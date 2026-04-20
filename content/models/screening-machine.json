@@ -1,0 +1,27 @@
+{
+  "id": "screening-machine",
+  "name": "筛选机器模型",
+  "summary": "教育和组织把人当作待筛选样本，而非待生长的人来处理的系统逻辑。",
+  "definition": "筛选机器模型强调，一旦制度把核心目标放在排名、筛分和路径分流上，那么身体、兴趣、理解力和创造性都会让位于更方便计量的指标。",
+  "application": "它适合分析应试教育、职业规划和标准答案文化的底层共性。",
+  "sourceLabel": "颖响力模型：筛选机器模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/screening-machine.json",
+  "episodes": [
+    {
+      "id": "EP014",
+      "note": "学校生活围绕考试被组织起来，直接体现筛选机器的逻辑。"
+    },
+    {
+      "id": "EP018",
+      "note": "文理科争论被还原为工业时代筛选逻辑的延续。"
+    },
+    {
+      "id": "EP058",
+      "note": "节目指出旧教育体系本质上仍在用工业时代机器筛选人才。"
+    },
+    {
+      "id": "EP118",
+      "note": "举报跨学科课程也被理解为筛选机器维护自身边界的一种反应。"
+    }
+  ]
+}

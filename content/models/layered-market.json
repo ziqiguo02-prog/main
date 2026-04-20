@@ -1,0 +1,19 @@
+{
+  "id": "layered-market",
+  "name": "分层市场",
+  "summary": "同一个大市场内部，不同层级之间可能并不共享同一套价格、流动性和预期。",
+  "definition": "分层市场强调市场内部的非均质性。高端与中低端、核心与外围、票面与真实成交、机构与散户之间，都可能运行着不同的逻辑。如果用一层市场的表现去替代整个市场，判断就会严重失真。",
+  "application": "放在颖响力节目里，这个模型适合解释豪宅、房票、高端消费和地缘政治中的多层分化现象。",
+  "sourceLabel": "颖响力模型：分层市场",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/layered-market.json",
+  "episodes": [
+    {
+      "id": "EP061",
+      "note": "节目明确把豪宅市场从普通住宅市场中剥离出来，认为二者本就不运行在同一套价格逻辑中。"
+    },
+    {
+      "id": "EP079",
+      "note": "房票的票面价格和场外折价交易并存，正体现了同一市场内部的分层。"
+    }
+  ]
+}

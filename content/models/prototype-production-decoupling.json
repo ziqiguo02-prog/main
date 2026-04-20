@@ -1,0 +1,19 @@
+{
+  "id": "prototype-production-decoupling",
+  "name": "样机量产脱钩",
+  "summary": "送检时是一套标准，量产时又是另一套标准，组织再用沉默和流程把这种落差合理化。",
+  "definition": "样机量产脱钩指的是企业在展示、测试和认证阶段拿出高规格配置，以证明产品足够先进或安全；等到真正量产时，再在成本、工期和 KPI 压力下逐步换件、降标、删场景、删权限保护。这样一来，用户拿到的产品和对外背书所对应的产品已经不是同一个对象。",
+  "application": "放在颖响力节目里，这个模型适合解释为什么一些电车在 PPT、发布会和送检数据里看起来几乎完美，真正上路后却不断暴露出边界场景的致命缺口。",
+  "sourceLabel": "颖响力模型：样机量产脱钩",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/prototype-production-decoupling.json",
+  "episodes": [
+    {
+      "id": "EP091",
+      "note": "节目认为语音权限设计能一路流到量产，说明验证和上线之间存在明显脱钩。"
+    },
+    {
+      "id": "EP103",
+      "note": "节目直接指出送检用好件、量产换平替，是研发体系里长期存在的结构性问题。"
+    }
+  ]
+}

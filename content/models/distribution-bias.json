@@ -1,0 +1,27 @@
+{
+  "id": "distribution-bias",
+  "name": "资源分配偏置",
+  "summary": "系统会优先保护更强势、更有组织和更能讲故事的环节，而把成本和压力慢慢压向更弱的一端。",
+  "definition": "资源分配偏置不是偶然不公平，而是一种稳定倾向：资本、财政和制度安排常常更愿意先支持强节点、中心节点和可见节点，而不是最弱、最需要的一端。",
+  "application": "这个模型适合解释养老金、医疗、地方财政和中产下坠等议题，因为很多痛感都来自资源长期偏向了别的方向。",
+  "sourceLabel": "颖响力模型：资源分配偏置",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/distribution-bias.json",
+  "episodes": [
+    {
+      "id": "EP030",
+      "note": "三明模式推广后，压力越来越多地被转移到医生与患者身上。"
+    },
+    {
+      "id": "EP052",
+      "note": "中产下坠时缺乏缓冲，说明系统对这部分人并没有足够保护带。"
+    },
+    {
+      "id": "EP100",
+      "note": "养老金问题在节目里被明确提升为一种分配偏好的表现。"
+    },
+    {
+      "id": "EP106",
+      "note": "大政府逻辑下，税费与收费越来越体现出强节点优先、弱节点承压的倾向。"
+    }
+  ]
+}

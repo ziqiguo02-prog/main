@@ -1,0 +1,15 @@
+{
+  "id": "human-contract-model",
+  "name": "国家信用契约模型",
+  "summary": "国家对个体生命的兜底力度，决定的不只是一次救援是否成功，也决定了整个系统的长期信用。",
+  "definition": "国家信用契约模型讨论的是一个国家如何通过持续兑现“不抛弃任何一个人”的承诺，把单次成本转化成长期信任、士气和制度红利。它把看似高昂的救援投入，重新理解为对国家信用与社会共识的投资。",
+  "application": "放在颖响力节目里，这个模型适合解释为什么美军高成本营救一个飞行员，在节目叙述里不是浪费，而是国家规则和公民关系的外显。",
+  "sourceLabel": "颖响力模型：国家信用契约模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/human-contract-model.json",
+  "episodes": [
+    {
+      "id": "EP115",
+      "note": "节目把营救 F-15E 飞行员视作国家对全部军人与公民履约的一次公开展示。"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "platform-meme-flywheel",
+  "name": "平台模因飞轮",
+  "summary": "模板内容、用户复制和平台推流彼此放大，最终把偶然热梗滚成大规模现象。",
+  "definition": "平台模因飞轮的起点往往是一个低门槛模板，用户大量参与复制后，平台再通过测试和加权继续放大，反过来激发更多参与，使内容从试验品变成全网现象。",
+  "application": "它能解释造梗为何越来越像一套工业流程，而不只是个人灵感的瞬间闪光。",
+  "sourceLabel": "颖响力模型：平台模因飞轮",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/platform-meme-flywheel.json",
+  "episodes": [
+    {
+      "id": "EP110",
+      "note": "酱板鸭被系统拆解为社交货币、模板复制与平台加权共同驱动的飞轮。"
+    }
+  ]
+}

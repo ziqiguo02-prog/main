@@ -1,0 +1,15 @@
+{
+  "id": "narrative-instrumentalization",
+  "name": "叙事工具化模型",
+  "summary": "一个叙事最主要的价值不再是解释，而是被拿来组织情绪和划分阵营。",
+  "definition": "叙事工具化模型强调，很多看似在讲历史、文化或价值的表达，其实更在意它能不能制造共同敌人、强化身份感和服务当下需要，而不是能否忠实呈现复杂性。",
+  "application": "这个模型适合分析皇汉史观、网络动员话术以及各种被工具化的文化叙事。",
+  "sourceLabel": "颖响力模型：叙事工具化模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/narrative-instrumentalization.json",
+  "episodes": [
+    {
+      "id": "EP048",
+      "note": "节目用它说明1644史观为何更像动员工具而非历史研究。"
+    }
+  ]
+}

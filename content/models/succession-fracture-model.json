@@ -1,0 +1,23 @@
+{
+  "id": "succession-fracture-model",
+  "name": "继承裂缝模型",
+  "summary": "当一个体制用临时稳定去换接班问题的短期解决时，往往会把更深的制度裂缝一起放大。",
+  "definition": "继承裂缝模型讨论的是权力继承如何反向暴露体制的真实脆弱点。一个制度如果长期靠个人威望、宗教神圣性或派系均衡维持，一旦进入接班时刻，就很容易让原本被压住的伦理、民族、宗教和机构矛盾同时浮出水面。",
+  "application": "放在颖响力节目里，这个模型适合分析伊朗的世袭倾向、越南的一人时代回归，以及为什么“先稳住”往往会换来更深的后遗症。",
+  "sourceLabel": "颖响力模型：继承裂缝模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/succession-fracture-model.json",
+  "episodes": [
+    {
+      "id": "EP087",
+      "note": "节目把哈梅内伊遇袭后的局势重点放在“接下来谁上来”而不是简单的军事输赢上。"
+    },
+    {
+      "id": "EP097",
+      "note": "节目认为穆杰塔巴上位会让伊朗的国家伦理、宗教权威和民族平衡同时松动。"
+    },
+    {
+      "id": "EP117",
+      "note": "节目认为越南打破集体领导体制后，未来会更接近强人治理下的恶性循环。"
+    }
+  ]
+}

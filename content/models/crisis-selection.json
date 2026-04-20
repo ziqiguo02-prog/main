@@ -1,0 +1,19 @@
+{
+  "id": "crisis-selection",
+  "name": "危机筛选",
+  "summary": "危机不会平均分配机会，它会把原本边缘的人推向前台，同时把原来的中心人群快速筛掉。",
+  "definition": "危机筛选强调在大转折时期，社会并不是所有人一起上升或一起下坠，而是某些类型的人因为更适配现实而被推上来，另一些人因为惯性、迟疑或结构失效而被迅速边缘化。",
+  "application": "这个模型适合解释性别上位、组织换人和财政激励转向等议题，因为危机本质上是在重新决定谁更适合留在前台。",
+  "sourceLabel": "颖响力模型：危机筛选",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/crisis-selection.json",
+  "episodes": [
+    {
+      "id": "EP020",
+      "note": "节目把中年女性被推到前台，解释成危机时代下的一种人事筛选。"
+    },
+    {
+      "id": "EP106",
+      "note": "地方政府角色的变化同样体现了系统在危机里重新筛选人和职能。"
+    }
+  ]
+}

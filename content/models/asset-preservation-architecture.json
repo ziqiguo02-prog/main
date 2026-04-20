@@ -1,0 +1,19 @@
+{
+  "id": "asset-preservation-architecture",
+  "name": "资产保全架构",
+  "summary": "财富能不能被保住，不只看有没有信托和离岸公司，更看资产来源、法域选择、时间前置和退出节奏能否互相配套。",
+  "definition": "资产保全架构讨论的是一整套财富保护链条，而不是单个工具。信托、离岸主体、境外上市、家族安排和资产出售，只在相互咬合且前置足够早时才形成保护力；如果来源不干净、动作太晚或结构彼此冲突，这些工具反而会暴露新的追索入口。",
+  "application": "放在颖响力节目里，这个模型适合解释为什么有些企业家能较完整地保住财富与人生空间，也适合解释为什么另一些人的家族信托会在危机里被直接追穿。",
+  "sourceLabel": "颖响力模型：资产保全架构",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/asset-preservation-architecture.json",
+  "episodes": [
+    {
+      "id": "EP010",
+      "note": "节目认为家族信托的成败关键不在信托名义，而在注入资金能否经得起向前追溯。"
+    },
+    {
+      "id": "EP121",
+      "note": "节目把潘石屹与张欣的婚姻、香港上市、家族信托和逐步出售资产，看成一套前置完成的保全架构。"
+    }
+  ]
+}

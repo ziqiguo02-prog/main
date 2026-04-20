@@ -1,0 +1,15 @@
+{
+  "id": "boundary-governance",
+  "name": "边界治理模型",
+  "summary": "在不适、争议与明确伤害之间，优先界定边界而非急于二分善恶。",
+  "definition": "边界治理模型关注的是：面对复杂个案，治理首先要回答哪里已经越线、哪里只是引发违和感，以及不同程度的问题应由何种制度、法律或社会工具来处理。",
+  "application": "它适合用来理解育儿争议、公共救助和灰区责任问题，尤其能避免把复杂现实压缩成简单站队。",
+  "sourceLabel": "颖响力模型：边界治理模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/boundary-governance.json",
+  "episodes": [
+    {
+      "id": "EP028",
+      "note": "云南野孩事件被放在“法律边缘但未明确越线”的边界治理框架中讨论。"
+    }
+  ]
+}

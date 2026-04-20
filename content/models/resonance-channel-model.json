@@ -1,0 +1,19 @@
+{
+  "id": "resonance-channel-model",
+  "name": "共振通道模型",
+  "summary": "一套内容是否有效，关键常常不在观点高低，而在它是否找到目标人群愿意停留的表达通道。",
+  "definition": "共振通道模型认为，普通人对现实的理解很多时候依赖媒介形式和感受门槛。直播、连线、故事或案例一旦构成合适通道，就会比抽象论证更容易击中集体情绪。",
+  "application": "它适合解释为什么某些创作者和中介即使理论不复杂，却能获得极高影响力。",
+  "sourceLabel": "颖响力模型：共振通道模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/resonance-channel-model.json",
+  "episodes": [
+    {
+      "id": "EP005",
+      "note": "户晨风被视为找到了普通年轻人最有共振感的展示通道。"
+    },
+    {
+      "id": "EP006",
+      "note": "张雪峰同样被看作一种向焦虑家庭出售可理解预期的有效通道。"
+    }
+  ]
+}

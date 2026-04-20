@@ -1,0 +1,23 @@
+{
+  "id": "subsidized-adoption-flywheel",
+  "name": "补贴驱动采纳飞轮",
+  "summary": "平台先用补贴拉来用户和创作者，再把他们的行为变成数据、付费和估值，最后反向证明补贴“有效”。",
+  "definition": "补贴驱动采纳飞轮讨论的是一种平台扩张模型：先拿现金补贴、免费额度或流量支持把人拉进来，再让这些人的创作、使用和付费行为沉淀为平台数据与营收记录，最后把这些记录包装成更大融资和更高估值的依据。飞轮看起来在自我增长，底层却离不开持续补贴。",
+  "application": "放在颖响力节目里，这个模型适合解释 AI Agent、AI 内容平台和地方产业扶持为什么总会在‘热闹增长’与‘真假需求’之间反复纠缠。",
+  "sourceLabel": "颖响力模型：补贴驱动采纳飞轮",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/subsidized-adoption-flywheel.json",
+  "episodes": [
+    {
+      "id": "EP094",
+      "note": "节目认为 OpenClaw 的出圈，关键不在产品成熟，而在资本需要新的算力消耗场景。"
+    },
+    {
+      "id": "EP108",
+      "note": "节目完整拆解了 AI 漫剧如何靠补贴、token 和平台估值讲出一个自我放大的商业故事。"
+    },
+    {
+      "id": "EP099",
+      "note": "地方政府的补贴招商在节目里也被理解为一种通过种子资金放大资本故事的飞轮。"
+    }
+  ]
+}

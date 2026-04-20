@@ -1,0 +1,15 @@
+{
+  "id": "leverage-backfire",
+  "name": "杠杆反噬",
+  "summary": "上行期放大利润的高杠杆结构，会在下行期更快放大亏损、现金流压力和清偿困难。",
+  "definition": "杠杆反噬讨论的不是“借钱有风险”这种常识，而是当企业把规模、利润和估值都建立在高杠杆之上时，一旦销售放缓、资产缩水或融资受阻，原本帮助扩张的杠杆会反过来压垮企业本身。",
+  "application": "放在颖响力节目里，这个模型适合解释地产、城投、新能源等领域里那些在上行期看似无往不利、下行期却迅速陷入资不抵债的公司或系统。",
+  "sourceLabel": "颖响力模型：杠杆反噬",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/leverage-backfire.json",
+  "episodes": [
+    {
+      "id": "EP031",
+      "note": "节目把碧桂园的问题归到高杠杆扩张、体外孵化和房价下行后的利润反转，典型符合杠杆反噬。"
+    }
+  ]
+}

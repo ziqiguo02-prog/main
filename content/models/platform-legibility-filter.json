@@ -1,0 +1,23 @@
+{
+  "id": "platform-legibility-filter",
+  "name": "平台可读性过滤器",
+  "summary": "平台会优先处理那些被识别为可能外溢、聚众或失控的表达形态。",
+  "definition": "平台可读性过滤器并不只看内容字面，它更关心表达是否容易形成身份连接、群体共振和可复制扩散。一旦某类表达被识别为高度可组织化，就更容易遭遇限制。",
+  "application": "这个模型适合解释为什么不同创作者、热梗和理论即使都在争议边缘，处理强度也会显著不同。",
+  "sourceLabel": "颖响力模型：平台可读性过滤器",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/platform-legibility-filter.json",
+  "episodes": [
+    {
+      "id": "EP005",
+      "note": "户晨风式表达被视为更容易形成共振和破壁，因此处理更重。"
+    },
+    {
+      "id": "EP006",
+      "note": "张雪峰被讨论为仍具功能但需被边界化的中介角色。"
+    },
+    {
+      "id": "EP032",
+      "note": "民间三论被认为因传播性和组织性增强而触发更强的平台治理。"
+    }
+  ]
+}

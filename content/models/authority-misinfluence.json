@@ -1,0 +1,15 @@
+{
+  "id": "authority-misinfluence",
+  "name": "权威影响",
+  "summary": "权威人物的存在会压缩组织独立思考，让成员更容易服从而不是纠偏。",
+  "definition": "权威影响指的是人们在面对权威人物时，倾向于降低独立判断、提高服从意愿的心理与组织现象。它不仅影响个体行为，也会深刻影响组织内部的信息流动。",
+  "application": "放在颖响力节目里，这个模型适合解释强创始人、强导师、强平台或强机构环境下，为什么真实反馈会越来越少，而单点判断越来越强。",
+  "sourceLabel": "GV 模型：权威影响",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/buffett-kb/content/models/权威影响.md",
+  "episodes": [
+    {
+      "id": "EP001",
+      "note": "节目通过巡店时团队沉默、大家等老板发言的细节，强调贾国龙作为单点权威如何压缩真实反馈。"
+    }
+  ]
+}

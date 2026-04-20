@@ -1,0 +1,19 @@
+{
+  "id": "platform-gatekeeping",
+  "name": "平台守门结构",
+  "summary": "平台通过流量、规则和处罚权决定谁可以被看见、谁可以挣钱、谁必须闭嘴。",
+  "definition": "平台守门结构指的是平台作为新的基础设施，不只是提供场地，而是在内容分发、账号治理和商业变现里扮演新的守门人。它既决定可见性，也决定合法性。",
+  "application": "这个模型适合解释直播带货、账号封禁和内容双标，因为很多争议背后都是平台在重新定义市场和公共讨论边界。",
+  "sourceLabel": "颖响力模型：平台守门结构",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/platform-gatekeeping.json",
+  "episodes": [
+    {
+      "id": "EP071",
+      "note": "超级直播间能够重写价格，本质上是平台守门结构向某些头部内容让渡了定义权。"
+    },
+    {
+      "id": "EP102",
+      "note": "反诈老陈和高知带货号的待遇差异，被节目直接指向平台守门结构。"
+    }
+  ]
+}

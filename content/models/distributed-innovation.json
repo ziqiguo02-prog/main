@@ -1,0 +1,19 @@
+{
+  "id": "distributed-innovation",
+  "name": "分布式创新",
+  "summary": "真正强韧的创新体系，不靠单一计划一把推到底，而靠多中心试错、持续纠偏和失败后的再组织。",
+  "definition": "分布式创新讨论的是一种与举国冲锋相反的创新逻辑。科研、商业、应用和制度并不是严格排成一条线，而是在多个主体之间并行探索、互相修正。这样的体系早期可能更慢、更乱，但遇到错误时更容易分散损失、保留成果并重新组合。",
+  "application": "放在颖响力节目里，这个模型适合解释为什么美国式军民商复合体虽然混乱，却往往比高度集权的系统更能扛住长期科技竞赛。",
+  "sourceLabel": "颖响力模型：分布式创新",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/distributed-innovation.json",
+  "episodes": [
+    {
+      "id": "EP054",
+      "note": "节目用苏联失败与哈耶克知识观，批评单一大计划无法替代分散试错。"
+    },
+    {
+      "id": "EP113",
+      "note": "节目把 NASA 与 SpaceX 的并存，视为美国能动性和纠错能力的关键来源。"
+    }
+  ]
+}

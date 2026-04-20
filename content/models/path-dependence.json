@@ -1,0 +1,15 @@
+{
+  "id": "path-dependence",
+  "name": "路径依赖",
+  "summary": "企业早期的技术和叙事选择一旦成功，就会反过来限制后续转向更优路径的能力。",
+  "definition": "路径依赖讨论的是：早期选择会锁定后续可能性，即使后来出现更优方案，切换成本也可能高到难以承受。对企业来说，技术栈、品牌心智、组织能力和用户认知都可能形成路径锁定。",
+  "application": "放在颖响力节目里，这个模型特别适合解释那些靠某条技术路线或某套品牌叙事迅速崛起的公司，为什么在行业环境变化后很难轻松转身。",
+  "sourceLabel": "GV 模型：路径依赖",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/buffett-kb/content/models/路径依赖.md",
+  "episodes": [
+    {
+      "id": "EP055",
+      "note": "节目把增程路线比作早期见效快但后续越走越窄的路径，明显符合路径依赖的判断框架。"
+    }
+  ]
+}

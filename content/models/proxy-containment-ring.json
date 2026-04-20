@@ -1,0 +1,15 @@
+{
+  "id": "proxy-containment-ring",
+  "name": "代理围堵环",
+  "summary": "大国不必自己承担全部战争成本，也能通过盟友、代理人与边界重划来封堵对手的关键通道。",
+  "definition": "代理围堵环讨论的是一种低成本霸权方式：核心国家不再事事亲自下场，而是把防线前移，让盟友和代理人承担前线开支与区域管理，自己则负责规则、结算与总体后勤。只要关键通道被封住，对手的灰色贸易和扩张空间就会被系统性压缩。",
+  "application": "放在颖响力节目里，这个模型适合解释新门罗主义、代理人战争和全球阵营切割，因为它关注的不是单场战争输赢，而是通道控制权。",
+  "sourceLabel": "颖响力模型：代理围堵环",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/proxy-containment-ring.json",
+  "episodes": [
+    {
+      "id": "EP107",
+      "note": "节目把川普的战略理解为一种通过盟友分担成本、封堵灰色石油流动的代理围堵环。"
+    }
+  ]
+}

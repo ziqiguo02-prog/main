@@ -1,0 +1,19 @@
+{
+  "id": "attention-commerce-loop",
+  "name": "注意力商业闭环",
+  "summary": "内容先为注意力而非真实服务，之后再把注意力反过来结算成商业价值。",
+  "definition": "注意力商业闭环指的是，内容生产和宣发首先围绕“能不能被看见、被讨论、被转发”展开，至于角色真实性、劳动真相或审美完整性则退居次位，最终争议和围观本身也会成为商业回报。",
+  "application": "这个模型适合分析平台宣传、影视宣发和劳动叙事中“先抢注意力，再谈内容”的工业逻辑。",
+  "sourceLabel": "颖响力模型：注意力商业闭环",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/attention-commerce-loop.json",
+  "episodes": [
+    {
+      "id": "EP038",
+      "note": "唯美外卖员短片被视为以注意力包装劳动现实的典型。"
+    },
+    {
+      "id": "EP109",
+      "note": "影视宣发通过黑红和人设维持形成完整的注意力结算回路。"
+    }
+  ]
+}

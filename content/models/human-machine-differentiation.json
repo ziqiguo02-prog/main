@@ -1,0 +1,23 @@
+{
+  "id": "human-machine-differentiation",
+  "name": "人机差异化模型",
+  "summary": "当机器越来越擅长标准化任务时，人类价值必须转向不可轻易复制的判断与创造。",
+  "definition": "人机差异化模型强调，技术发展会持续吞掉计算、执行和规训型岗位，而人的比较优势将逐渐集中到提问、选择、审美、复杂沟通和精神性表达等领域。",
+  "application": "它适合同时解释文理科争论、AI 时代教育错位和自动化替代中的人类位置问题。",
+  "sourceLabel": "颖响力模型：人机差异化模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/human-machine-differentiation.json",
+  "episodes": [
+    {
+      "id": "EP018",
+      "note": "节目以此说明文科和感性判断在未来为何会重新变贵。"
+    },
+    {
+      "id": "EP058",
+      "note": "AI 时代教育错位被归因为学校仍在训练机器更擅长的能力。"
+    },
+    {
+      "id": "EP084",
+      "note": "春晚机器人让节目进一步追问人类到底该保住什么不可替代的部分。"
+    }
+  ]
+}

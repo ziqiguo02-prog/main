@@ -1,0 +1,15 @@
+{
+  "id": "inheritance-distortion-model",
+  "name": "继承扭曲模型",
+  "summary": "财富、关系与人格问题一起代际传递时，继承会变成扭曲而非接续。",
+  "definition": "继承扭曲模型关注的是：第一代积累财富的方式、家庭结构和情感伤害如何同时影响第二代，使他们既无法自然承接资源，也很难真正脱离父辈逻辑。",
+  "application": "这个模型适合用来理解富裕家庭中的人格失衡、关系极化和对父辈的复杂反抗。",
+  "sourceLabel": "颖响力模型：继承扭曲模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/inheritance-distortion-model.json",
+  "episodes": [
+    {
+      "id": "EP022",
+      "note": "李新野被当作富裕家庭二代人格与关系扭曲的代表性样本。"
+    }
+  ]
+}

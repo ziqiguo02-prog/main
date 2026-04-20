@@ -1,0 +1,31 @@
+{
+  "id": "institutional-formalism-spiral",
+  "name": "制度形式主义螺旋",
+  "summary": "一个系统越依赖面子、流程和可展示动作，越会继续生产新的空洞动作。",
+  "definition": "制度形式主义螺旋意味着：一旦某套组织开始用仪式、排名、头衔、活动和场面来证明自身有效，它就会不断加码这些可展示内容，而真正解决问题的能力却进一步被抽空。",
+  "application": "它适合分析学校、地方治理、赛事和高校系统中“越忙越空、越热闹越无效”的现象。",
+  "sourceLabel": "颖响力模型：制度形式主义螺旋",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/institutional-formalism-spiral.json",
+  "episodes": [
+    {
+      "id": "EP014",
+      "note": "学校围绕考试不断制造管理动作，被视为形式主义升级。"
+    },
+    {
+      "id": "EP023",
+      "note": "地方马拉松从城市名片逐步卷成低质量文旅任务。"
+    },
+    {
+      "id": "EP026",
+      "note": "学校迎宾仪式被视为形式主义进入校园日常。"
+    },
+    {
+      "id": "EP033",
+      "note": "选美赛事保留了外观仪式，却失去真实程序。"
+    },
+    {
+      "id": "EP034",
+      "note": "高校官气压过学气后，头衔和包装不断自我繁殖。"
+    }
+  ]
+}

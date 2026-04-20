@@ -1,0 +1,15 @@
+{
+  "id": "rule-charity-bridge",
+  "name": "规则善意桥接模型",
+  "summary": "通过基金、救助和清晰比例机制，把法律责任与社会善意衔接起来。",
+  "definition": "规则善意桥接模型认为，社会不应把所有模糊风险都扔给个体来承担，而应建立专门装置，在不破坏法治分责的前提下保护那些值得被鼓励的善意行为。",
+  "application": "它尤其适合分析扶老人、紧急施救和灰区侵权争议等问题。",
+  "sourceLabel": "颖响力模型：规则善意桥接模型",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/rule-charity-bridge.json",
+  "episodes": [
+    {
+      "id": "EP086",
+      "note": "节目提出基金和制度兜底，正是为了给善意行为建立桥接层。"
+    }
+  ]
+}

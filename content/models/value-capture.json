@@ -1,0 +1,15 @@
+{
+  "id": "value-capture",
+  "name": "价值捕获",
+  "summary": "一条商业链条里，关键不只是有没有创造价值，更是谁真正留下了价值。",
+  "definition": "价值捕获关注的是价值分配，而不只是价值创造。企业、顾问、平台、渠道、用户都可能参与一条价值链，但真正留下利润和议价权的，往往是处在更强位置的环节。",
+  "application": "放在颖响力节目里，这个模型适合解释消费者多付出来的钱，究竟更多流向了产品升级、品牌体系、顾问服务，还是某个更强势的中间层。",
+  "sourceLabel": "GV 模型：价值捕获",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/buffett-kb/content/models/价值捕获.md",
+  "episodes": [
+    {
+      "id": "EP001",
+      "note": "节目质疑消费者额外支付的价格并未主要转化为更好的体验，而是被咨询公司和品牌体系部分捕获。"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "technology-wave-cycle",
+  "name": "技术浪潮周期",
+  "summary": "新技术的命运不只看方向对不对，更看资本、基础设施和真实应用能否在同一时间窗口里对齐。",
+  "definition": "技术浪潮周期描述的是一种反复出现的结构：新技术先被资本、政策和基础设施推高预期，随后市场检验真实应用是否足够快地产生稳定价值。如果兑现节奏跟不上，资本就会撤退、行业降温、进入漫长爬坡，直到下一轮条件重新成熟。",
+  "application": "放在颖响力节目里，这个模型适合解释 AI、Agent 与其他高投入新技术为什么会在“方向正确”和“当下赚钱”之间反复摇摆。",
+  "sourceLabel": "颖响力模型：技术浪潮周期",
+  "sourcePath": "/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/网页/content/models/technology-wave-cycle.json",
+  "episodes": [
+    {
+      "id": "EP049",
+      "note": "节目把 AI 当下争议归到一个老问题：资本已经极度前置，但稳定价值还没有兑现。"
+    },
+    {
+      "id": "EP094",
+      "note": "OpenClaw 被节目理解为算力消耗型热点，能否穿过热潮周期仍取决于真实价值是否成立。"
+    },
+    {
+      "id": "EP108",
+      "note": "AI 漫剧看起来火爆，但节目认为它更像靠补贴和估值支撑的阶段性浪潮。"
+    }
+  ]
+}
