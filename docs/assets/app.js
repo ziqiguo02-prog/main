@@ -1,3 +1,5 @@
+import { destroyGraphView, renderGraphView } from './graph-view.js';
+
 const app = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
 const sidebarBody = document.getElementById('sidebar-body');
@@ -5,6 +7,7 @@ const menuButton = document.getElementById('menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
 
 let site = null;
+let graphData = null;
 let searchKeyword = '';
 let sidebarKeywordQuery = '';
 let keywordIndexQuery = '';
@@ -56,6 +59,35 @@ function routeTo(path) {
     .map((part) => encodeURIComponent(part))
     .join('/');
   return `#/${encodedPath}`;
+}
+
+function episodeById(id) {
+  return site?.episodes?.find((episode) => episode.id === id) || null;
+}
+
+function renderLinkedEpisodeText(value) {
+  const raw = String(value || '');
+  if (!raw) return '';
+
+  let cursor = 0;
+  let html = '';
+
+  raw.replace(/\bEP\d{3}\b/g, (match, offset) => {
+    html += escapeHtml(raw.slice(cursor, offset));
+    const episode = episodeById(match);
+    html += episode
+      ? `<span class="inline-episode-ref"><a class="inline-episode-link" href="${routeTo(`episodes/${match}`)}">${escapeHtml(match)}</a><span class="inline-episode-popup"><strong>${escapeHtml(match)}｜${escapeHtml(episode.title)}</strong><span>${escapeHtml(episode.summary || '')}</span></span></span>`
+      : escapeHtml(match);
+    cursor = offset + match.length;
+    return match;
+  });
+
+  html += escapeHtml(raw.slice(cursor));
+  return html;
+}
+
+function graphStatValue() {
+  return graphData?.meta?.nodeCount || 0;
 }
 
 function chipList(items = []) {
@@ -569,6 +601,32 @@ function getSidebarKeywordMatches() {
     .slice(0, 8);
 }
 
+function getSidebarReferenceMatches(type, collection = [], query, badge) {
+  if (!query) return [];
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return collection
+    .filter((item) => {
+      const haystack = [
+        item.id,
+        item.name || '',
+        item.title || '',
+        item.summary || '',
+        item.definition || '',
+        item.description || '',
+        ...(item.aliases || [])
+      ].join(' ').toLowerCase();
+      return haystack.includes(normalizedQuery);
+    })
+    .slice(0, 6)
+    .map((item) => ({
+      type,
+      id: item.id,
+      name: item.name || item.title || item.id,
+      badge
+    }));
+}
+
 function getSidebarSearchMatches() {
   const query = sidebarKeywordQuery.trim();
   const keywords = getSidebarKeywordMatches().map((keyword) => ({
@@ -591,15 +649,20 @@ function getSidebarSearchMatches() {
       badge: '节目'
     }));
 
+  const concepts = getSidebarReferenceMatches('concept', site?.concepts || [], query, '概念');
+  const models = getSidebarReferenceMatches('model', site?.models || [], query, '模型');
+  const people = getSidebarReferenceMatches('person', site?.people || [], query, '人物');
+  const themes = getSidebarReferenceMatches('theme', site?.themes || [], query, '主题');
+
   const exactEpisodeId = normalizeEpisodeIdQuery(query);
   if (exactEpisodeId) {
     const exact = episodes.find((item) => item.id === exactEpisodeId);
     if (exact) {
-      return [exact, ...keywords, ...episodes.filter((item) => item.id !== exactEpisodeId)].slice(0, 8);
+      return [exact, ...keywords, ...concepts, ...models, ...people, ...themes, ...episodes.filter((item) => item.id !== exactEpisodeId)].slice(0, 10);
     }
   }
 
-  return [...keywords, ...episodes].slice(0, 8);
+  return [...keywords, ...concepts, ...models, ...people, ...themes, ...episodes].slice(0, 10);
 }
 
 function renderSidebarKeywordSuggestions() {
@@ -611,11 +674,18 @@ function renderSidebarKeywordSuggestions() {
     heading.textContent = sidebarKeywordQuery.trim() ? '匹配结果' : '推荐关键词';
   }
   if (!matches.length) {
-    container.innerHTML = `<div class="sidebar-empty">没有匹配的关键词或节目</div>`;
+    container.innerHTML = `<div class="sidebar-empty">没有匹配的关键词、节目或知识条目</div>`;
     return;
   }
   container.innerHTML = matches.map((keyword) => `
-    <a class="sidebar-suggestion" href="${keyword.type === 'episode' ? routeTo(`episodes/${keyword.id}`) : routeTo(`keywords/${keyword.id}`)}">
+    <a class="sidebar-suggestion" href="${
+      keyword.type === 'episode' ? routeTo(`episodes/${keyword.id}`)
+        : keyword.type === 'keyword' ? routeTo(`keywords/${keyword.id}`)
+        : keyword.type === 'concept' ? routeTo(`concepts/${keyword.id}`)
+        : keyword.type === 'model' ? routeTo(`models/${keyword.id}`)
+        : keyword.type === 'person' ? routeTo(`people/${keyword.id}`)
+        : routeTo(`themes/${keyword.id}`)
+    }">
       <span>${escapeHtml(keyword.name)}</span>
       <span class="count-badge">${escapeHtml(keyword.badge)}</span>
     </a>
@@ -639,9 +709,9 @@ function renderSidebar() {
       <a class="sidebar-link" href="#/keywords">关键词 <span class="count-badge">${site.stats.keywords}</span></a>
     </div>
     <div class="sidebar-section">
-      <p class="sidebar-title">搜索关键词 / 节目</p>
+      <p class="sidebar-title">搜索知识库</p>
       <div class="sidebar-search-wrap">
-        <input id="keyword-search-input" class="sidebar-search-input" type="text" placeholder="搜索关键词或集数，如 西贝 / 31 / 三十一集">
+        <input id="keyword-search-input" class="sidebar-search-input" type="text" placeholder="搜索关键词、节目、概念、模型，如 咽喉杠杆 / 西贝 / EP031">
         <p id="keyword-suggestions-title" class="sidebar-subtitle">推荐关键词</p>
         <div id="keyword-suggestions" class="sidebar-suggestions"></div>
       </div>
@@ -660,6 +730,7 @@ function renderSidebar() {
       <p class="sidebar-title">思想模型</p>
       ${topModels.map((model) => `<a class="sidebar-item" href="${routeTo(`models/${model.id}`)}">${escapeHtml(model.name)}</a>`).join('')}
       <a class="sidebar-more" href="#/models">更多模型 →</a>
+      <a class="sidebar-item" href="#/graph">知识图谱 <span class="count-badge">${graphStatValue()}</span></a>
     </div>
   `;
 
@@ -672,15 +743,23 @@ function renderSidebar() {
   keywordInput.addEventListener('focus', () => {
     renderSidebarKeywordSuggestions();
   });
-  keywordInput.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    const [firstMatch] = getSidebarSearchMatches();
-    if (firstMatch) {
-      window.location.hash = firstMatch.type === 'episode'
-        ? routeTo(`episodes/${firstMatch.id}`)
-        : routeTo(`keywords/${firstMatch.id}`);
-    }
-  });
+    keywordInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const [firstMatch] = getSidebarSearchMatches();
+      if (firstMatch) {
+        window.location.hash = firstMatch.type === 'episode'
+          ? routeTo(`episodes/${firstMatch.id}`)
+          : firstMatch.type === 'keyword'
+            ? routeTo(`keywords/${firstMatch.id}`)
+            : firstMatch.type === 'concept'
+              ? routeTo(`concepts/${firstMatch.id}`)
+              : firstMatch.type === 'model'
+                ? routeTo(`models/${firstMatch.id}`)
+                : firstMatch.type === 'person'
+                  ? routeTo(`people/${firstMatch.id}`)
+                  : routeTo(`themes/${firstMatch.id}`);
+      }
+    });
   renderSidebarKeywordSuggestions();
 }
 
@@ -706,8 +785,12 @@ function renderHome(focusSectionId = '') {
     <section class="hero">
       <p class="eyebrow">Web Knowledge Base</p>
       <h1>颖响力 <span>知识库</span></h1>
-      <p>${escapeHtml(site.meta.subtitle)}。当前这版先把节目、概念、思想模型拆成独立内容层，再用一个本地静态网页把它们连起来，后续可以继续批量扩充。</p>
+      <p>${escapeHtml(site.meta.subtitle)}。当前这版已经把节目、概念、模型、人物、主题连成一个可交互图谱，本地可以先验证结构质量，再决定是否发布到线上。</p>
       <div class="stats">
+        <a class="stat-card" href="#/graph">
+          <div class="stat-value">${graphStatValue()}</div>
+          <div class="stat-label">图谱节点</div>
+        </a>
         <a class="stat-card" href="#/episodes">
           <div class="stat-value">${site.stats.episodes}</div>
           <div class="stat-label">节目索引</div>
@@ -727,6 +810,41 @@ function renderHome(focusSectionId = '') {
       </div>
       <div class="search-box">
         <input id="search-input" type="text" placeholder="搜索节目编号、标题或摘要">
+      </div>
+      <div class="hero-actions">
+        <a class="hero-action primary" href="#/graph">打开知识图谱</a>
+        <a class="hero-action" href="#/episodes">先看节目索引</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">知识图谱</h2>
+        <a class="section-note" href="#/graph">进入图谱视图</a>
+      </div>
+      <div class="grid cards-2">
+        <a class="card graph-preview-card" href="#/graph">
+          <p class="card-kicker">Graph View · ${graphData?.meta?.linkCount || 0} 条连接</p>
+          <h3>从节目跳到概念，再跳到人物与主题</h3>
+          <p>这张图把五类核心节点放进同一个可视化网络里，适合先看结构密度，再回到单条目做细读。</p>
+          <div class="meta-row">
+            <span class="chip">节目 ${site.stats.episodes}</span>
+            <span class="chip">概念 ${site.stats.concepts}</span>
+            <span class="chip">模型 ${site.stats.models}</span>
+            <span class="chip">人物 ${site.stats.people}</span>
+            <span class="chip">主题 ${site.stats.themes}</span>
+          </div>
+        </a>
+        <div class="card">
+          <p class="card-kicker">How To Read</p>
+          <h3>先找高连接节点，再顺着局部关系钻进去</h3>
+          <p>图谱适合回答两个问题：哪些主题经常和哪些节目一起出现，以及某个人物或模型究竟被放在什么语境里讲。</p>
+          <div class="meta-row">
+            <span class="chip">点击节点看近邻</span>
+            <span class="chip">双击节点开详情</span>
+            <span class="chip">滚轮缩放</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -805,6 +923,19 @@ function renderHome(focusSectionId = '') {
   });
 
   scrollToSection(focusSectionId);
+}
+
+function renderGraphPage() {
+  if (!graphData) {
+    renderNotFound('知识图谱数据尚未生成，请先执行构建。');
+    return;
+  }
+
+  renderGraphView({
+    container: app,
+    graph: graphData,
+    toHash: routeTo
+  });
 }
 
 function renderEpisodeIndex() {
@@ -1234,6 +1365,37 @@ function renderThemesIndex() {
   });
 }
 
+function renderDetailList(items = []) {
+  if (!items.length) return '<p class="subtle">待补充。</p>';
+  return `<ul>${items.map((item) => `<li>${renderLinkedEpisodeText(item)}</li>`).join('')}</ul>`;
+}
+
+function renderHighlightCards(items = []) {
+  if (!items.length) return '<p class="subtle">待补充。</p>';
+  return `
+    <div class="list">
+      ${items.map((item) => `
+        <a class="list-item" href="${routeTo(`episodes/${item.id}`)}">
+          <h3>${escapeHtml(item.id)}｜${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.note || item.summary || '待补充')}</p>
+          ${item.summary && item.summary !== item.note ? `<p class="subtle">${escapeHtml(item.summary)}</p>` : ''}
+          ${item.mechanism ? `<p class="subtle">机制线：${escapeHtml(item.mechanism)}</p>` : ''}
+        </a>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderReferenceChipSection(title, type, items, collection) {
+  if (!items?.length) return '';
+  return `
+    <div>
+      <h3>${escapeHtml(title)}</h3>
+      ${linkedChipList(type, items, collection)}
+    </div>
+  `;
+}
+
 function renderConceptDetail(id) {
   const concept = site.concepts.find((item) => item.id === id);
   if (!concept) {
@@ -1262,21 +1424,35 @@ function renderConceptDetail(id) {
         <p class="detail-summary">${escapeHtml(concept.summary)}</p>
       </div>
       <section class="detail-section">
-        <h2>定义</h2>
-        <p>${escapeHtml(concept.definition)}</p>
+        <h2>定义与展开</h2>
+        <p>${renderLinkedEpisodeText(concept.definition)}</p>
+        ${concept.context ? `<p>${renderLinkedEpisodeText(concept.context)}</p>` : ''}
         <h3>为什么重要</h3>
-        <p>${escapeHtml(concept.importance)}</p>
+        <p>${renderLinkedEpisodeText(concept.importance)}</p>
+      </section>
+      <section class="detail-section split">
+        <div>
+          <h2>识别信号</h2>
+          ${renderDetailList(concept.signals)}
+        </div>
+        <div>
+          <h2>使用边界</h2>
+          ${renderDetailList(concept.boundaries)}
+        </div>
+      </section>
+      <section class="detail-section split">
+        ${renderReferenceChipSection('共现模型', 'models', concept.relatedModels, site.models)}
+        ${renderReferenceChipSection('共现主题', 'themes', concept.relatedThemes, site.themes)}
+        ${renderReferenceChipSection('共现人物', 'people', concept.relatedPeople, site.people)}
+        ${renderReferenceChipSection('相关概念', 'concepts', concept.relatedConcepts, site.concepts)}
       </section>
       <section class="detail-section">
-        <h2>相关节目中的表现</h2>
-        <div class="list">
-          ${episodes.map((entry) => `
-            <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
-              <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
-            </a>
-          `).join('')}
-        </div>
+        <h2>进一步追问</h2>
+        ${renderDetailList(concept.questions)}
+      </section>
+      <section class="detail-section">
+        <h2>节目里的典型锚点</h2>
+        ${renderHighlightCards(concept.episodeHighlights?.length ? concept.episodeHighlights : episodes)}
       </section>
     </section>
   `;
@@ -1310,21 +1486,35 @@ function renderModelDetail(id) {
         ${model.sourcePath ? `<p class="footer-note">GV 参考：<a href="${escapeHtml(model.sourcePath)}">${escapeHtml(model.sourceLabel || model.name)}</a></p>` : ''}
       </div>
       <section class="detail-section">
-        <h2>定义</h2>
-        <p>${escapeHtml(model.definition)}</p>
+        <h2>机制定义</h2>
+        <p>${renderLinkedEpisodeText(model.definition)}</p>
+        ${model.context ? `<p>${renderLinkedEpisodeText(model.context)}</p>` : ''}
         <h3>放在颖响力里的用法</h3>
-        <p>${escapeHtml(model.application)}</p>
+        <p>${renderLinkedEpisodeText(model.application)}</p>
+      </section>
+      <section class="detail-section split">
+        <div>
+          <h2>观察信号</h2>
+          ${renderDetailList(model.signals)}
+        </div>
+        <div>
+          <h2>适用边界</h2>
+          ${renderDetailList(model.boundaries)}
+        </div>
+      </section>
+      <section class="detail-section split">
+        ${renderReferenceChipSection('共现概念', 'concepts', model.relatedConcepts, site.concepts)}
+        ${renderReferenceChipSection('共现主题', 'themes', model.relatedThemes, site.themes)}
+        ${renderReferenceChipSection('共现人物', 'people', model.relatedPeople, site.people)}
+        ${renderReferenceChipSection('邻近模型', 'models', model.relatedModels, site.models)}
       </section>
       <section class="detail-section">
-        <h2>相关节目</h2>
-        <div class="list">
-          ${relatedEpisodes.map((entry) => `
-            <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
-              <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
-            </a>
-          `).join('')}
-        </div>
+        <h2>自检问题</h2>
+        ${renderDetailList(model.questions)}
+      </section>
+      <section class="detail-section">
+        <h2>节目里的典型锚点</h2>
+        ${renderHighlightCards(model.episodeHighlights?.length ? model.episodeHighlights : relatedEpisodes)}
       </section>
     </section>
   `;
@@ -1488,6 +1678,7 @@ function renderNotFound(message) {
 
 function renderRoute() {
   if (!site) return;
+  destroyGraphView();
   const hash = window.location.hash.replace(/^#\/?/, '');
   const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
   const [section, id] = parts;
@@ -1496,6 +1687,8 @@ function renderRoute() {
 
   if (!section) {
     renderHome();
+  } else if (section === 'graph') {
+    renderGraphPage();
   } else if (section === 'home' && id === 'curated') {
     renderHome('home-curated-episodes');
   } else if (section === 'episodes' && !id) {
@@ -1530,8 +1723,12 @@ function renderRoute() {
 }
 
 async function init() {
-  const response = await fetch('./data/site.json');
-  site = await response.json();
+  const [siteResponse, graphResponse] = await Promise.all([
+    fetch('./data/site.json'),
+    fetch('./data/graph.json')
+  ]);
+  site = await siteResponse.json();
+  graphData = await graphResponse.json();
   renderSidebar();
   renderRoute();
 }
