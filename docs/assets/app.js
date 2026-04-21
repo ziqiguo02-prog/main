@@ -2,6 +2,7 @@ import { destroyGraphView, renderGraphView } from './graph-view.js';
 
 const app = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 const sidebarBody = document.getElementById('sidebar-body');
 const menuButton = document.getElementById('menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
@@ -18,9 +19,31 @@ let modelIndexQuery = '';
 let peopleIndexQuery = '';
 let themeIndexQuery = '';
 
-menuButton.addEventListener('click', () => sidebar.classList.add('open'));
-sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
+function openSidebar() {
+  sidebar.classList.add('open');
+  document.body.classList.add('sidebar-open');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = false;
+  }
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  document.body.classList.remove('sidebar-open');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = true;
+  }
+}
+
+menuButton.addEventListener('click', openSidebar);
+sidebarClose.addEventListener('click', closeSidebar);
+sidebarBackdrop?.addEventListener('click', closeSidebar);
 window.addEventListener('hashchange', renderRoute);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeSidebar();
+  }
+});
 document.addEventListener('click', (event) => {
   const trigger = event.target.closest('[data-nav-back]');
   if (!trigger) return;
@@ -59,6 +82,11 @@ function routeTo(path) {
     .map((part) => encodeURIComponent(part))
     .join('/');
   return `#/${encodedPath}`;
+}
+
+function dataUrl(file) {
+  const version = window.__BUILD_VERSION__;
+  return version ? `./data/${file}?v=${encodeURIComponent(version)}` : `./data/${file}`;
 }
 
 function episodeById(id) {
@@ -1551,8 +1579,8 @@ function renderPersonDetail(id) {
       </div>
       <section class="detail-section">
         <h2>人物背景</h2>
-        <p class="detail-lead">${escapeHtml(person.summary)}</p>
-        ${hasMeaningfulDescription ? `<p>${escapeHtml(personDescription)}</p>` : ''}
+        <p class="detail-lead">${renderLinkedEpisodeText(person.summary)}</p>
+        ${hasMeaningfulDescription ? `<p>${renderLinkedEpisodeText(personDescription)}</p>` : ''}
       </section>
       <section class="detail-section">
         <h2>相关节目</h2>
@@ -1560,7 +1588,7 @@ function renderPersonDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1597,7 +1625,7 @@ function renderThemeDetail(id) {
       </div>
       <section class="detail-section">
         <h2>主题说明</h2>
-        <p>${escapeHtml(theme.description)}</p>
+        <p>${renderLinkedEpisodeText(theme.description)}</p>
       </section>
       <section class="detail-section">
         <h2>相关节目</h2>
@@ -1605,7 +1633,7 @@ function renderThemeDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1646,11 +1674,11 @@ function renderKeywordDetail(id) {
         <p class="detail-eyebrow">Keyword Node</p>
         <h1 class="detail-title">${escapeHtml(keyword.name)}</h1>
         <p class="detail-summary">${escapeHtml(keyword.summary)}</p>
-        <div class="detail-intro">${escapeHtml(keyword.description)}</div>
+        <div class="detail-intro">${renderLinkedEpisodeText(keyword.description)}</div>
       </div>
       <section class="detail-section">
         <h2>简单介绍</h2>
-        <p>${escapeHtml(keyword.description)}</p>
+        <p>${renderLinkedEpisodeText(keyword.description)}</p>
         ${keyword.aliases?.length ? `<h3>相关别名</h3>${chipList(keyword.aliases)}` : ''}
       </section>
       <section class="detail-section">
@@ -1659,7 +1687,7 @@ function renderKeywordDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1719,13 +1747,13 @@ function renderRoute() {
     renderNotFound('页面不存在');
   }
 
-  sidebar.classList.remove('open');
+  closeSidebar();
 }
 
 async function init() {
   const [siteResponse, graphResponse] = await Promise.all([
-    fetch('./data/site.json'),
-    fetch('./data/graph.json')
+    fetch(dataUrl('site.json')),
+    fetch(dataUrl('graph.json'))
   ]);
   site = await siteResponse.json();
   graphData = await graphResponse.json();

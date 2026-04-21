@@ -119,7 +119,7 @@
       "fullLabel": "特朗普",
       "type": "person",
       "route": "people/donald-trump",
-      "summary": "特朗普是美国政治人物，曾任美国总统，也是这些节目里反复出现的关键地缘角色之一。",
+      "summary": "特朗普是美国政治人物，现任美国总统，也是这些节目里反复出现的关键地缘角色之一。",
       "status": null,
       "degree": 10
     },
@@ -1527,7 +1527,7 @@
       "fullLabel": "高市早苗",
       "type": "person",
       "route": "people/gao-shi-zaomiao",
-      "summary": "高市早苗是日本自民党政治人物，也是近年日本保守派和安全政策讨论中最有辨识度的人物之一。",
+      "summary": "高市早苗是日本现任首相，也是近年日本保守派和安全政策讨论中最有辨识度的人物之一。",
       "status": null,
       "degree": 4
     },
@@ -3485,7 +3485,7 @@
       "fullLabel": "高市早苗",
       "type": "person",
       "route": "people/takaichi-sanae",
-      "summary": "高市早苗是日本政治人物，在颖响力知识库里常被当作危机时期女性被推到前台的典型。",
+      "summary": "高市早苗是日本现任首相，在颖响力知识库里也常被当作危机时期女性被推到前台的典型。",
       "status": null,
       "degree": 1
     },
