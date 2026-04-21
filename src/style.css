@@ -563,6 +563,11 @@ input {
   color: var(--muted);
 }
 
+.card .chip-row {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
 .card .meta-row {
   margin-top: auto;
   padding-top: 14px;

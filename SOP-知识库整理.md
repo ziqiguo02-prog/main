@@ -750,6 +750,7 @@ rg -n "英文 slug 或中文近义词" content/concepts content/models content/t
 - `#/episodes` 的节目列表与相关节目列表默认按集数从大到小排序
   - 最新节目放在最前面
 - `#/keywords` 的关键词专题卡片底部信息要固定在卡片底边，不允许高低错位
+- 首页 `节目索引` 卡片底部的小标签也必须固定在卡片底边，不允许因为摘要长短不同而上下漂移
 - `#/keywords` 只显示至少出现 `2` 次的关键词
 - `#/concepts`、`#/models`、`#/people`、`#/themes`
   - 只显示被引用超过 `1` 次的条目
@@ -1516,3 +1517,65 @@ npm run serve
 ```bash
 npm run dev
 ```
+
+## GitHub 与上线发布标准
+
+这个项目现在不是“本地改完就算上线”，而是 GitHub 驱动 Cloudflare 部署。
+
+### 当前发布链路
+
+- GitHub 仓库：`yinfluence/main`
+- 生产分支：`main`
+- Cloudflare Workers Builds 读取仓库里的 `docs/`
+
+所以发布的关键不是只改本地文件，而是：
+
+1. 本地把内容和页面改好
+2. 执行 `npm run build`
+3. 确认 `docs/` 已同步更新
+4. `git add`
+5. `git commit`
+6. `git push` 到 `yinfluence/main`
+
+如果不 `commit + push`，GitHub 不会更新，Cloudflare 也不会更新。
+
+### 发布前最低动作
+
+```bash
+npm run build
+git add -A
+git commit -m "<符合 Lore 协议的提交信息>"
+git push yinfluence-origin main
+```
+
+### 发布前必须检查
+
+1. `npm run build` 成功
+2. `docs/index.html` 与当前构建产物一致
+3. 本地关键页面已验证
+4. GitHub 远端 `main` 已更新到最新 commit
+
+### 如果 GitHub 更新了，但网站没更新
+
+优先检查：
+
+1. Cloudflare 有没有拉到新的 commit
+2. Cloudflare Build 是否真的部署 `docs/`
+3. 是否需要清缓存
+
+也就是说：
+
+- GitHub 没更新：先 `push`
+- GitHub 更新了但线上没变：查 Cloudflare deployment / cache
+
+### 新终端执行原则
+
+新终端如果完成了站点改动，默认不要停在“本地已经好了”。
+
+必须继续做完：
+
+1. `npm run build`
+2. `git commit`
+3. `git push yinfluence-origin main`
+
+只有远端更新，才算真正进入部署链路。
