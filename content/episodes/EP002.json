@@ -60,5 +60,15 @@
   "extensions": [
     "可继续与 EP001、EP065 形成西贝专题簇。",
     "也能作为预制菜和连锁餐饮标准化议题的入口节目。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV16KJdzsEUD/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=AOpvnwsD3Ek"
+    }
   ]
 }

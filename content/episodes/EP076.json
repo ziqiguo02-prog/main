@@ -73,5 +73,15 @@
     "交易前先确认平台和退出机制，比研究十篇行情分析更重要。",
     "对普通人来说，持有现金和等待窗口，本身就是一种很强的投资动作。",
     "真正的战略思维，往往看起来比短线激情更无聊，也更反人性。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1vUFjz9E1f/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=ZafsCC1_Ax8"
+    }
   ]
 }

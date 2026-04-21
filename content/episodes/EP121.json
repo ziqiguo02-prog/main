@@ -86,5 +86,15 @@
     "节目提供的不只是人物判断，更是一种看商业决策的方法：先问时间窗口，再问结构，最后才问道德标签。",
     "对于任何关心财富保全的人，这期最大的启发可能不是复制谁的路径，而是理解“前置完成”为什么比“事后补救”重要得多。",
     "在知识库里，这一集适合作为连接房地产人物、家族信托和时间尺度思维的入口条目。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1tPdVBWEnX/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=SIj7VTRSvc4"
+    }
   ]
 }

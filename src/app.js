@@ -1,11 +1,30 @@
+import { destroyGraphView, renderGraphView } from './graph-view.js';
+
 const app = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 const sidebarBody = document.getElementById('sidebar-body');
 const menuButton = document.getElementById('menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
+const backToTopButton = document.getElementById('back-to-top');
+const HOME_PLATFORM_LINKS = [
+  {
+    platform: 'bilibili',
+    url: 'https://space.bilibili.com/91741174?spm_id_from=333.337.search-card.all.click'
+  },
+  {
+    platform: 'youtube',
+    url: 'https://www.youtube.com/@颖响力'
+  }
+];
+
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
 
 let site = null;
-let searchKeyword = '';
+let graphData = null;
+let homeKnowledgeQuery = '';
 let sidebarKeywordQuery = '';
 let keywordIndexQuery = '';
 let episodeIndexQuery = '';
@@ -15,9 +34,34 @@ let modelIndexQuery = '';
 let peopleIndexQuery = '';
 let themeIndexQuery = '';
 
-menuButton.addEventListener('click', () => sidebar.classList.add('open'));
-sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
+function openSidebar() {
+  sidebar.classList.add('open');
+  document.body.classList.add('sidebar-open');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = false;
+  }
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  document.body.classList.remove('sidebar-open');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = true;
+  }
+}
+
+menuButton.addEventListener('click', openSidebar);
+sidebarClose.addEventListener('click', closeSidebar);
+sidebarBackdrop?.addEventListener('click', closeSidebar);
+backToTopButton?.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
 window.addEventListener('hashchange', renderRoute);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeSidebar();
+  }
+});
 document.addEventListener('click', (event) => {
   const trigger = event.target.closest('[data-nav-back]');
   if (!trigger) return;
@@ -56,6 +100,40 @@ function routeTo(path) {
     .map((part) => encodeURIComponent(part))
     .join('/');
   return `#/${encodedPath}`;
+}
+
+function dataUrl(file) {
+  const version = window.__BUILD_VERSION__;
+  return version ? `./data/${file}?v=${encodeURIComponent(version)}` : `./data/${file}`;
+}
+
+function episodeById(id) {
+  return site?.episodes?.find((episode) => episode.id === id) || null;
+}
+
+function renderLinkedEpisodeText(value) {
+  const raw = String(value || '');
+  if (!raw) return '';
+
+  let cursor = 0;
+  let html = '';
+
+  raw.replace(/\bEP\d{3}\b/g, (match, offset) => {
+    html += escapeHtml(raw.slice(cursor, offset));
+    const episode = episodeById(match);
+    html += episode
+      ? `<span class="inline-episode-ref"><a class="inline-episode-link" href="${routeTo(`episodes/${match}`)}">${escapeHtml(match)}</a><span class="inline-episode-popup"><strong>${escapeHtml(match)}｜${escapeHtml(episode.title)}</strong><span>${escapeHtml(episode.summary || '')}</span></span></span>`
+      : escapeHtml(match);
+    cursor = offset + match.length;
+    return match;
+  });
+
+  html += escapeHtml(raw.slice(cursor));
+  return html;
+}
+
+function graphStatValue() {
+  return graphData?.meta?.nodeCount || 0;
 }
 
 function chipList(items = []) {
@@ -197,18 +275,84 @@ function linkedChipList(type, items = [], collection = []) {
   if (!items.length) return '';
   return `
     <div class="chip-row">
-      ${items.map((item) => {
-        const found = collection.find((entry) => {
-          const aliases = entry.aliases || [];
-          return (
-            normalizeValue(entry.id) === normalizeValue(item) ||
-            normalizeValue(entry.name) === normalizeValue(item) ||
-            aliases.some((alias) => normalizeValue(alias) === normalizeValue(item))
-          );
-        });
-        if (!found) return `<span class="chip">${escapeHtml(item)}</span>`;
-        return `<a class="chip" href="${routeTo(`${type}/${found.id}`)}">${escapeHtml(found.name || found.title || found.id)}</a>`;
-      }).join('')}
+      ${renderLinkedChipItems(type, items, collection)}
+    </div>
+  `;
+}
+
+function renderLinkedChipItems(type, items = [], collection = []) {
+  return items.map((item) => {
+    const found = collection.find((entry) => {
+      const aliases = entry.aliases || [];
+      return (
+        normalizeValue(entry.id) === normalizeValue(item) ||
+        normalizeValue(entry.name) === normalizeValue(item) ||
+        aliases.some((alias) => normalizeValue(alias) === normalizeValue(item))
+      );
+    });
+    if (!found) return `<span class="chip">${escapeHtml(item)}</span>`;
+    return `<a class="chip" href="${routeTo(`${type}/${found.id}`)}">${escapeHtml(found.name || found.title || found.id)}</a>`;
+  }).join('');
+}
+
+function renderVideoLinkIcon(link) {
+  const platform = normalizeValue(link?.platform);
+  const url = String(link?.url || '').trim();
+  const isMemberOnly = normalizeValue(link?.access) === 'member' || link?.memberOnly === true;
+  const isUnavailable = normalizeValue(link?.status) === 'unavailable' || !url;
+  const unavailableText = String(link?.note || '已下架').trim();
+
+  const platforms = {
+    bilibili: {
+      label: isMemberOnly ? 'Bilibili 会员' : 'Bilibili',
+      className: 'bilibili',
+      content: `<span class="media-chip-text media-chip-text-bilibili">bilibili</span>`
+    },
+    youtube: {
+      label: 'YouTube',
+      className: 'youtube',
+      content: `
+        <span class="media-chip-youtube-play" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="media-chip-youtube-icon">
+            <path d="M9 7.8L16.2 12L9 16.2Z"></path>
+          </svg>
+        </span>
+        <span class="media-chip-text media-chip-text-youtube">YouTube</span>
+      `
+    }
+  };
+
+  const config = platforms[platform];
+  if (!config) return '';
+
+  if (isUnavailable) {
+    return `
+      <span class="media-chip ${config.className} unavailable" title="${escapeHtml(unavailableText)}" aria-label="${escapeHtml(unavailableText)}">
+        ${config.content}
+        <span class="media-chip-unavailable-text">${escapeHtml(unavailableText)}</span>
+      </span>
+    `;
+  }
+
+  return `
+    <a class="media-chip ${config.className}${isMemberOnly ? ' member-only' : ''}" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="${config.label}" title="${config.label}">
+      ${config.content}
+      ${isMemberOnly ? `
+        <span class="media-chip-badge" aria-hidden="true">会员</span>
+      ` : ''}
+    </a>
+  `;
+}
+
+function renderEpisodeHeaderMeta(episode) {
+  const videoLinks = Array.isArray(episode.videoLinks) ? episode.videoLinks : [];
+  const tags = episode.tags || [];
+  if (!videoLinks.length && !tags.length) return '';
+
+  return `
+    <div class="chip-row episode-header-meta">
+      ${videoLinks.map((link) => renderVideoLinkIcon(link)).join('')}
+      ${renderLinkedChipItems('keywords', tags, site.keywords)}
     </div>
   `;
 }
@@ -569,19 +713,27 @@ function getSidebarKeywordMatches() {
     .slice(0, 8);
 }
 
-function getSidebarSearchMatches() {
-  const query = sidebarKeywordQuery.trim();
-  const keywords = getSidebarKeywordMatches().map((keyword) => ({
-    type: 'keyword',
-    id: keyword.id,
-    name: keyword.name,
-    badge: '关键词'
-  }));
+function getKnowledgeSearchMatches(query) {
+  const trimmedQuery = String(query || '').trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const keywords = (site?.keywords || []);
+  const keywordMatches = (!trimmedQuery ? keywords.slice(0, 3) : keywords
+    .filter((keyword) => {
+      const haystack = `${keyword.name} ${keyword.summary || ''} ${(keyword.aliases || []).join(' ')}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    })
+    .slice(0, 8))
+    .map((keyword) => ({
+      type: 'keyword',
+      id: keyword.id,
+      name: keyword.name,
+      badge: '关键词'
+    }));
 
-  if (!query) return keywords;
+  if (!trimmedQuery) return keywordMatches;
 
   const episodes = (site?.episodes || [])
-    .filter((episode) => episodeMatchesQuery(episode, query))
+    .filter((episode) => episodeMatchesQuery(episode, trimmedQuery))
     .sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id))
     .slice(0, 8)
     .map((episode) => ({
@@ -591,35 +743,98 @@ function getSidebarSearchMatches() {
       badge: '节目'
     }));
 
-  const exactEpisodeId = normalizeEpisodeIdQuery(query);
+  const concepts = getSidebarReferenceMatches('concept', site?.concepts || [], trimmedQuery, '概念');
+  const models = getSidebarReferenceMatches('model', site?.models || [], trimmedQuery, '模型');
+  const people = getSidebarReferenceMatches('person', site?.people || [], trimmedQuery, '人物');
+  const themes = getSidebarReferenceMatches('theme', site?.themes || [], trimmedQuery, '主题');
+
+  const exactEpisodeId = normalizeEpisodeIdQuery(trimmedQuery);
   if (exactEpisodeId) {
     const exact = episodes.find((item) => item.id === exactEpisodeId);
     if (exact) {
-      return [exact, ...keywords, ...episodes.filter((item) => item.id !== exactEpisodeId)].slice(0, 8);
+      return [exact, ...keywordMatches, ...concepts, ...models, ...people, ...themes, ...episodes.filter((item) => item.id !== exactEpisodeId)].slice(0, 10);
     }
   }
 
-  return [...keywords, ...episodes].slice(0, 8);
+  return [...keywordMatches, ...concepts, ...models, ...people, ...themes, ...episodes].slice(0, 10);
+}
+
+function getSidebarReferenceMatches(type, collection = [], query, badge) {
+  if (!query) return [];
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return collection
+    .filter((item) => {
+      const haystack = [
+        item.id,
+        item.name || '',
+        item.title || '',
+        item.summary || '',
+        item.definition || '',
+        item.description || '',
+        ...(item.aliases || [])
+      ].join(' ').toLowerCase();
+      return haystack.includes(normalizedQuery);
+    })
+    .slice(0, 6)
+    .map((item) => ({
+      type,
+      id: item.id,
+      name: item.name || item.title || item.id,
+      badge
+    }));
+}
+
+function getSidebarSearchMatches() {
+  return getKnowledgeSearchMatches(sidebarKeywordQuery);
+}
+
+function routeForSearchMatch(match) {
+  return match.type === 'episode' ? routeTo(`episodes/${match.id}`)
+    : match.type === 'keyword' ? routeTo(`keywords/${match.id}`)
+    : match.type === 'concept' ? routeTo(`concepts/${match.id}`)
+    : match.type === 'model' ? routeTo(`models/${match.id}`)
+    : match.type === 'person' ? routeTo(`people/${match.id}`)
+    : routeTo(`themes/${match.id}`);
+}
+
+function openFirstSearchMatch(query) {
+  const [firstMatch] = getKnowledgeSearchMatches(query);
+  if (!firstMatch) return;
+  window.location.hash = routeForSearchMatch(firstMatch);
+}
+
+function renderKnowledgeSuggestions({ containerId, titleId, query, emptyMessage, idleTitle = '推荐关键词' }) {
+  const container = document.getElementById(containerId);
+  const heading = document.getElementById(titleId);
+  if (!container || !site) return;
+
+  const matches = getKnowledgeSearchMatches(query);
+  if (heading) {
+    heading.textContent = String(query || '').trim() ? '匹配结果' : idleTitle;
+  }
+
+  if (!matches.length) {
+    container.innerHTML = `<div class="sidebar-empty">${escapeHtml(emptyMessage)}</div>`;
+    return;
+  }
+
+  container.innerHTML = matches.map((match) => `
+    <a class="sidebar-suggestion search-suggestion" href="${routeForSearchMatch(match)}">
+      <span>${escapeHtml(match.name)}</span>
+      <span class="count-badge">${escapeHtml(match.badge)}</span>
+    </a>
+  `).join('');
 }
 
 function renderSidebarKeywordSuggestions() {
-  const container = document.getElementById('keyword-suggestions');
-  const heading = document.getElementById('keyword-suggestions-title');
-  if (!container || !site) return;
-  const matches = getSidebarSearchMatches();
-  if (heading) {
-    heading.textContent = sidebarKeywordQuery.trim() ? '匹配结果' : '推荐关键词';
-  }
-  if (!matches.length) {
-    container.innerHTML = `<div class="sidebar-empty">没有匹配的关键词或节目</div>`;
-    return;
-  }
-  container.innerHTML = matches.map((keyword) => `
-    <a class="sidebar-suggestion" href="${keyword.type === 'episode' ? routeTo(`episodes/${keyword.id}`) : routeTo(`keywords/${keyword.id}`)}">
-      <span>${escapeHtml(keyword.name)}</span>
-      <span class="count-badge">${escapeHtml(keyword.badge)}</span>
-    </a>
-  `).join('');
+  renderKnowledgeSuggestions({
+    containerId: 'keyword-suggestions',
+    titleId: 'keyword-suggestions-title',
+    query: sidebarKeywordQuery,
+    emptyMessage: '没有匹配的关键词、节目或知识条目',
+    idleTitle: '推荐关键词'
+  });
 }
 
 function renderSidebar() {
@@ -639,9 +854,9 @@ function renderSidebar() {
       <a class="sidebar-link" href="#/keywords">关键词 <span class="count-badge">${site.stats.keywords}</span></a>
     </div>
     <div class="sidebar-section">
-      <p class="sidebar-title">搜索关键词 / 节目</p>
+      <p class="sidebar-title">搜索知识库</p>
       <div class="sidebar-search-wrap">
-        <input id="keyword-search-input" class="sidebar-search-input" type="text" placeholder="搜索关键词或集数，如 西贝 / 31 / 三十一集">
+        <input id="keyword-search-input" class="sidebar-search-input" type="text" placeholder="搜索关键词、节目、概念、模型，如 咽喉杠杆 / 西贝 / EP031">
         <p id="keyword-suggestions-title" class="sidebar-subtitle">推荐关键词</p>
         <div id="keyword-suggestions" class="sidebar-suggestions"></div>
       </div>
@@ -660,6 +875,7 @@ function renderSidebar() {
       <p class="sidebar-title">思想模型</p>
       ${topModels.map((model) => `<a class="sidebar-item" href="${routeTo(`models/${model.id}`)}">${escapeHtml(model.name)}</a>`).join('')}
       <a class="sidebar-more" href="#/models">更多模型 →</a>
+      <a class="sidebar-item" href="#/graph">知识图谱 <span class="count-badge">${graphStatValue()}</span></a>
     </div>
   `;
 
@@ -672,15 +888,23 @@ function renderSidebar() {
   keywordInput.addEventListener('focus', () => {
     renderSidebarKeywordSuggestions();
   });
-  keywordInput.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    const [firstMatch] = getSidebarSearchMatches();
-    if (firstMatch) {
-      window.location.hash = firstMatch.type === 'episode'
-        ? routeTo(`episodes/${firstMatch.id}`)
-        : routeTo(`keywords/${firstMatch.id}`);
-    }
-  });
+    keywordInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const [firstMatch] = getSidebarSearchMatches();
+      if (firstMatch) {
+        window.location.hash = firstMatch.type === 'episode'
+          ? routeTo(`episodes/${firstMatch.id}`)
+          : firstMatch.type === 'keyword'
+            ? routeTo(`keywords/${firstMatch.id}`)
+            : firstMatch.type === 'concept'
+              ? routeTo(`concepts/${firstMatch.id}`)
+              : firstMatch.type === 'model'
+                ? routeTo(`models/${firstMatch.id}`)
+                : firstMatch.type === 'person'
+                  ? routeTo(`people/${firstMatch.id}`)
+                  : routeTo(`themes/${firstMatch.id}`);
+      }
+    });
   renderSidebarKeywordSuggestions();
 }
 
@@ -695,26 +919,26 @@ function scrollToSection(id) {
 }
 
 function renderHome(focusSectionId = '') {
-  const curatedEpisodes = site.episodes.filter((episode) => episode.curated);
-  const filteredEpisodes = site.episodes.filter((episode) => {
-    if (!searchKeyword) return true;
-    const haystack = `${episode.id} ${episode.title} ${episode.summary || ''}`.toLowerCase();
-    return haystack.includes(searchKeyword.toLowerCase());
-  });
+  const episodesByNewest = [...site.episodes].sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+  const featuredEpisodes = episodesByNewest;
 
   app.innerHTML = `
     <section class="hero">
       <p class="eyebrow">Web Knowledge Base</p>
-      <h1>颖响力 <span>知识库</span></h1>
-      <p>${escapeHtml(site.meta.subtitle)}。当前这版先把节目、概念、思想模型拆成独立内容层，再用一个本地静态网页把它们连起来，后续可以继续批量扩充。</p>
+      <div class="hero-title-row">
+        <h1>颖响力 <span>知识库</span></h1>
+      </div>
+      <div class="hero-platform-links">
+        ${HOME_PLATFORM_LINKS.map((link) => renderVideoLinkIcon(link)).join('')}
+      </div>
       <div class="stats">
+        <a class="stat-card" href="#/graph">
+          <div class="stat-value">${graphStatValue()}</div>
+          <div class="stat-label">图谱节点</div>
+        </a>
         <a class="stat-card" href="#/episodes">
           <div class="stat-value">${site.stats.episodes}</div>
           <div class="stat-label">节目索引</div>
-        </a>
-        <a class="stat-card" href="#/home/curated">
-          <div class="stat-value">${site.stats.curatedEpisodes}</div>
-          <div class="stat-label">已整理节目</div>
         </a>
         <a class="stat-card" href="#/concepts">
           <div class="stat-value">${site.stats.concepts}</div>
@@ -725,23 +949,29 @@ function renderHome(focusSectionId = '') {
           <div class="stat-label">思想模型</div>
         </a>
       </div>
-      <div class="search-box">
-        <input id="search-input" type="text" placeholder="搜索节目编号、标题或摘要">
+      <div class="search-box home-search-box">
+        <div class="search-row">
+          <input id="search-input" type="text" placeholder="搜索知识库：节目、概念、模型、人物、主题，如 EP019 / 特朗普 / 安全阀治理">
+          <button id="search-submit" class="search-submit" type="button">搜索</button>
+        </div>
+        <p id="home-search-title" class="search-subtitle">推荐关键词</p>
+        <div id="home-search-results" class="search-results"></div>
       </div>
     </section>
 
-    <section id="home-curated-episodes" class="section">
+    <section id="home-episodes" class="section">
       <div class="section-header">
-        <h2 class="section-title">已整理节目</h2>
+        <h2 class="section-title">节目索引</h2>
         <a class="section-note" href="#/episodes">查看全部节目</a>
       </div>
-      <div class="grid cards-2">
-        ${curatedEpisodes.slice(0, 3).map((episode) => `
+      <p class="section-note">首页优先展示最新节目，完整目录请进入节目索引页查看。</p>
+      <div class="grid cards-3">
+        ${featuredEpisodes.slice(0, 3).map((episode) => `
           <a class="card" href="${routeTo(`episodes/${episode.id}`)}">
-            <p class="card-kicker">${escapeHtml(episode.id)} · 节目条目</p>
+            <p class="card-kicker">${escapeHtml(episode.id)} ${episode.curated ? '· 已整理' : '· 待整理'}</p>
             <h3>${escapeHtml(episode.title)}</h3>
-            <p>${escapeHtml(episode.summary || '待补充摘要')}</p>
-            ${chipList((episode.tags || []).slice(0, 4))}
+            <p>${escapeHtml(episode.summary || '待整理')}</p>
+            ${chipList((episode.tags || []).slice(0, 5))}
           </a>
         `).join('')}
       </div>
@@ -780,31 +1010,79 @@ function renderHome(focusSectionId = '') {
 
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">节目索引</h2>
-        <p class="section-note">从 raw 自动扫出的节目目录，已整理节目会优先显示结构化内容。</p>
+        <h2 class="section-title">知识图谱</h2>
+        <a class="section-note" href="#/graph">进入图谱视图</a>
       </div>
-      <div class="grid cards-3">
-        ${filteredEpisodes.slice(0, 3).map((episode) => `
-          <a class="card" href="${routeTo(`episodes/${episode.id}`)}">
-            <p class="card-kicker">${escapeHtml(episode.id)} ${episode.curated ? '· 已整理' : '· 待整理'}</p>
-            <h3>${escapeHtml(episode.title)}</h3>
-            <p>${escapeHtml(episode.summary || '待整理')}</p>
-            ${chipList((episode.tags || []).slice(0, 5))}
-          </a>
-        `).join('')}
+      <div class="grid cards-2">
+        <a class="card graph-preview-card" href="#/graph">
+          <p class="card-kicker">Graph View · ${graphData?.meta?.linkCount || 0} 条连接</p>
+          <h3>从节目跳到概念，再跳到人物与主题</h3>
+          <p>这张图把五类核心节点放进同一个可视化网络里，适合先看结构密度，再回到单条目做细读。</p>
+          <div class="meta-row">
+            <span class="chip">节目 ${site.stats.episodes}</span>
+            <span class="chip">概念 ${site.stats.concepts}</span>
+            <span class="chip">模型 ${site.stats.models}</span>
+            <span class="chip">人物 ${site.stats.people}</span>
+            <span class="chip">主题 ${site.stats.themes}</span>
+          </div>
+        </a>
+        <div class="card">
+          <p class="card-kicker">How To Read</p>
+          <h3>先找高连接节点，再顺着局部关系钻进去</h3>
+          <p>图谱适合回答两个问题：哪些主题经常和哪些节目一起出现，以及某个人物或模型究竟被放在什么语境里讲。</p>
+          <div class="meta-row">
+            <span class="chip">点击节点看近邻</span>
+            <span class="chip">双击节点开详情</span>
+            <span class="chip">滚轮缩放</span>
+          </div>
+        </div>
       </div>
-      <p class="footer-note">首页只展示前 3 条结果，完整目录请进入查看全部页面。</p>
     </section>
   `;
 
   const searchInput = document.getElementById('search-input');
-  searchInput.value = searchKeyword;
+  const searchSubmit = document.getElementById('search-submit');
+  searchInput.value = homeKnowledgeQuery;
   searchInput.addEventListener('input', (event) => {
-    searchKeyword = event.target.value;
-    renderHome();
+    homeKnowledgeQuery = event.target.value;
+    renderKnowledgeSuggestions({
+      containerId: 'home-search-results',
+      titleId: 'home-search-title',
+      query: homeKnowledgeQuery,
+      emptyMessage: '没有匹配的节目、概念、模型、人物或主题',
+      idleTitle: '推荐关键词'
+    });
+  });
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    openFirstSearchMatch(homeKnowledgeQuery);
+  });
+  searchSubmit.addEventListener('click', () => {
+    openFirstSearchMatch(homeKnowledgeQuery);
+  });
+  renderKnowledgeSuggestions({
+    containerId: 'home-search-results',
+    titleId: 'home-search-title',
+    query: homeKnowledgeQuery,
+    emptyMessage: '没有匹配的节目、概念、模型、人物或主题',
+    idleTitle: '推荐关键词'
   });
 
   scrollToSection(focusSectionId);
+}
+
+function renderGraphPage() {
+  if (!graphData) {
+    renderNotFound('知识图谱数据尚未生成，请先执行构建。');
+    return;
+  }
+
+  renderGraphView({
+    container: app,
+    graph: graphData,
+    toHash: routeTo
+  });
 }
 
 function renderEpisodeIndex() {
@@ -1139,7 +1417,7 @@ function renderEpisodeDetail(id) {
         <p class="detail-eyebrow">Episode Entry</p>
         <h1 class="detail-title">${escapeHtml(episode.id)}｜${escapeHtml(episode.title)}</h1>
         <p class="detail-summary">${escapeHtml(episode.summary)}</p>
-        ${linkedChipList('keywords', episode.tags, site.keywords)}
+        ${renderEpisodeHeaderMeta(episode)}
       </div>
 
       <section class="detail-section">
@@ -1234,6 +1512,47 @@ function renderThemesIndex() {
   });
 }
 
+function renderDetailList(items = []) {
+  if (!items.length) return '<p class="subtle">待补充。</p>';
+  return `<ul>${items.map((item) => `<li>${renderLinkedEpisodeText(item)}</li>`).join('')}</ul>`;
+}
+
+function renderHighlightCards(items = []) {
+  if (!items.length) return '<p class="subtle">待补充。</p>';
+  return `
+    <div class="list">
+      ${items.map((item) => `
+        <a class="list-item" href="${routeTo(`episodes/${item.id}`)}">
+          <h3>${escapeHtml(item.id)}｜${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.note || item.summary || '待补充')}</p>
+          ${item.summary && item.summary !== item.note ? `<p class="subtle">${escapeHtml(item.summary)}</p>` : ''}
+          ${item.mechanism ? `<p class="subtle">机制线：${escapeHtml(item.mechanism)}</p>` : ''}
+        </a>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderReferenceChipSection(title, type, items, collection) {
+  if (!items?.length) return '';
+  return `
+    <div>
+      <h3>${escapeHtml(title)}</h3>
+      ${linkedChipList(type, items, collection)}
+    </div>
+  `;
+}
+
+function renderDetailBackRow(sectionHref, sectionLabel) {
+  return `
+    <div class="back-row">
+      <button type="button" class="back-link back-button" data-nav-back="true">← 返回前一页</button>
+      <a class="back-link secondary" href="${sectionHref}">返回${escapeHtml(sectionLabel)}页</a>
+      <a class="back-link secondary" href="#/">返回首页</a>
+    </div>
+  `;
+}
+
 function renderConceptDetail(id) {
   const concept = site.concepts.find((item) => item.id === id);
   if (!concept) {
@@ -1252,31 +1571,41 @@ function renderConceptDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <button type="button" class="back-link back-button" data-nav-back="true">← 返回前一页</button>
-          <a class="back-link secondary" href="#/concepts">返回概念页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/concepts', '概念')}
         <p class="detail-eyebrow">Concept Card</p>
         <h1 class="detail-title">${escapeHtml(concept.name)}</h1>
         <p class="detail-summary">${escapeHtml(concept.summary)}</p>
       </div>
       <section class="detail-section">
-        <h2>定义</h2>
-        <p>${escapeHtml(concept.definition)}</p>
+        <h2>定义与展开</h2>
+        <p>${renderLinkedEpisodeText(concept.definition)}</p>
+        ${concept.context ? `<p>${renderLinkedEpisodeText(concept.context)}</p>` : ''}
         <h3>为什么重要</h3>
-        <p>${escapeHtml(concept.importance)}</p>
+        <p>${renderLinkedEpisodeText(concept.importance)}</p>
+      </section>
+      <section class="detail-section split">
+        <div>
+          <h2>识别信号</h2>
+          ${renderDetailList(concept.signals)}
+        </div>
+        <div>
+          <h2>使用边界</h2>
+          ${renderDetailList(concept.boundaries)}
+        </div>
+      </section>
+      <section class="detail-section split">
+        ${renderReferenceChipSection('共现模型', 'models', concept.relatedModels, site.models)}
+        ${renderReferenceChipSection('共现主题', 'themes', concept.relatedThemes, site.themes)}
+        ${renderReferenceChipSection('共现人物', 'people', concept.relatedPeople, site.people)}
+        ${renderReferenceChipSection('相关概念', 'concepts', concept.relatedConcepts, site.concepts)}
       </section>
       <section class="detail-section">
-        <h2>相关节目中的表现</h2>
-        <div class="list">
-          ${episodes.map((entry) => `
-            <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
-              <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
-            </a>
-          `).join('')}
-        </div>
+        <h2>进一步追问</h2>
+        ${renderDetailList(concept.questions)}
+      </section>
+      <section class="detail-section">
+        <h2>节目里的典型锚点</h2>
+        ${renderHighlightCards(concept.episodeHighlights?.length ? concept.episodeHighlights : episodes)}
       </section>
     </section>
   `;
@@ -1300,31 +1629,41 @@ function renderModelDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/models">← 返回思想模型页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/models', '模型')}
         <p class="detail-eyebrow">Mental Model</p>
         <h1 class="detail-title">${escapeHtml(model.name)}</h1>
         <p class="detail-summary">${escapeHtml(model.summary)}</p>
-        ${model.sourcePath ? `<p class="footer-note">GV 参考：<a href="${escapeHtml(model.sourcePath)}">${escapeHtml(model.sourceLabel || model.name)}</a></p>` : ''}
       </div>
       <section class="detail-section">
-        <h2>定义</h2>
-        <p>${escapeHtml(model.definition)}</p>
+        <h2>机制定义</h2>
+        <p>${renderLinkedEpisodeText(model.definition)}</p>
+        ${model.context ? `<p>${renderLinkedEpisodeText(model.context)}</p>` : ''}
         <h3>放在颖响力里的用法</h3>
-        <p>${escapeHtml(model.application)}</p>
+        <p>${renderLinkedEpisodeText(model.application)}</p>
+      </section>
+      <section class="detail-section split">
+        <div>
+          <h2>观察信号</h2>
+          ${renderDetailList(model.signals)}
+        </div>
+        <div>
+          <h2>适用边界</h2>
+          ${renderDetailList(model.boundaries)}
+        </div>
+      </section>
+      <section class="detail-section split">
+        ${renderReferenceChipSection('共现概念', 'concepts', model.relatedConcepts, site.concepts)}
+        ${renderReferenceChipSection('共现主题', 'themes', model.relatedThemes, site.themes)}
+        ${renderReferenceChipSection('共现人物', 'people', model.relatedPeople, site.people)}
+        ${renderReferenceChipSection('邻近模型', 'models', model.relatedModels, site.models)}
       </section>
       <section class="detail-section">
-        <h2>相关节目</h2>
-        <div class="list">
-          ${relatedEpisodes.map((entry) => `
-            <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
-              <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
-            </a>
-          `).join('')}
-        </div>
+        <h2>自检问题</h2>
+        ${renderDetailList(model.questions)}
+      </section>
+      <section class="detail-section">
+        <h2>节目里的典型锚点</h2>
+        ${renderHighlightCards(model.episodeHighlights?.length ? model.episodeHighlights : relatedEpisodes)}
       </section>
     </section>
   `;
@@ -1351,18 +1690,15 @@ function renderPersonDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/people">← 返回人物页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/people', '人物')}
         <p class="detail-eyebrow">${escapeHtml(person.englishName || 'Person Node')}</p>
         <h1 class="detail-title">${escapeHtml(person.name)}</h1>
         ${person.englishName ? `<p class="detail-summary">${escapeHtml(person.englishName)}</p>` : ''}
       </div>
       <section class="detail-section">
         <h2>人物背景</h2>
-        <p class="detail-lead">${escapeHtml(person.summary)}</p>
-        ${hasMeaningfulDescription ? `<p>${escapeHtml(personDescription)}</p>` : ''}
+        <p class="detail-lead">${renderLinkedEpisodeText(person.summary)}</p>
+        ${hasMeaningfulDescription ? `<p>${renderLinkedEpisodeText(personDescription)}</p>` : ''}
       </section>
       <section class="detail-section">
         <h2>相关节目</h2>
@@ -1370,7 +1706,7 @@ function renderPersonDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1397,17 +1733,14 @@ function renderThemeDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/themes">← 返回主题页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/themes', '主题')}
         <p class="detail-eyebrow">Theme Node</p>
         <h1 class="detail-title">${escapeHtml(theme.name)}</h1>
         <p class="detail-summary">${escapeHtml(theme.summary)}</p>
       </div>
       <section class="detail-section">
         <h2>主题说明</h2>
-        <p>${escapeHtml(theme.description)}</p>
+        <p>${renderLinkedEpisodeText(theme.description)}</p>
       </section>
       <section class="detail-section">
         <h2>相关节目</h2>
@@ -1415,7 +1748,7 @@ function renderThemeDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1449,18 +1782,15 @@ function renderKeywordDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/keywords">← 返回关键词页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/keywords', '关键词')}
         <p class="detail-eyebrow">Keyword Node</p>
         <h1 class="detail-title">${escapeHtml(keyword.name)}</h1>
         <p class="detail-summary">${escapeHtml(keyword.summary)}</p>
-        <div class="detail-intro">${escapeHtml(keyword.description)}</div>
+        <div class="detail-intro">${renderLinkedEpisodeText(keyword.description)}</div>
       </div>
       <section class="detail-section">
         <h2>简单介绍</h2>
-        <p>${escapeHtml(keyword.description)}</p>
+        <p>${renderLinkedEpisodeText(keyword.description)}</p>
         ${keyword.aliases?.length ? `<h3>相关别名</h3>${chipList(keyword.aliases)}` : ''}
       </section>
       <section class="detail-section">
@@ -1469,7 +1799,7 @@ function renderKeywordDetail(id) {
           ${relatedEpisodes.map((entry) => `
             <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
               <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${escapeHtml(entry.note)}</p>
+              <p>${renderLinkedEpisodeText(entry.note)}</p>
             </a>
           `).join('')}
         </div>
@@ -1488,6 +1818,7 @@ function renderNotFound(message) {
 
 function renderRoute() {
   if (!site) return;
+  destroyGraphView();
   const hash = window.location.hash.replace(/^#\/?/, '');
   const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
   const [section, id] = parts;
@@ -1496,8 +1827,10 @@ function renderRoute() {
 
   if (!section) {
     renderHome();
-  } else if (section === 'home' && id === 'curated') {
-    renderHome('home-curated-episodes');
+  } else if (section === 'graph') {
+    renderGraphPage();
+  } else if (section === 'home' && id === 'episodes') {
+    renderHome('home-episodes');
   } else if (section === 'episodes' && !id) {
     renderEpisodeIndex();
   } else if (section === 'concepts' && !id) {
@@ -1526,12 +1859,17 @@ function renderRoute() {
     renderNotFound('页面不存在');
   }
 
-  sidebar.classList.remove('open');
+  closeSidebar();
+  window.scrollTo(0, 0);
 }
 
 async function init() {
-  const response = await fetch('./data/site.json');
-  site = await response.json();
+  const [siteResponse, graphResponse] = await Promise.all([
+    fetch(dataUrl('site.json')),
+    fetch(dataUrl('graph.json'))
+  ]);
+  site = await siteResponse.json();
+  graphData = await graphResponse.json();
   renderSidebar();
   renderRoute();
 }

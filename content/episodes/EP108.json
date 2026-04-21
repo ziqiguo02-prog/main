@@ -70,5 +70,15 @@
     "如果继续往下整理，最值得补的是平台退出失败后，创作者资产如何归零的典型案例。",
     "节目对创作者的建议非常实操：多平台分发、做自有 IP、优先跑通非补贴收入。",
     "看懂这期以后，再看所有“平台送钱”的故事，都会先多问一句：它到底在买什么。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV13rX6BwEB4/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=uaiDo_Nr5eM"
+    }
   ]
 }

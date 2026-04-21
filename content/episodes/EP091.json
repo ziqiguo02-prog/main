@@ -74,5 +74,16 @@
     "这期适合作为“权限设计为何属于安全设计”的典型案例。",
     "也可以与 EP017 对照：前者是概率型硬件风险，后者是权限型软件风险，两者都不是靠事后情绪就能解决的。",
     "如果继续整理智能车议题，这一条能作为“哪些功能不该被做成炫技入口”的基准。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=PC8PiH5UkZQ"
+    }
   ]
 }

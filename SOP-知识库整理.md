@@ -72,6 +72,7 @@
 - `id`
 - `title`
 - `summary`
+- `videoLinks`（可选）
 - `tags`
 - `people`
 - `themes`
@@ -83,6 +84,15 @@
 - `extensions`
 
 其中：
+
+- `videoLinks`
+  可选。用于在节目详情页标题下方显示视频平台图标。
+  每个条目推荐包含：
+  - `platform`: `bilibili` 或 `youtube`
+  - `url`: 视频链接
+  - `access`: 可选，普通节目可省略；如果是会员专属内容，填 `member`
+  - `status`: 可选，如果平台没有这一期，填 `unavailable`
+  - `note`: 可选，用于鼠标移到灰色按钮时显示，例如 `已下架`
 
 - `topic`
   必须按这套结构写：
@@ -99,6 +109,196 @@
 ### 节目 `content/episodes/*.json`
 
 负责承接本期的完整结构化整理，是网页详情页的主来源。
+
+如果已经找到视频链接，优先直接写进节目 JSON 的 `videoLinks`，不要拖到最后再补。
+
+示例：
+
+```json
+"videoLinks": [
+  {
+    "platform": "bilibili",
+    "url": "https://www.bilibili.com/video/..."
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=..."
+  }
+]
+```
+
+如果 B 站是会员专属节目，写成：
+
+```json
+"videoLinks": [
+  {
+    "platform": "bilibili",
+    "url": "https://www.bilibili.com/video/...",
+    "access": "member"
+  }
+]
+```
+
+前端会自动把普通 B 站图标显示成蓝色，把会员专属 B 站图标显示成金色会员标识。
+
+如果 B 站没有这一期，写成：
+
+```json
+"videoLinks": [
+  {
+    "platform": "bilibili",
+    "status": "unavailable",
+    "note": "已下架"
+  }
+]
+```
+
+前端会自动把这个入口显示成灰色，鼠标移上去显示 `已下架`。
+
+## 视频链接维护标准
+
+视频链接现在是节目页标配，不是可有可无的附加信息。
+
+默认要求：
+
+1. 每期节目都维护 `videoLinks`
+2. 优先同时维护两条：
+   - `bilibili`
+   - `youtube`
+3. B 站分三种状态：
+   - 普通节目：蓝色
+   - 会员节目：金色会员样式
+   - 没有 / 已下架：灰色，并在 hover 时显示 `已下架`
+4. YouTube 默认正常可用，当前项目按全量可用维护
+
+批量同步命令：
+
+```bash
+npm run sync:videos
+```
+
+这个命令会自动：
+
+1. 读取本地 B 站库存与当前清单
+2. 抓取 YouTube 频道视频列表
+3. 批量回填 `content/episodes/*.json` 里的 `videoLinks`
+4. 自动执行 `npm run build`
+
+也就是说，新终端里按 SOP 执行到这里时，不需要手工一个个点视频链接。
+
+### 视频链接判别标准
+
+#### B 站怎么判别
+
+B 站不是直接硬抓网页前台结果，而是优先使用本地已经保存的清单文件。
+
+主要来源：
+
+- `../bilibili/raw/subtitle_inventory.json`
+- `../bilibili/raw/season_episodes.json`
+- `scripts/video-link-overrides.json`
+
+判别顺序固定为：
+
+1. 先读 `scripts/video-link-overrides.json`
+   - 这里放人工确认过的链接
+   - 只要覆盖表里有，脚本就直接信这个值
+   - 后续批量同步不得覆盖人工确认链接
+2. 再读本地 B 站库存：
+   - `subtitle_inventory.json`
+   - `season_episodes.json`
+3. 用 `EPxxx` 编号优先匹配
+4. 如果标题里没有明确 `EPxxx`，再用归一化标题做模糊匹配
+5. 如果本地 B 站清单里确实找不到，才判成：
+   - `status: "unavailable"`
+   - `note: "已下架"`
+
+#### B 站会员怎么判别
+
+B 站会员态不是靠颜色猜，是靠数据或明确文本线索判断。
+
+目前判定依据：
+
+- `season_episodes.json` 里的 `attribute === 8`
+- 标题或分 P 名里明确出现：
+  - `会员`
+  - `会员专属`
+  - `搬后会员发`
+- 人工覆盖表里显式写：
+  - `"access": "member"`
+
+满足以上任一条，就按会员节目处理。
+
+#### YouTube 怎么抓
+
+YouTube 不是手工搜每一条，而是直接抓频道数据。
+
+来源：
+
+- 频道页：`https://www.youtube.com/@颖响力/videos`
+
+抓取方式：
+
+1. 先从频道页 HTML 里提取：
+   - `ytInitialData`
+   - `INNERTUBE_API_KEY`
+   - `INNERTUBE_CLIENT_VERSION`
+   - `VISITOR_DATA`
+2. 先读首页首屏视频
+3. 再用 YouTube 内部 `browse` continuation 接口继续翻页
+4. 直到把频道视频列表抓全
+
+也就是说，YouTube 当前不是靠页面可见的 30 条，而是靠 continuation 翻完整个频道。
+
+#### YouTube 怎么匹配到 EP
+
+优先级：
+
+1. 标题中的 `EPxxx`
+2. 描述摘要中的 `EPxxx`
+3. 兼容旧写法：
+   - `PE21` 这种也会识别成 `EP021`
+4. 如果标题不带编号，再用归一化标题做模糊匹配
+
+#### 手工覆盖优先
+
+凡是你单独给过我的视频链接，都要写进：
+
+- `scripts/video-link-overrides.json`
+
+这是最高优先级来源。
+
+规则：
+
+- 手工覆盖优先于自动抓取
+- 后续再跑 `npm run sync:videos` 也不能把手工链接冲掉
+- 会员节目如果已经人工确认，直接在覆盖表里写 `access: "member"`
+
+#### 新终端执行原则
+
+新终端如果要补视频链接，不要自己重新发明流程。
+
+必须按下面顺序做：
+
+1. 先看 SOP 这段视频链接规则
+2. 先看 `scripts/video-link-overrides.json` 有没有人工确认链接
+3. 再运行：
+
+```bash
+npm run sync:videos
+```
+
+4. 跑完以后抽查三种样本：
+   - 一条普通 B 站
+   - 一条会员 B 站
+   - 一条灰色已下架 B 站
+5. 最后再看本地页面
+
+最低抽查标准：
+
+- 普通：蓝色 B 站入口
+- 会员：金色 B 站入口
+- 下架：灰色入口，hover 显示 `已下架`
 
 ### 概念 `content/concepts/*.json`
 
@@ -169,6 +369,249 @@
 
 - 人物关键词：先写这个人是谁，再写其在专题里的位置
 - 公司关键词：先写这家公司做什么，再写它在节目里代表的结构问题
+
+## 节点生成硬标准
+
+这一节不是写作建议，而是实际落库时必须遵守的标准。
+
+### 1. 新增节点前，先查有没有现成节点
+
+不要看到一个新说法就立刻新建 `concept` 或 `model`。
+
+这是默认规则，不是可选动作。
+
+先做两步搜索：
+
+```bash
+rg -n "咽喉|命门|海峡|中立" content/concepts content/models
+rg -n "英文 slug 或中文近义词" content/concepts content/models content/themes content/people content/keywords
+```
+
+判断顺序：
+
+1. 如果只是同一机制的另一种说法，优先复用已有节点
+2. 如果只是当前节目的一次性表达，先留在 `summary / topic / viewpoints`
+3. 只有当它能跨节目复用、且现有节点明显装不下时，才新增节点
+
+复用已有节点的收益要写死理解：
+
+- 省时间，不重复造轮子
+- 提高整理效率，不用每期都发明新概念、新模型
+- 让原有节点越用越厚，`episodes / context / related*` 会越来越完整
+- 让知识库入口更稳定，读者更容易形成连续认知，不会被一堆近义新词打散
+
+所以默认动作永远是：
+
+`先查旧节点 -> 能复用就复用 -> 复用后把旧节点补厚`
+
+而不是：
+
+`先新建一个差不多的新节点 -> 再想办法解释它和旧节点有什么区别`
+
+### 2. 概念和模型怎么区分
+
+概念回答：
+
+- `这里到底出现了什么现象？`
+
+模型回答：
+
+- `这些现象背后反复出现的机制是什么？`
+
+快判断：
+
+- 能用一句话定义某个稳定现象，优先做 `concept`
+- 需要把多个概念串成因果结构，优先做 `model`
+- 如果它暂时只能解释这一集，先不要建节点
+
+### 3. 不同关联字段，用的不是同一套键
+
+这是当前项目最容易填错的地方。
+
+- `episode.concepts` 填 `concept.id`
+- `episode.models` 填 `model.id`
+- `episode.people` 填人物 `name`，不是人物文件名
+- `episode.themes` 填主题 `name`，不是主题文件名
+- `episode.relatedEpisodes` 填 `EPxxx`
+- `episode.tags` 填自然语言关键词，关键词页主要靠这里驱动
+
+也就是说：
+
+- 概念 / 模型：节目里用英文 slug `id`
+- 人物 / 主题：节目里用中文展示名 `name`
+- 关键词：不在节目 JSON 单独挂 `keywords` 字段，主要通过 `tags` 进入关键词系统
+
+### 4. 关键词关联怎么生效
+
+关键词层和其他节点不一样。
+
+当前构建逻辑是：
+
+1. 先从每个节目的 `tags` 自动生成关键词目录
+2. 再把 `content/keywords/*.json` 里的人工条目与自动关键词按 `name / aliases` 合并
+
+所以：
+
+- 想让某期进入某个关键词专题，首先检查 `episode.tags`
+- 如果只是同义词、口语词、下位词，不新增新关键词页，放进主关键词的 `aliases`
+- 只有确实需要一个稳定专题入口时，才新建 `content/keywords/*.json`
+
+### 5. `episodes[].note` 怎么写
+
+无论是概念、模型、人物、主题还是关键词里的 `episodes` 数组，`note` 都不要写成摘要复读。
+
+正确写法：
+
+- 说明这期为什么和这个节点有关
+- 说明它承接的是哪一个判断或哪一种机制
+
+错误写法：
+
+- `本期讨论了这个概念`
+- `这期和这个模型有关`
+
+正确方向：
+
+- `节目把维文的表态视作小国守住规则边界的典型表达`
+- `节目把保险、护航和定价权合并解释为海峡秩序的一部分`
+
+### 6. 模型的 `sourceLabel / sourcePath` 规则
+
+模型条目必须明确自己是本地颖响力模型，还是复用 GV 现有模型。
+
+如果是本地颖响力模型：
+
+- `sourceLabel`: `颖响力模型：模型中文名`
+- `sourcePath`: 当前模型 JSON 的绝对路径
+
+如果是复用 GV 模型：
+
+- `sourceLabel`: `GV 模型：模型中文名`
+- `sourcePath`: 指向 GV 原始模型卡路径
+
+不要空着这两个字段，也不要随便写一句说明文字代替。
+
+### 7. 推荐完整模板
+
+#### 概念模板
+
+```json
+{
+  "id": "english-slug",
+  "name": "中文概念名",
+  "summary": "一句话说清这个现象是什么。",
+  "definition": "完整定义，解释它为什么成立。",
+  "importance": "为什么值得在知识库里单独成立。",
+  "episodes": [
+    {
+      "id": "EP123",
+      "note": "这期为什么和这个概念有关。"
+    }
+  ],
+  "signals": [],
+  "boundaries": [],
+  "questions": [],
+  "context": "它在颖响力语境中的位置。",
+  "episodeHighlights": [],
+  "relatedConcepts": [],
+  "relatedModels": [],
+  "relatedThemes": [],
+  "relatedPeople": []
+}
+```
+
+#### 模型模板
+
+```json
+{
+  "id": "english-slug",
+  "name": "中文模型名",
+  "summary": "一句话说清这个机制的核心。",
+  "definition": "这个模型到底在解释什么。",
+  "application": "它在颖响力里主要拿来解释哪些节目。",
+  "sourceLabel": "颖响力模型：模型中文名",
+  "sourcePath": "/绝对路径/到/模型源文件",
+  "episodes": [
+    {
+      "id": "EP123",
+      "note": "这期怎样体现了这个机制。"
+    }
+  ],
+  "signals": [],
+  "boundaries": [],
+  "questions": [],
+  "context": "这个模型在知识库里的使用场景。",
+  "episodeHighlights": [],
+  "relatedConcepts": [],
+  "relatedModels": [],
+  "relatedThemes": [],
+  "relatedPeople": []
+}
+```
+
+#### 人物模板
+
+```json
+{
+  "id": "english-slug",
+  "name": "中文名",
+  "summary": "先回答这个人是谁。",
+  "description": "先交代背景，再说明在这些节目里主要承接什么讨论线。",
+  "episodes": [
+    {
+      "id": "EP123",
+      "note": "这期里这个人物承担了什么作用。"
+    }
+  ]
+}
+```
+
+#### 主题模板
+
+```json
+{
+  "id": "english-slug",
+  "name": "中文主题名",
+  "summary": "一句话说清这些节目为什么该被放在一起。",
+  "description": "这个主题关注什么、适合承接哪些节目。",
+  "episodes": [
+    {
+      "id": "EP123",
+      "note": "这期为什么属于这个主题。"
+    }
+  ]
+}
+```
+
+#### 关键词模板
+
+```json
+{
+  "id": "english-slug",
+  "name": "中文关键词名",
+  "summary": "先说明它是什么类型的对象。",
+  "description": "先写它是什么，再写它在知识库里为什么重要。",
+  "aliases": [],
+  "episodes": []
+}
+```
+
+### 8. 从节目到节点的回填顺序
+
+标准顺序固定为：
+
+1. 先把 `content/episodes/EPxxx.json` 写完整
+2. 再决定哪些内容值得沉淀成 `concepts / models / people / themes / keywords`
+3. 新建或复用节点后，先把该节点自己的 `episodes` 和 `related*` 补齐
+4. 再回填节目里的：
+   - `concepts`
+   - `models`
+   - `people`
+   - `themes`
+   - `relatedEpisodes`
+5. 最后跑 `npm run build` 验证网页跳转
+
+不要先建一堆节点，再倒推节目内容。
 
 ## 关键词整理规则
 
@@ -321,6 +764,34 @@
   - 标题
   - 一行摘要
 
+## 原始源文件与标题标准
+
+### 标题命名标准
+
+- 原始节目源文件统一使用：
+  - `[EPxxx】 正式标题.srt`
+- 标题主体只保留节目编号和正式标题，不要再把：
+  - `【EP123】`
+  - `｜关键词尾巴`
+  - `#话题标签`
+  重复塞回标题末尾
+- 如果你手里只有聊天整理稿、手打文字稿、AI 转写整理稿，没有时间轴，先把它整理成顺排的 `.srt`
+- 这套知识库的标准原始字幕文件仍然是 `.srt`
+
+例如：
+
+- `[EP123】 伊朗为何是现代版“三国荆州”？诸葛亮庞统之争看懂大国博弈底层逻辑.srt`
+
+### 只有文字稿时，怎么转成可导入的 `.srt`
+
+- 如果已经有标准字幕时间轴，直接保留原 `.srt`
+- 如果只有纯文字内容、分段整理稿、聊天里发来的讲稿，就先转成顺排 `.srt`
+- 对于知识库导入来说，时间轴精确到真实口播不是第一优先级，关键是：
+  - 文件名合规
+  - 文本内容完整
+  - 时间轴格式合法且顺序递增
+- 导入进入知识库后，脚本会去掉时间轴，抽成纯文本 transcript 进入 `workbench/EPxxx/`
+
 ## 新终端导入 `.srt` 的方法
 
 ### 最短命令
@@ -351,9 +822,9 @@ npm run bootstrap:all
 自动完成以下动作：
 
 1. 检查文件名是否符合：
-   `[EPxxx】 标题.srt`
+   `[EPxxx】 标题.srt` 或 `[EPxxx】 标题.md`
 2. 如果文件不在 `bilibili/raw/`，自动复制进去
-3. 把字幕去掉时间轴，抽成纯文本 transcript
+3. 把字幕或文字稿抽成纯文本 transcript
 4. 在 `workbench/EPxxx/` 下生成：
    - `EPxxx.transcript.txt`
    - `EPxxx.intake.md`
@@ -390,6 +861,8 @@ npm run bootstrap:all
 npm run srt -- "/path/to/[EP123】 标题.srt"
 ```
 
+如果你现在手里不是标准字幕，而是像微信/聊天里整理出来的纯文字稿，先转成 `.srt`，再导入。
+
 ### 第二步：查看 workbench
 
 导入完成后会生成：
@@ -411,6 +884,130 @@ npm run srt -- "/path/to/[EP123】 标题.srt"
 2. `topic`
 3. `viewpoints`
 4. `extensions`
+
+## 从聊天文字稿到网页条目的完整 SOP
+
+适用场景：
+
+- 你手里没有标准 `.srt`
+- 只有聊天里发来的整理稿、手打稿、纯文本字幕
+- 你想先把这一期塞进知识库，再继续精修
+
+### 第一步：先把聊天内容整理成 `.srt`
+
+保存到原始字幕目录：
+
+`/Users/ziqiguo/Documents/Diary/GoldenVault/md/topic/personal/sources/people/颖响力/bilibili/raw/`
+
+文件名统一写成：
+
+`[EPxxx】 正式标题.srt`
+
+例如：
+
+`[EP123】 伊朗为何是现代版“三国荆州”？诸葛亮庞统之争看懂大国博弈底层逻辑.srt`
+
+要求：
+
+- 这一步保存的是“原始输入”，不是最终网页文案
+- 可以按语义分段生成多个字幕块
+- 时间轴只要格式合法、顺序递增即可
+- 在没有真实时间轴的情况下，可以先生成顺排时间轴，目的是让知识库顺利导入
+- 不需要提前整理成 JSON
+
+### 第二步：运行导入脚本
+
+在 `网页/` 目录下执行：
+
+```bash
+npm run srt -- "/绝对路径/[EP123】 正式标题.srt"
+```
+
+脚本会自动生成：
+
+- `workbench/EP123/EP123.transcript.txt`
+- `workbench/EP123/EP123.intake.md`
+- `content/episodes/EP123.json`
+- 最新的 `dist/` 静态网页
+
+### 第三步：看 `workbench`，不要直接对着 raw 生写
+
+先读：
+
+- `workbench/EP123/EP123.transcript.txt`
+- `workbench/EP123/EP123.intake.md`
+
+原因：
+
+- `raw` 是原始存档
+- `transcript` 是后续整理时真正要读的清洗文本
+- `intake` 是这一期的整理清单
+
+### 第四步：把节目草稿补成可展示条目
+
+核心编辑文件：
+
+`content/episodes/EP123.json`
+
+至少先补完：
+
+1. `summary`
+2. `topic.background`
+3. `topic.conflicts`
+4. `topic.boundaries`
+5. `topic.mechanism`
+6. `topic.extensions`
+7. `viewpoints`
+8. `extensions`
+
+到这一步，这一期就已经可以作为“有效网页内容”被展示，不再只是一个占位草稿。
+
+### 第五步：继续沉淀稳定节点
+
+如果这一期里已经出现了稳定、可复用的节点，再补到：
+
+- `content/concepts/*.json`
+- `content/models/*.json`
+- `content/people/*.json`
+- `content/themes/*.json`
+- `content/keywords/*.json`
+
+然后回填节目里的：
+
+- `concepts`
+- `models`
+- `people`
+- `themes`
+- `relatedEpisodes`
+
+### 第六步：重建并验证网页
+
+执行：
+
+```bash
+npm run build
+```
+
+需要检查三件事：
+
+1. 节目索引里能看到 `EP123`
+2. 点进节目详情页后，不再显示“待整理”占位状态
+3. 节目页里的 `summary / 话题 / 核心观点 / 延展` 都正常显示
+
+### 第七步：什么时候算“只是导入成功”，什么时候算“网页内容有效”
+
+只导入成功：
+
+- raw 有源文件
+- workbench 有 transcript / intake
+- `content/episodes/EP123.json` 被自动创建
+- 网页里能搜到这期，但点进去还是 draft 占位
+
+网页内容有效：
+
+- `content/episodes/EP123.json` 已补完核心字段
+- 详情页显示的是结构化内容，不是占位提示
+- 至少完成一轮 `npm run build` 验证
 
 ## 节目内容怎么做
 

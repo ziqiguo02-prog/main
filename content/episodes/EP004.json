@@ -48,5 +48,15 @@
   ],
   "extensions": [
     "可以和西贝专题、餐饮安全专题双向关联。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1ZEnnzpEjP/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=FgFHeX96PXM"
+    }
   ]
 }

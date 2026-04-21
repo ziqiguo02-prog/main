@@ -70,5 +70,16 @@
     "这期可作为理解“低频高后果风险”最直观的入口，不只适用于航空，也适用于电车和储能。",
     "如果把概率型安全当成常态来管理，监管和产品设计的重点就不该只是合规打勾，而是极端场景里的剩余冗余。",
     "也可以和 EP091、EP103 一起看：一个说概率风险，一个说权限设计，一个说研发治理，三者能拼出更完整的安全图景。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=XLxKe6s7ALY"
+    }
   ]
 }

@@ -75,5 +75,16 @@
     "这期可以作为理解新能源研发治理问题的总纲，其余很多事故都是它的下游表现。",
     "也能和 EP041、EP091 连起来看，前者说设计捷径，后者说权限失守，这期解释为什么这些东西会一路放行。",
     "如果以后继续整理科研或工程治理相关内容，这条会是非常稳的结构入口。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=kRRq8asLnZ8"
+    }
   ]
 }

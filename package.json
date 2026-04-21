@@ -8,6 +8,7 @@
     "srt": "node scripts/ingest-srt.mjs",
     "ingest:srt": "node scripts/ingest-srt.mjs",
     "bootstrap:all": "node scripts/bootstrap-missing-episodes.mjs",
+    "sync:videos": "node scripts/sync-video-links.mjs && node build.mjs",
     "serve": "python3 -m http.server 4310 -d dist",
     "dev": "node build.mjs && python3 -m http.server 4310 -d dist"
   }

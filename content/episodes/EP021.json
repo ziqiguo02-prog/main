@@ -74,5 +74,16 @@
     "这期可以作为新能源汽车“退出问题”的总入口，后面很多节目都只是在不同位置补充这个风险。",
     "如果未来行业真的要淘汰一半以上品牌，那么谁来承接这些车的售后、保险和回收，将比谁多卖几万辆更重要。",
     "它也提醒人们：购买电车不是只买一台车，而是在买进一个品牌能否活下去的长期承诺。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=xT7dbjwm1M0"
+    }
   ]
 }

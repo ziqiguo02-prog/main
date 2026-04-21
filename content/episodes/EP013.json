@@ -76,5 +76,16 @@
     "可以与 EP041 对照着看，前者更偏事故和结构安全，后者更偏设计借鉴与速成逻辑。",
     "也适合和 EP062 连起来看，前者说的是产品边界，后者说的是粉丝结构和市场分层如何替这些边界护航。",
     "如果继续整理新能源案例，这期可以作为“小米汽车为什么没有成为行业纠偏者”的入口条目。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=FOwM2Pe6lCg"
+    }
   ]
 }

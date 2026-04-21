@@ -71,5 +71,15 @@
     "AI 让更多人能做内容，但也让平台更容易在海量内容中迅速培养出少数幸存者。",
     "越工业化的造梗生态，越会把语言推向速食化和扁平化，因为复杂内容不利于高频复制。",
     "这一期也为品牌营销、MCN 操盘和个人创作者的策略边界提供了现实提醒。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV14x9pBGEUj/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=NkiMe-Uo5BY"
+    }
   ]
 }

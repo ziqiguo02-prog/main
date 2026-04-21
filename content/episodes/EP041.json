@@ -75,5 +75,16 @@
     "这期和 EP013 可以拼成小米汽车批评的两侧：一侧是事故，一侧是设计路径。",
     "也适合和 EP103 一起看，前者说设计捷径，后者说研发治理为什么会让这种捷径一路放行到量产。",
     "如果后续整理更多工业设计案例，这期可以作为“抄近路如何变成结构错误”的基准条目。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=vOjRZCoHxd8"
+    }
   ]
 }

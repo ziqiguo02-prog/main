@@ -70,5 +70,15 @@
     "越来越多行业都在学会用审美叙事处理结构问题，这让识别现实反而变得更难。",
     "真正的关怀不是把苦拍得好看，而是让苦本身不再成为常态。",
     "这一期也提示我们：传播方式一旦掌握在平台手里，劳动现实就很容易被改写成消费内容。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1Nz24BeEU4/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=rnOtO0iuuCo"
+    }
   ]
 }

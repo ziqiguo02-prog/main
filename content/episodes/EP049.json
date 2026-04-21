@@ -74,5 +74,15 @@
     "如果把 AI 看成一场技术浪潮，最关键的问题不是会不会来，而是这一轮能不能穿越兑现时间差。",
     "对投资视角而言，节目更在意的是应用和安全的硬约束，而不是口号式站队。",
     "对普通用户而言，越是在全民兴奋的时候，越要先问清楚工具到底替你创造了什么价值。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1kAB8BjEpf/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=D7f6oGezKSs"
+    }
   ]
 }

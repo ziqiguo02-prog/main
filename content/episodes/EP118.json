@@ -75,5 +75,15 @@
     "对复杂系统保持敬畏，本来应该是现代公民的基础能力，却在很多课堂上变成了可疑能力。",
     "举报并不总是坏事，但当它主要被用来惩罚有启发性的越界时，教育就会越来越胆小。",
     "这一期也提醒我们：学生最该被保护的，也许不是“绝不被冒犯”，而是还有机会被真正打开。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1fmQvBZEJf/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=jcsD4bq6KUs"
+    }
   ]
 }

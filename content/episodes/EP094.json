@@ -70,5 +70,15 @@
     "如果继续往下看，会很自然连到 AI 漫剧为什么也依赖补贴和 token 的问题。",
     "节目给普通用户的提醒非常实用：不要把自己最核心的权限交给一个你还不了解的系统。",
     "真正的生产力升级，必须区分“能用”和“值得大规模交给它用”这两件事。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1ZDcBzdEzE/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=nXHlbTl2te4"
+    }
   ]
 }

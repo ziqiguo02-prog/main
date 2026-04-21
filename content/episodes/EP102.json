@@ -72,5 +72,15 @@
     "被包装成“知识”的内容，如果本质仍然是卖货，它就仍然值得按商业逻辑审视。",
     "这期的价值不只是替谁发声，而是帮助识别平台权力如何塑造公共判断。",
     "在流量世界里，说真话的难度，常常不在于真话本身，而在于真话挡了谁的路。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV193AAzpEx5/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=5rFIl1xIJYA"
+    }
   ]
 }

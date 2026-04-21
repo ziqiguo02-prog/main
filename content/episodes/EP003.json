@@ -73,5 +73,15 @@
     "如果一个品牌的增长只能依赖更大的话题和更夸张的事件，它其实已经离产品很远了。",
     "对品牌研究者来说，这期很适合和西贝、直播电商等案例并读，观察叙事如何反过来伤害价值。",
     "对普通消费者来说，品牌突然变得极其热闹时，往往正值得重新判断它到底在卖什么。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1kYJSzkEh5/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=VVFyk-RpF-M"
+    }
   ]
 }

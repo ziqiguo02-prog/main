@@ -70,5 +70,16 @@
     "如果要继续整理，最值得追的是‘失败之后谁还能保住成果继续做下一轮’。",
     "节目对商业航天的判断，也能反过来帮助理解 AI 与新能源赛道的组织差异。",
     "把这期和苏联美学、大计划锁定合看，会看到同一问题在不同场景里的反复出现。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1hgDaBYE3y/",
+      "access": "member"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=-AoVG2bhE2o"
+    }
   ]
 }

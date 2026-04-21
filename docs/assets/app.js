@@ -6,6 +6,21 @@ const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 const sidebarBody = document.getElementById('sidebar-body');
 const menuButton = document.getElementById('menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
+const backToTopButton = document.getElementById('back-to-top');
+const HOME_PLATFORM_LINKS = [
+  {
+    platform: 'bilibili',
+    url: 'https://space.bilibili.com/91741174?spm_id_from=333.337.search-card.all.click'
+  },
+  {
+    platform: 'youtube',
+    url: 'https://www.youtube.com/@颖响力'
+  }
+];
+
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
 
 let site = null;
 let graphData = null;
@@ -38,6 +53,9 @@ function closeSidebar() {
 menuButton.addEventListener('click', openSidebar);
 sidebarClose.addEventListener('click', closeSidebar);
 sidebarBackdrop?.addEventListener('click', closeSidebar);
+backToTopButton?.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
 window.addEventListener('hashchange', renderRoute);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
@@ -257,18 +275,84 @@ function linkedChipList(type, items = [], collection = []) {
   if (!items.length) return '';
   return `
     <div class="chip-row">
-      ${items.map((item) => {
-        const found = collection.find((entry) => {
-          const aliases = entry.aliases || [];
-          return (
-            normalizeValue(entry.id) === normalizeValue(item) ||
-            normalizeValue(entry.name) === normalizeValue(item) ||
-            aliases.some((alias) => normalizeValue(alias) === normalizeValue(item))
-          );
-        });
-        if (!found) return `<span class="chip">${escapeHtml(item)}</span>`;
-        return `<a class="chip" href="${routeTo(`${type}/${found.id}`)}">${escapeHtml(found.name || found.title || found.id)}</a>`;
-      }).join('')}
+      ${renderLinkedChipItems(type, items, collection)}
+    </div>
+  `;
+}
+
+function renderLinkedChipItems(type, items = [], collection = []) {
+  return items.map((item) => {
+    const found = collection.find((entry) => {
+      const aliases = entry.aliases || [];
+      return (
+        normalizeValue(entry.id) === normalizeValue(item) ||
+        normalizeValue(entry.name) === normalizeValue(item) ||
+        aliases.some((alias) => normalizeValue(alias) === normalizeValue(item))
+      );
+    });
+    if (!found) return `<span class="chip">${escapeHtml(item)}</span>`;
+    return `<a class="chip" href="${routeTo(`${type}/${found.id}`)}">${escapeHtml(found.name || found.title || found.id)}</a>`;
+  }).join('');
+}
+
+function renderVideoLinkIcon(link) {
+  const platform = normalizeValue(link?.platform);
+  const url = String(link?.url || '').trim();
+  const isMemberOnly = normalizeValue(link?.access) === 'member' || link?.memberOnly === true;
+  const isUnavailable = normalizeValue(link?.status) === 'unavailable' || !url;
+  const unavailableText = String(link?.note || '已下架').trim();
+
+  const platforms = {
+    bilibili: {
+      label: isMemberOnly ? 'Bilibili 会员' : 'Bilibili',
+      className: 'bilibili',
+      content: `<span class="media-chip-text media-chip-text-bilibili">bilibili</span>`
+    },
+    youtube: {
+      label: 'YouTube',
+      className: 'youtube',
+      content: `
+        <span class="media-chip-youtube-play" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="media-chip-youtube-icon">
+            <path d="M9 7.8L16.2 12L9 16.2Z"></path>
+          </svg>
+        </span>
+        <span class="media-chip-text media-chip-text-youtube">YouTube</span>
+      `
+    }
+  };
+
+  const config = platforms[platform];
+  if (!config) return '';
+
+  if (isUnavailable) {
+    return `
+      <span class="media-chip ${config.className} unavailable" title="${escapeHtml(unavailableText)}" aria-label="${escapeHtml(unavailableText)}">
+        ${config.content}
+        <span class="media-chip-unavailable-text">${escapeHtml(unavailableText)}</span>
+      </span>
+    `;
+  }
+
+  return `
+    <a class="media-chip ${config.className}${isMemberOnly ? ' member-only' : ''}" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="${config.label}" title="${config.label}">
+      ${config.content}
+      ${isMemberOnly ? `
+        <span class="media-chip-badge" aria-hidden="true">会员</span>
+      ` : ''}
+    </a>
+  `;
+}
+
+function renderEpisodeHeaderMeta(episode) {
+  const videoLinks = Array.isArray(episode.videoLinks) ? episode.videoLinks : [];
+  const tags = episode.tags || [];
+  if (!videoLinks.length && !tags.length) return '';
+
+  return `
+    <div class="chip-row episode-header-meta">
+      ${videoLinks.map((link) => renderVideoLinkIcon(link)).join('')}
+      ${renderLinkedChipItems('keywords', tags, site.keywords)}
     </div>
   `;
 }
@@ -835,14 +919,18 @@ function scrollToSection(id) {
 }
 
 function renderHome(focusSectionId = '') {
-  const curatedEpisodes = site.episodes.filter((episode) => episode.curated);
-  const featuredEpisodes = site.episodes;
+  const episodesByNewest = [...site.episodes].sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+  const featuredEpisodes = episodesByNewest;
 
   app.innerHTML = `
     <section class="hero">
       <p class="eyebrow">Web Knowledge Base</p>
-      <h1>颖响力 <span>知识库</span></h1>
-      <p>${escapeHtml(site.meta.subtitle)}。当前这版已经把节目、概念、模型、人物、主题连成一个可交互图谱，本地可以先验证结构质量，再决定是否发布到线上。</p>
+      <div class="hero-title-row">
+        <h1>颖响力 <span>知识库</span></h1>
+      </div>
+      <div class="hero-platform-links">
+        ${HOME_PLATFORM_LINKS.map((link) => renderVideoLinkIcon(link)).join('')}
+      </div>
       <div class="stats">
         <a class="stat-card" href="#/graph">
           <div class="stat-value">${graphStatValue()}</div>
@@ -851,10 +939,6 @@ function renderHome(focusSectionId = '') {
         <a class="stat-card" href="#/episodes">
           <div class="stat-value">${site.stats.episodes}</div>
           <div class="stat-label">节目索引</div>
-        </a>
-        <a class="stat-card" href="#/home/curated">
-          <div class="stat-value">${site.stats.curatedEpisodes}</div>
-          <div class="stat-label">已整理节目</div>
         </a>
         <a class="stat-card" href="#/concepts">
           <div class="stat-value">${site.stats.concepts}</div>
@@ -873,55 +957,21 @@ function renderHome(focusSectionId = '') {
         <p id="home-search-title" class="search-subtitle">推荐关键词</p>
         <div id="home-search-results" class="search-results"></div>
       </div>
-      <div class="hero-actions">
-        <a class="hero-action" href="#/graph">打开知识图谱</a>
-        <a class="hero-action" href="#/episodes">先看节目索引</a>
-      </div>
     </section>
 
-    <section class="section">
+    <section id="home-episodes" class="section">
       <div class="section-header">
-        <h2 class="section-title">知识图谱</h2>
-        <a class="section-note" href="#/graph">进入图谱视图</a>
-      </div>
-      <div class="grid cards-2">
-        <a class="card graph-preview-card" href="#/graph">
-          <p class="card-kicker">Graph View · ${graphData?.meta?.linkCount || 0} 条连接</p>
-          <h3>从节目跳到概念，再跳到人物与主题</h3>
-          <p>这张图把五类核心节点放进同一个可视化网络里，适合先看结构密度，再回到单条目做细读。</p>
-          <div class="meta-row">
-            <span class="chip">节目 ${site.stats.episodes}</span>
-            <span class="chip">概念 ${site.stats.concepts}</span>
-            <span class="chip">模型 ${site.stats.models}</span>
-            <span class="chip">人物 ${site.stats.people}</span>
-            <span class="chip">主题 ${site.stats.themes}</span>
-          </div>
-        </a>
-        <div class="card">
-          <p class="card-kicker">How To Read</p>
-          <h3>先找高连接节点，再顺着局部关系钻进去</h3>
-          <p>图谱适合回答两个问题：哪些主题经常和哪些节目一起出现，以及某个人物或模型究竟被放在什么语境里讲。</p>
-          <div class="meta-row">
-            <span class="chip">点击节点看近邻</span>
-            <span class="chip">双击节点开详情</span>
-            <span class="chip">滚轮缩放</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="home-curated-episodes" class="section">
-      <div class="section-header">
-        <h2 class="section-title">已整理节目</h2>
+        <h2 class="section-title">节目索引</h2>
         <a class="section-note" href="#/episodes">查看全部节目</a>
       </div>
-      <div class="grid cards-2">
-        ${curatedEpisodes.slice(0, 3).map((episode) => `
+      <p class="section-note">首页优先展示最新节目，完整目录请进入节目索引页查看。</p>
+      <div class="grid cards-3">
+        ${featuredEpisodes.slice(0, 3).map((episode) => `
           <a class="card" href="${routeTo(`episodes/${episode.id}`)}">
-            <p class="card-kicker">${escapeHtml(episode.id)} · 节目条目</p>
+            <p class="card-kicker">${escapeHtml(episode.id)} ${episode.curated ? '· 已整理' : '· 待整理'}</p>
             <h3>${escapeHtml(episode.title)}</h3>
-            <p>${escapeHtml(episode.summary || '待补充摘要')}</p>
-            ${chipList((episode.tags || []).slice(0, 4))}
+            <p>${escapeHtml(episode.summary || '待整理')}</p>
+            ${chipList((episode.tags || []).slice(0, 5))}
           </a>
         `).join('')}
       </div>
@@ -960,20 +1010,33 @@ function renderHome(focusSectionId = '') {
 
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">节目索引</h2>
-        <p class="section-note">从 raw 自动扫出的节目目录，已整理节目会优先显示结构化内容。</p>
+        <h2 class="section-title">知识图谱</h2>
+        <a class="section-note" href="#/graph">进入图谱视图</a>
       </div>
-      <div class="grid cards-3">
-        ${featuredEpisodes.slice(0, 3).map((episode) => `
-          <a class="card" href="${routeTo(`episodes/${episode.id}`)}">
-            <p class="card-kicker">${escapeHtml(episode.id)} ${episode.curated ? '· 已整理' : '· 待整理'}</p>
-            <h3>${escapeHtml(episode.title)}</h3>
-            <p>${escapeHtml(episode.summary || '待整理')}</p>
-            ${chipList((episode.tags || []).slice(0, 5))}
-          </a>
-        `).join('')}
+      <div class="grid cards-2">
+        <a class="card graph-preview-card" href="#/graph">
+          <p class="card-kicker">Graph View · ${graphData?.meta?.linkCount || 0} 条连接</p>
+          <h3>从节目跳到概念，再跳到人物与主题</h3>
+          <p>这张图把五类核心节点放进同一个可视化网络里，适合先看结构密度，再回到单条目做细读。</p>
+          <div class="meta-row">
+            <span class="chip">节目 ${site.stats.episodes}</span>
+            <span class="chip">概念 ${site.stats.concepts}</span>
+            <span class="chip">模型 ${site.stats.models}</span>
+            <span class="chip">人物 ${site.stats.people}</span>
+            <span class="chip">主题 ${site.stats.themes}</span>
+          </div>
+        </a>
+        <div class="card">
+          <p class="card-kicker">How To Read</p>
+          <h3>先找高连接节点，再顺着局部关系钻进去</h3>
+          <p>图谱适合回答两个问题：哪些主题经常和哪些节目一起出现，以及某个人物或模型究竟被放在什么语境里讲。</p>
+          <div class="meta-row">
+            <span class="chip">点击节点看近邻</span>
+            <span class="chip">双击节点开详情</span>
+            <span class="chip">滚轮缩放</span>
+          </div>
+        </div>
       </div>
-      <p class="footer-note">首页只展示前 3 条结果，完整目录请进入查看全部页面。</p>
     </section>
   `;
 
@@ -1354,7 +1417,7 @@ function renderEpisodeDetail(id) {
         <p class="detail-eyebrow">Episode Entry</p>
         <h1 class="detail-title">${escapeHtml(episode.id)}｜${escapeHtml(episode.title)}</h1>
         <p class="detail-summary">${escapeHtml(episode.summary)}</p>
-        ${linkedChipList('keywords', episode.tags, site.keywords)}
+        ${renderEpisodeHeaderMeta(episode)}
       </div>
 
       <section class="detail-section">
@@ -1480,6 +1543,16 @@ function renderReferenceChipSection(title, type, items, collection) {
   `;
 }
 
+function renderDetailBackRow(sectionHref, sectionLabel) {
+  return `
+    <div class="back-row">
+      <button type="button" class="back-link back-button" data-nav-back="true">← 返回前一页</button>
+      <a class="back-link secondary" href="${sectionHref}">返回${escapeHtml(sectionLabel)}页</a>
+      <a class="back-link secondary" href="#/">返回首页</a>
+    </div>
+  `;
+}
+
 function renderConceptDetail(id) {
   const concept = site.concepts.find((item) => item.id === id);
   if (!concept) {
@@ -1498,11 +1571,7 @@ function renderConceptDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <button type="button" class="back-link back-button" data-nav-back="true">← 返回前一页</button>
-          <a class="back-link secondary" href="#/concepts">返回概念页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/concepts', '概念')}
         <p class="detail-eyebrow">Concept Card</p>
         <h1 class="detail-title">${escapeHtml(concept.name)}</h1>
         <p class="detail-summary">${escapeHtml(concept.summary)}</p>
@@ -1560,14 +1629,10 @@ function renderModelDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/models">← 返回思想模型页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/models', '模型')}
         <p class="detail-eyebrow">Mental Model</p>
         <h1 class="detail-title">${escapeHtml(model.name)}</h1>
         <p class="detail-summary">${escapeHtml(model.summary)}</p>
-        ${model.sourcePath ? `<p class="footer-note">GV 参考：<a href="${escapeHtml(model.sourcePath)}">${escapeHtml(model.sourceLabel || model.name)}</a></p>` : ''}
       </div>
       <section class="detail-section">
         <h2>机制定义</h2>
@@ -1625,10 +1690,7 @@ function renderPersonDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/people">← 返回人物页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/people', '人物')}
         <p class="detail-eyebrow">${escapeHtml(person.englishName || 'Person Node')}</p>
         <h1 class="detail-title">${escapeHtml(person.name)}</h1>
         ${person.englishName ? `<p class="detail-summary">${escapeHtml(person.englishName)}</p>` : ''}
@@ -1671,10 +1733,7 @@ function renderThemeDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/themes">← 返回主题页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/themes', '主题')}
         <p class="detail-eyebrow">Theme Node</p>
         <h1 class="detail-title">${escapeHtml(theme.name)}</h1>
         <p class="detail-summary">${escapeHtml(theme.summary)}</p>
@@ -1723,10 +1782,7 @@ function renderKeywordDetail(id) {
   app.innerHTML = `
     <section class="detail">
       <div class="detail-header">
-        <div class="back-row">
-          <a class="back-link" href="#/keywords">← 返回关键词页</a>
-          <a class="back-link secondary" href="#/">返回首页</a>
-        </div>
+        ${renderDetailBackRow('#/keywords', '关键词')}
         <p class="detail-eyebrow">Keyword Node</p>
         <h1 class="detail-title">${escapeHtml(keyword.name)}</h1>
         <p class="detail-summary">${escapeHtml(keyword.summary)}</p>
@@ -1773,8 +1829,8 @@ function renderRoute() {
     renderHome();
   } else if (section === 'graph') {
     renderGraphPage();
-  } else if (section === 'home' && id === 'curated') {
-    renderHome('home-curated-episodes');
+  } else if (section === 'home' && id === 'episodes') {
+    renderHome('home-episodes');
   } else if (section === 'episodes' && !id) {
     renderEpisodeIndex();
   } else if (section === 'concepts' && !id) {
@@ -1804,6 +1860,7 @@ function renderRoute() {
   }
 
   closeSidebar();
+  window.scrollTo(0, 0);
 }
 
 async function init() {

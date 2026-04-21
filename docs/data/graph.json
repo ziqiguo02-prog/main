@@ -2,11 +2,11 @@
   "meta": {
     "title": "颖响力知识图谱",
     "subtitle": "节目、概念、模型、人物、主题之间的可视化连接网络",
-    "nodeCount": 434,
-    "linkCount": 779,
+    "nodeCount": 435,
+    "linkCount": 785,
     "typeCounts": {
       "model": 53,
-      "episode": 122,
+      "episode": 123,
       "concept": 111,
       "person": 62,
       "theme": 86
@@ -276,6 +276,17 @@
       "summary": "本期从黄循财访中不回祖宅谈起，说明这不是忘本，而是新加坡作为华人占多数小国必须维持的边界感；同时节目也把这个国家级选择延伸成个人命题：现代人的故乡不必只由血缘坐标决定，能安身、能创造价值的地方也可以成为真正的归属。",
       "status": "curated",
       "degree": 9
+    },
+    {
+      "id": "theme:maritime-chokepoints-and-route-order",
+      "key": "maritime-chokepoints-and-route-order",
+      "label": "海峡命门与航运秩序",
+      "fullLabel": "海峡命门与航运秩序",
+      "type": "theme",
+      "route": "themes/maritime-chokepoints-and-route-order",
+      "summary": "讨论海峡、运河和关键航道如何把地理位置变成规则、保险、资本和军事的综合权力。",
+      "status": null,
+      "degree": 8
     },
     {
       "id": "theme:ev-collapse-and-exit-risk",
@@ -560,17 +571,6 @@
       "type": "theme",
       "route": "themes/local-fiscal-stress-and-hidden-debt",
       "summary": "地方财政吃紧后，系统会通过更复杂的融资、资产包装和风险转移来维持运转。",
-      "status": null,
-      "degree": 7
-    },
-    {
-      "id": "theme:maritime-chokepoints-and-route-order",
-      "key": "maritime-chokepoints-and-route-order",
-      "label": "海峡命门与航运秩序",
-      "fullLabel": "海峡命门与航运秩序",
-      "type": "theme",
-      "route": "themes/maritime-chokepoints-and-route-order",
-      "summary": "讨论海峡、运河和关键航道如何把地理位置变成规则、保险、资本和军事的综合权力。",
       "status": null,
       "degree": 7
     },
@@ -938,6 +938,17 @@
       "degree": 6
     },
     {
+      "id": "model:regional-denial-model",
+      "key": "regional-denial-model",
+      "label": "区域拒止模型",
+      "fullLabel": "区域拒止模型",
+      "type": "model",
+      "route": "models/regional-denial-model",
+      "summary": "真正有效的区域拒止，不是无上限扩张，而是把对手压在若干区域里，阻止其形成全球联动能力。",
+      "status": null,
+      "degree": 6
+    },
+    {
       "id": "model:time-arbitrage-model",
       "key": "time-arbitrage-model",
       "label": "时间套利模型",
@@ -967,6 +978,17 @@
       "type": "theme",
       "route": "themes/ev-safety-and-consumer-testing",
       "summary": "讨论新能源车与相关电池系统如何把安全验证不足的代价，转移到真实用户和真实事故里。",
+      "status": null,
+      "degree": 6
+    },
+    {
+      "id": "concept:chokepoint-leverage",
+      "key": "chokepoint-leverage",
+      "label": "咽喉杠杆",
+      "fullLabel": "咽喉杠杆",
+      "type": "concept",
+      "route": "concepts/chokepoint-leverage",
+      "summary": "控制海峡、运河和关键通道的人，往往能把地理位置转化成定价权、通行权和规则权。",
       "status": null,
       "degree": 6
     },
@@ -1169,6 +1191,17 @@
       "degree": 6
     },
     {
+      "id": "episode:EP123",
+      "key": "EP123",
+      "label": "EP123",
+      "fullLabel": "EP123 · 伊朗为何是现代版“三国荆州”？诸葛亮庞统之争看懂大国博弈底层逻辑",
+      "type": "episode",
+      "route": "episodes/EP123",
+      "summary": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。",
+      "status": "curated",
+      "degree": 6
+    },
+    {
       "id": "concept:cost-shifting",
       "key": "cost-shifting",
       "label": "成本外移",
@@ -1224,17 +1257,6 @@
       "degree": 5
     },
     {
-      "id": "model:regional-denial-model",
-      "key": "regional-denial-model",
-      "label": "区域拒止模型",
-      "fullLabel": "区域拒止模型",
-      "type": "model",
-      "route": "models/regional-denial-model",
-      "summary": "真正有效的区域拒止，不是无上限扩张，而是把对手压在若干区域里，阻止其形成全球联动能力。",
-      "status": null,
-      "degree": 5
-    },
-    {
       "id": "concept:time-asymmetry",
       "key": "time-asymmetry",
       "label": "时间非对称",
@@ -1268,13 +1290,24 @@
       "degree": 5
     },
     {
-      "id": "concept:chokepoint-leverage",
-      "key": "chokepoint-leverage",
-      "label": "咽喉杠杆",
-      "fullLabel": "咽喉杠杆",
+      "id": "theme:sanctions-and-power-containment",
+      "key": "sanctions-and-power-containment",
+      "label": "制裁、遏制与集团竞争",
+      "fullLabel": "制裁、遏制与集团竞争",
+      "type": "theme",
+      "route": "themes/sanctions-and-power-containment",
+      "summary": "讨论制裁、门罗主义、海峡与联盟如何共同服务于压制对手集团的全球布局。",
+      "status": null,
+      "degree": 5
+    },
+    {
+      "id": "concept:sanction-containment",
+      "key": "sanction-containment",
+      "label": "制裁遏制",
+      "fullLabel": "制裁遏制",
       "type": "concept",
-      "route": "concepts/chokepoint-leverage",
-      "summary": "控制海峡、运河和关键通道的人，往往能把地理位置转化成定价权、通行权和规则权。",
+      "route": "concepts/sanction-containment",
+      "summary": "制裁的真正作用常常不是逼对手立刻认输，而是长期压低其外延空间、联动能力和做大速度。",
       "status": null,
       "degree": 5
     },
@@ -1642,28 +1675,6 @@
       "degree": 4
     },
     {
-      "id": "theme:sanctions-and-power-containment",
-      "key": "sanctions-and-power-containment",
-      "label": "制裁、遏制与集团竞争",
-      "fullLabel": "制裁、遏制与集团竞争",
-      "type": "theme",
-      "route": "themes/sanctions-and-power-containment",
-      "summary": "讨论制裁、门罗主义、海峡与联盟如何共同服务于压制对手集团的全球布局。",
-      "status": null,
-      "degree": 4
-    },
-    {
-      "id": "concept:sanction-containment",
-      "key": "sanction-containment",
-      "label": "制裁遏制",
-      "fullLabel": "制裁遏制",
-      "type": "concept",
-      "route": "concepts/sanction-containment",
-      "summary": "制裁的真正作用常常不是逼对手立刻认输，而是长期压低其外延空间、联动能力和做大速度。",
-      "status": null,
-      "degree": 4
-    },
-    {
       "id": "concept:organizational-silence",
       "key": "organizational-silence",
       "label": "组织失声",
@@ -1858,6 +1869,17 @@
       "type": "theme",
       "route": "themes/catering-pricing-logic",
       "summary": "讨论餐饮价格背后到底由哪些结构因素共同决定。",
+      "status": null,
+      "degree": 3
+    },
+    {
+      "id": "model:proxy-containment-ring",
+      "key": "proxy-containment-ring",
+      "label": "代理围堵环",
+      "fullLabel": "代理围堵环",
+      "type": "model",
+      "route": "models/proxy-containment-ring",
+      "summary": "代理围堵环解释大国如何通过盟友、代理人和通道控制分摊成本、封堵对手。",
       "status": null,
       "degree": 3
     },
@@ -2518,17 +2540,6 @@
       "type": "theme",
       "route": "themes/planned-systems-and-innovation",
       "summary": "讨论统一目标和强组织动员如何带来短期速度，又如何在长期压缩创新、纠错与自发能动性。",
-      "status": null,
-      "degree": 2
-    },
-    {
-      "id": "model:proxy-containment-ring",
-      "key": "proxy-containment-ring",
-      "label": "代理围堵环",
-      "fullLabel": "代理围堵环",
-      "type": "model",
-      "route": "models/proxy-containment-ring",
-      "summary": "代理围堵环解释大国如何通过盟友、代理人和通道控制分摊成本、封堵对手。",
       "status": null,
       "degree": 2
     },
@@ -8587,6 +8598,36 @@
     {
       "source": "episode:EP122",
       "target": "theme:southeast-asia-fragmentation-and-bloc-competition",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "concept:chokepoint-leverage",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "concept:sanction-containment",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "model:regional-denial-model",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "model:proxy-containment-ring",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "theme:maritime-chokepoints-and-route-order",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP123",
+      "target": "theme:sanctions-and-power-containment",
       "kind": "episode-theme"
     },
     {

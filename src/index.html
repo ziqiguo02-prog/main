@@ -8,6 +8,21 @@
 </head>
 <body>
   <button class="menu-button" id="menu-button" aria-label="打开导航">☰</button>
+  <div class="floating-actions">
+    <a class="floating-home" id="floating-home" href="#/" aria-label="返回首页">
+      <svg class="floating-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 10.5L12 4.5L19.5 10.5" />
+        <path d="M6.5 9.5V18.5H17.5V9.5" />
+        <path d="M10 18.5V13H14V18.5" />
+      </svg>
+    </a>
+    <button class="back-to-top visible" id="back-to-top" aria-label="返回顶部">
+      <svg class="floating-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 14.5L12 9.5L17 14.5" />
+        <path d="M12 10.5V18" />
+      </svg>
+    </button>
+  </div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div>
@@ -18,9 +33,13 @@
     </div>
     <div class="sidebar-body" id="sidebar-body"></div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
   <main class="page" id="app">
     <div class="loading">正在加载知识库...</div>
   </main>
+  <script>
+    window.__BUILD_VERSION__ = '__BUILD_VERSION_VALUE__';
+  </script>
   <script type="module" src="./assets/app.js"></script>
 </body>
 </html>

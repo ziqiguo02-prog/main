@@ -75,5 +75,16 @@
     "对普通观众而言，最值得警惕的未必是耸动表达，而是那些让你第一次重新理解自己位置的内容。",
     "很多公共人物之所以短暂爆红，不是因为他们最聪明，而是因为他们在某个节点上找到了最有效的共振通道。",
     "这一期适合与张雪峰暂时性封禁、民间三论清理和平台话语治理的后续节目一起看。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=0BfS5Tv-c7g"
+    }
   ]
 }

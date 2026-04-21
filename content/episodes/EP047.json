@@ -72,5 +72,16 @@
     "把这期和“新钱阶层”相关节目放在一起，会看到很多问题最后都指向文化缺口。",
     "对社会观察者来说，这期很适合作为“技术中性神话”失效的案例。",
     "对个人来说，越想完全掌控下一代，往往越容易失去真正的连接。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=hXSMfCNoCyM"
+    }
   ]
 }

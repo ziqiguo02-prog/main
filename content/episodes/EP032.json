@@ -75,5 +75,16 @@
     "平台越依赖算法分发，就越容易先生产解释热潮，再反过来治理解释热潮。",
     "一个表达系统是否危险，不只看它说了什么，也看它有没有成为某类群体的低成本自我识别工具。",
     "这期为理解后续平台清理、造梗机制和年轻男性焦虑提供了一个总入口。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=zOsfaWmrDzs"
+    }
   ]
 }

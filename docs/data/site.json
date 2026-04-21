@@ -2,17 +2,17 @@
   "meta": {
     "title": "颖响力知识库",
     "subtitle": "节目、概念、思想模型的结构化索引",
-    "updatedAt": "2026-04-21T00:06:00.782Z"
+    "updatedAt": "2026-04-21T13:18:27.614Z"
   },
   "stats": {
-    "episodes": 122,
-    "curatedEpisodes": 122,
+    "episodes": 123,
+    "curatedEpisodes": 123,
     "draftEpisodes": 0,
     "concepts": 111,
     "models": 53,
     "people": 62,
     "themes": 86,
-    "keywords": 624
+    "keywords": 629
   },
   "episodes": [
     {
@@ -113,6 +113,16 @@
         "对任何创始人强势主导的企业，都值得额外观察其内部是否仍然存在真实反馈机制。",
         "这一期可以作为后续整理“品牌咨询”“高溢价消费”“创始人权力结构”“餐饮品牌失真”等相关节目的入口条目。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1oCp1zFEWy/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=038P7mtT6sM"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -179,6 +189,16 @@
       "extensions": [
         "可继续与 EP001、EP065 形成西贝专题簇。",
         "也能作为预制菜和连锁餐饮标准化议题的入口节目。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV16KJdzsEUD/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=AOpvnwsD3Ek"
+        }
       ],
       "status": "curated"
     },
@@ -260,6 +280,16 @@
         "对品牌研究者来说，这期很适合和西贝、直播电商等案例并读，观察叙事如何反过来伤害价值。",
         "对普通消费者来说，品牌突然变得极其热闹时，往往正值得重新判断它到底在卖什么。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1kYJSzkEh5/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=VVFyk-RpF-M"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -314,6 +344,16 @@
       ],
       "extensions": [
         "可以和西贝专题、餐饮安全专题双向关联。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ZEnnzpEjP/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=FgFHeX96PXM"
+        }
       ],
       "status": "curated"
     },
@@ -396,6 +436,17 @@
         "对普通观众而言，最值得警惕的未必是耸动表达，而是那些让你第一次重新理解自己位置的内容。",
         "很多公共人物之所以短暂爆红，不是因为他们最聪明，而是因为他们在某个节点上找到了最有效的共振通道。",
         "这一期适合与张雪峰暂时性封禁、民间三论清理和平台话语治理的后续节目一起看。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0BfS5Tv-c7g"
+        }
       ]
     },
     {
@@ -478,6 +529,17 @@
         "一个安全阀式人物的存在，既说明体系并不透明，也说明大众暂时还离不开中介翻译。",
         "看懂张雪峰的角色，有助于区分“帮助人做选择”和“替人消灭不确定性”这两件并不相同的事。",
         "这一期与 EP018、EP111 连起来看，会更清楚稳定路径叙事如何塑造年轻人的未来想象。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=bICSV-3aZ5Q"
+        }
       ]
     },
     {
@@ -561,6 +623,16 @@
         "对普通观察者来说，重要的不是嘲笑一个旧首富，而是识别类似结构是否仍在别的行业复制。",
         "这一期适合与地产、城投、新能源内容一起看，去理解“风险并没有消失，只是换了承担者”。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1vhHgztE9k/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=WxAQLwR4NAI"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -642,6 +714,16 @@
         "对企业和投资者来说，地方背景不是护身符，反而可能意味着你看不见的风险链条更长。",
         "很多所谓的产业故事，真正厉害的地方不在产业，而在它怎么把更多人的钱卷进来。",
         "把这期和隐性债务、财政改革内容一起看，会更容易看出未来几年风险的集中爆发点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1QnxLz5Edo/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0fiCVuTTS5s"
+        }
       ],
       "status": "curated"
     },
@@ -735,6 +817,16 @@
         "这期适合与后续的家族信托、二代接班和万科继承问题一起看，因为它提供了一个从家族裂痕走向公司脆断的完整入口。",
         "对于同样处在交棒期的企业，这期最值得记住的不是宗馥莉个人得失，而是旧账能不能在下一代接手前被制度化处理掉。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV16YxrzwEtW/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=7cXsMXSlkNc"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -819,6 +911,17 @@
         "如果规则变化继续向前穿透，那么未来更有价值的可能不是更复杂的工具，而是更早完成资产清洁和结构前置。",
         "这期和潘石屹那一集可以放在一起看，因为两期共同指向同一个问题：财富保全不是单个产品，而是一整套时间上提前完成的安排。",
         "对普通观众来说，最有用的结论或许不是要不要买某个金融产品，而是要看懂“结构安全”和“资产安全”其实不是一回事。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=hmfHC_QQ1QI"
+        }
       ],
       "status": "curated"
     },
@@ -912,6 +1015,16 @@
         "节目虽然带着强烈个人判断，但它真正提出的是一个很有普遍性的难题：创始人有没有在自己最强的时候，把制度建立到自己退场后也能运转。",
         "对于其他正处在交棒期的企业，这期最有价值的提醒是，交班前先处理掉历史正当性问题，比接班后做更多品牌动作重要得多。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1LK46zRERQ/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=30y_JyoJJXo"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -999,6 +1112,16 @@
         "它和 EP101 也有互文关系，因为两期都在讨论企业能不能靠政企绑定活下去，以及这种活法会把谁一起拖下水。",
         "如果说经营问题还能靠调整修复，那么关系型续命到了后期，真正难处理的反而是责任重新分配。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1fkWHziES5/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=sH4pZ2UewSk"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -1081,6 +1204,17 @@
         "可以与 EP041 对照着看，前者更偏事故和结构安全，后者更偏设计借鉴与速成逻辑。",
         "也适合和 EP062 连起来看，前者说的是产品边界，后者说的是粉丝结构和市场分层如何替这些边界护航。",
         "如果继续整理新能源案例，这期可以作为“小米汽车为什么没有成为行业纠偏者”的入口条目。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=FOwM2Pe6lCg"
+        }
       ]
     },
     {
@@ -1159,6 +1293,17 @@
         "很多成年人后来的羞耻感、慕强心理和答案依赖，往往可以在学校阶段找到早期模板。",
         "判断一所学校是否真的在育人，不能只看分数和升学率，也要看学生是否还保有基本的舒展感和主体性。",
         "这一期与 EP058、EP118 一起看，会更清楚“标准答案机器”为什么和未来社会越来越错位。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=p5_6COuyuuA"
+        }
       ]
     },
     {
@@ -1168,6 +1313,16 @@
       "curated": true,
       "sourceFile": "[EP015】 地方债务与电车的野合酝酿重大危机，20分钟深度分析隐性债务与新能源汽车背后的关系。｜国补｜补贴｜金融｜产业园｜杠杆｜风险｜电动车｜.srt",
       "status": "curated",
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1rAsnzMEmi/?spm_id_from=333.337.search-card.all.click"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=x5kT8dd-BQk"
+        }
+      ],
       "tags": [
         "地方债",
         "隐性债务",
@@ -1324,6 +1479,16 @@
         "这期适合作为地方财政、城投、假繁荣问题的总入口。",
         "和医疗、养老、地方附加税一起看，会更清楚看到财政压力如何一路传导到公共服务层面。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV12gxAzYEjY/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=lfhZsmLv2f0"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -1400,6 +1565,17 @@
         "这期可作为理解“低频高后果风险”最直观的入口，不只适用于航空，也适用于电车和储能。",
         "如果把概率型安全当成常态来管理，监管和产品设计的重点就不该只是合规打勾，而是极端场景里的剩余冗余。",
         "也可以和 EP091、EP103 一起看：一个说概率风险，一个说权限设计，一个说研发治理，三者能拼出更完整的安全图景。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=XLxKe6s7ALY"
+        }
       ]
     },
     {
@@ -1483,6 +1659,16 @@
         "如果未来的社会更需要人与机器协同，那么教育真正该保护的，是人的独特性，而不是更高强度的标准化复制。",
         "所谓“学文科没出路”的说法，本质上常常是家长的风险厌恶，而不是对未来结构的真正理解。",
         "这一期和 EP111 连起来看，会更清楚为什么“安全路径”叙事常常在精神上先杀死了年轻人。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1paybBFETd/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Z_dGB-JMqsI"
+        }
       ]
     },
     {
@@ -1558,6 +1744,16 @@
         "这期最大的价值，在于把“制裁有没有逼出结果”改成“制裁有没有阻止一个集团做大”。",
         "如果把集团战争视角带回来看今天的世界，会发现很多围栏动作其实早在冲突爆发前就开始了。",
         "它也提醒读者，判断一个战略工具是否有效，必须先看它到底服务于哪一层目标。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1PX1PBYEg5/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=wOBvgoVGK-E"
+        }
       ]
     },
     {
@@ -1640,6 +1836,17 @@
         "所谓好运势，也许常常只是某些人不得不站出来的另一种说法。",
         "对个体来说，真正的准备不是等待被看见，而是先培养自己承压后的稳定性。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=H1hDLAA7AmI"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -1720,6 +1927,17 @@
         "这期可以作为新能源汽车“退出问题”的总入口，后面很多节目都只是在不同位置补充这个风险。",
         "如果未来行业真的要淘汰一半以上品牌，那么谁来承接这些车的售后、保险和回收，将比谁多卖几万辆更重要。",
         "它也提醒人们：购买电车不是只买一台车，而是在买进一个品牌能否活下去的长期承诺。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=xT7dbjwm1M0"
+        }
       ]
     },
     {
@@ -1799,6 +2017,16 @@
         "当一个人太快把局部胜利上升为普遍规律时，他更需要的通常不是赞美，而是周期感。",
         "真正成熟的反叛，不是把父辈骂一遍，而是避免自己换一种包装继续成为父辈。",
         "这一期提供了一种识别“高智商自我神话”的方法：看他是否真正承认自己也被结构塑造。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV16q1ZBGEPJ/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=2PVjmPKVxBc"
+        }
       ]
     },
     {
@@ -1876,6 +2104,16 @@
         "很多公共项目之所以长期无法退出，是因为它在上层视野里仍然是面子工程，在下层视野里却早已是负担工程。",
         "文旅如果只是把财政压力换成活动压力，最后只是从一种低质量发展跳到另一种低质量发展。",
         "这一期也提醒我们：真正可持续的公共活动，必须建立在自愿参与和真实收益上，而不是行政堆砌。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1px1yBVEod/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0jpb1fYSSZc"
+        }
       ]
     },
     {
@@ -1964,6 +2202,17 @@
         "今天大量年轻人感到的并不是单纯穷，而是被一套“本来应该有机会”的叙事抬高后，又被现实迅速掐灭，这种落差会不会成为未来更多极端情绪的源头。",
         "当社会习惯把外卖员、保安、快递员都看成低一等的人时，它其实是在为自己日常秩序埋下一种越来越无法预测的风险。",
         "一个家庭真正该防的，也许不只是收入变少，而是长期高压下心态先塌、关系先裂，然后连最基本的判断力都被消耗掉。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=bZAwz95wqyA"
+        }
       ]
     },
     {
@@ -2043,6 +2292,17 @@
         "这期适合作为新能源后端问题的入口，因为它提醒人们前端销量和后端处置根本不是同一个难度等级。",
         "也可以和 EP021 连起来看，前者讨论未来会堆出多少待处理电车，后者讨论这些东西最后会被谁以何种方式“处理”。",
         "如果政策还继续鼓励“回收产业化”，真正该盯住的可能不是行业规模，而是污染到底有没有被真正消灭。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=g-QMyWmN55k"
+        }
       ]
     },
     {
@@ -2122,6 +2382,17 @@
         "教育场景里最危险的不是偶发失误，而是那些已经被正常化的荒诞动作。",
         "如果校园里最能被强调的是服从和整齐，那么它输出到社会中的人也更容易把服从误认成美德。",
         "这期提醒我们：形式主义一旦进入学校，影响的就不只是效率，而是一代人的人格姿态。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=3fg9ytHHIRo"
+        }
       ]
     },
     {
@@ -2201,6 +2472,16 @@
         "这期适合与平台封禁、流量分发议题一起看，因为它们都涉及“守门人是否被绕开”。",
         "对制度观察者来说，这期最大的价值是重新理解“容错”和“修正”到底意味着什么。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1hRC3B4EUi/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=UR3PRTtbjyk"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -2279,6 +2560,17 @@
         "当父母试图反抗传统教育时，最难的从来不是提出口号，而是划定新的边界。",
         "对调查报告的重视，也是一种对证据讨论的尊重，而不是把所有公共争议都交给情绪完成。",
         "这一期与 EP063、EP086 连起来看，会更清楚家庭边界和法治边界为什么常常纠缠在一起。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=CyxF8ujObe8"
+        }
       ]
     },
     {
@@ -2366,6 +2658,16 @@
         "当银行亲自下场处置断供资产后，房地产风险暴露会不会从开发商违约进一步转向金融体系的流动性压力。",
         "比起出生人口下降，六零后持房群体逐步退出市场，会不会更早、更直接地改变未来十年的房屋供给结构。",
         "在一个可能被拉长十年以上的阴跌周期里，家庭到底应该优先追求名义资产保值，还是优先保住现金流和生活弹性。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1YbCYB9EBp/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=OT0YJah0fdg"
+        }
       ]
     },
     {
@@ -2444,6 +2746,17 @@
         "如果改革不能同时处理治理能力、财政能力和职业激励，复制越广问题可能越大。",
         "这期能帮助理解为什么很多看似进步的公共改革，在推广阶段会突然让人失望。",
         "当一个制度成功太依赖“好地方、好人、好时代”时，它就很难成为稳定模板。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=ye3Wu5GBsLA"
+        }
       ],
       "status": "curated"
     },
@@ -2534,6 +2847,16 @@
         "当地方政府、供应链和龙头房企深度绑定时，所谓“救企业”到底是在救一个开发商，还是在救整套地方产业和财政结构。",
         "森林城市这样的跨境项目一旦失去原来的资本流入逻辑，会不会比国内烂尾项目更难止损，因为它连本土接盘机制都不存在。",
         "对普通观察者而言，比起盯着销售额反弹，是否更该盯着那些表外平台、合作方和非优先债权人的损失是怎么慢慢浮出水面的。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1r4U7BBEew/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=oFmhXv929Cs"
+        }
       ]
     },
     {
@@ -2615,6 +2938,17 @@
         "平台越依赖算法分发，就越容易先生产解释热潮，再反过来治理解释热潮。",
         "一个表达系统是否危险，不只看它说了什么，也看它有没有成为某类群体的低成本自我识别工具。",
         "这期为理解后续平台清理、造梗机制和年轻男性焦虑提供了一个总入口。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=zOsfaWmrDzs"
+        }
       ]
     },
     {
@@ -2692,6 +3026,16 @@
         "观众的嘲笑并不一定只是看热闹，它也可能是对程序性失真的最后一种民间反馈。",
         "很多人以为审美是主观问题，但当主观被反复拿来掩护暗箱，行业就会失去最低的专业边界。",
         "这一期和粉底液将军、酱板鸭平台推热结合起来看，会更清楚“看上去很热闹”如何替代“实际上很专业”。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1F9UrBMEhu/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=6-7XG7ZGxJE"
+        }
       ]
     },
     {
@@ -2769,6 +3113,16 @@
         "一个知识系统是否健康，看它如何对待学生与年轻教师的质疑，比看它年度通稿更有价值。",
         "很多人把学术腐败理解成道德失范，但它往往首先是一种激励失配。",
         "这一期提醒我们，高校真正需要恢复的，也许不是更多口号，而是让“会不会做学问”重新变成最硬的标准。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1hbU8BRE38/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=d9xjCmcyqC8"
+        }
       ]
     },
     {
@@ -2850,6 +3204,17 @@
         "这期可以作为理解“新能源项目出清时谁先受伤”的基准案例。",
         "如果后来者还在用同样方式讲故事，那恒大汽车更像预告片，而不是终章。",
         "从这期往后追，会自然连到 EP015 的地方债逻辑、EP021 的用户后果和 EP066 的资本改造案例。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=yHQuNv3ughM"
+        }
       ]
     },
     {
@@ -2930,6 +3295,17 @@
         "如果一个资产同时跨越开曼、美国、中国三层结构，普通人的信息劣势会被放到极大。",
         "这期能帮助理解为什么越赚钱的行业，越可能迅速吸来最复杂的资本结构。",
         "也值得继续追问：当公共危机产生巨额利润时，公共利益究竟能留下多少。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=wEBcbXHgIGw"
+        }
       ],
       "status": "curated"
     },
@@ -3026,6 +3402,17 @@
         "它也适合和 EP061、EP079 一起看，因为豪宅托底和房票流转都属于同一轮价格发现延迟机制的不同侧面。",
         "对于想判断楼市周期的人，这期最重要的提醒是不把局部热度误读成整体拐点。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=8aJoZTn8ilk"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -3102,6 +3489,16 @@
         "越来越多行业都在学会用审美叙事处理结构问题，这让识别现实反而变得更难。",
         "真正的关怀不是把苦拍得好看，而是让苦本身不再成为常态。",
         "这一期也提示我们：传播方式一旦掌握在平台手里，劳动现实就很容易被改写成消费内容。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1Nz24BeEU4/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=rnOtO0iuuCo"
+        }
       ]
     },
     {
@@ -3183,6 +3580,16 @@
         "今天很多企业把高工时包装成‘一起打硬仗’，但当这种逻辑变成常态时，工人还有没有机会把自己从一次次冲刺中完整带出来。",
         "罗斯福和德国两种路径放到今天，真正值得问的不是谁更强，而是一个社会是优先让工人分享增长，还是优先让组织把增长榨干。",
         "如果一个行业长期只奖励股东、老板和叙事，而不真正奖励劳动者，那么它最后留下来的会不会不仅是疲惫工人，还有一整套越来越空心的繁荣。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1uV2EBJEDn/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=9r85dndvEtQ"
+        }
       ]
     },
     {
@@ -3259,6 +3666,17 @@
         "这期最重要的提醒，是别把台海想成一场只发生在台湾海峡里的孤立战争。",
         "它把作战问题重新落回到时间、禁区和外围体系，因而比单纯看兵棋推演更接近结构问题。",
         "顺着这期继续整理，会很自然地进入日本角色变化和东亚安全重组。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1mi2BBNEp6/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=WZ85a90QIxo"
+        }
       ]
     },
     {
@@ -3340,6 +3758,17 @@
         "这期和 EP013 可以拼成小米汽车批评的两侧：一侧是事故，一侧是设计路径。",
         "也适合和 EP103 一起看，前者说设计捷径，后者说研发治理为什么会让这种捷径一路放行到量产。",
         "如果后续整理更多工业设计案例，这期可以作为“抄近路如何变成结构错误”的基准条目。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=vOjRZCoHxd8"
+        }
       ]
     },
     {
@@ -3420,6 +3849,16 @@
         "这期也适合和贵金属、财经博主内容一起看，因为背后都在提醒“时间”比表面价格更关键。",
         "一个企业从高位滑落时，往往不是突然没钱，而是先拿不到“合适的钱”。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1B4m8BAEy1/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=weLyr5tmQxo"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -3496,6 +3935,16 @@
         "如果一代人只能通过怀旧去理解今天，那通常说明今天的现实解释已经失灵了。",
         "真正有价值的历史教育，不是继续招魂，而是帮助后来的人识别创伤如何被包装。",
         "这一期也提醒我们：对旧时代的浪漫化，往往是对现实出路贫乏的一种补偿。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1fEmUBnEzX/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=cFsy3kWMk50"
+        }
       ]
     },
     {
@@ -3573,6 +4022,17 @@
         "这期最有价值的地方，是把美国战略从情绪评价拉回到“题面”和“解法”。",
         "一旦接受社会成本这条线，特朗普和民主党的差异会变得更像路径差异，而不是目标差异。",
         "它也为后续理解东亚为什么越来越被推到前台提供了结构基础。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1pBmQBNEPv/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Xj-JIZQzYr4"
+        }
       ]
     },
     {
@@ -3655,6 +4115,17 @@
         "这期提供了一个判断龙头风险的新角度：不只是看它有多大，而是看它为了维持“大”已经用了多少金融化结构。",
         "也可以与 EP080 对照，前者更偏财务和供应链，后者更偏渠道和销量黑箱。",
         "如果后续行业真的进入加速出清阶段，这类龙头的链条压力会远比表面新闻更值得跟踪。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=DvI4BPnBX0M"
+        }
       ]
     },
     {
@@ -3735,6 +4206,17 @@
         "这期能帮助理解为什么很多人会从追求收益转向追求流动性。",
         "也提醒人：当人人都在强调“安全”时，最该追问的是安全到底来自什么。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=nk02MkRQMNA"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -3813,6 +4295,17 @@
         "把这期和“新钱阶层”相关节目放在一起，会看到很多问题最后都指向文化缺口。",
         "对社会观察者来说，这期很适合作为“技术中性神话”失效的案例。",
         "对个人来说，越想完全掌控下一代，往往越容易失去真正的连接。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=hXSMfCNoCyM"
+        }
       ],
       "status": "curated"
     },
@@ -3893,6 +4386,16 @@
         "今天很多看似高强度的历史争论，真正争夺的未必是史实，而是身份和阵营。",
         "对真相失去兴趣的社会，不会立刻崩塌，但会慢慢失去讨论任何公共问题的能力。",
         "这一期也适合作为理解网络煽动、文化动员和立场先行话语的基础节点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1wvq6BGER6/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=U5e0OwgeIhQ"
+        }
       ]
     },
     {
@@ -3973,6 +4476,16 @@
         "如果把 AI 看成一场技术浪潮，最关键的问题不是会不会来，而是这一轮能不能穿越兑现时间差。",
         "对投资视角而言，节目更在意的是应用和安全的硬约束，而不是口号式站队。",
         "对普通用户而言，越是在全民兴奋的时候，越要先问清楚工具到底替你创造了什么价值。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1kAB8BjEpf/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=D7f6oGezKSs"
+        }
       ],
       "status": "curated"
     },
@@ -4057,6 +4570,17 @@
         "这期更适合作为一种组织观察，而不是单纯产品评测。",
         "也能拿来与 EP074 对照，看同样讲生态和长期性，不同企业如何用完全不同的路径建立信任。",
         "如果后面继续整理华为车业务相关内容，这一条可以作为“神话是如何被制造出来的”入口。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=fMfF8IONCHs"
+        }
       ]
     },
     {
@@ -4131,6 +4655,16 @@
         "这期真正拆掉的是一种把政策节点等同于能力节点的叙事习惯。",
         "如果未来海南真想往更高位置走，补课重点不只是港口建设，而是法治、仲裁、人才和外部信任。",
         "它也把一个常被忽略的问题拉回来了：大项目如果不能转成普通人的获得感，最后很难稳定成立。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1mKBBBjEki/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=G8RP1IIias8"
+        }
       ]
     },
     {
@@ -4209,6 +4743,17 @@
         "这期特别适合和理财、养老、财政内容并读，理解为什么很多个体压力最后会变成结构问题。",
         "也提醒读者：越是强调“体面不能丢”的环境，越容易把人推向更深的悬崖。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=cpyvqVykbx4"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -4285,6 +4830,17 @@
         "如果继续追问，会自然走到私产、公产与公共信任之间到底如何重新划边界的问题。",
         "节目也提醒人们，不要把所有文化保护都简单等同于国家接管。",
         "看懂这期之后，再看很多关于文物、家族史和记忆政治的争论，会更容易抓到底层逻辑。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=1qc1B2UOgao"
+        }
       ],
       "status": "curated"
     },
@@ -4363,6 +4919,16 @@
         "它也提醒人们，计划、政策和投入都不是创新本身，最多只是创新的环境条件。",
         "如果往现实推一步，就会自然连到 AI、平台治理和产业政策的结构性焦虑。",
         "节目真正保留的希望，不在更强动员，而在更大的自发性和更真实的纠错能力。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1qgiLBtEsQ/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0_ji6JaUwoU"
+        }
       ],
       "status": "curated"
     },
@@ -4443,6 +5009,17 @@
         "可与所有“技术捷径 vs 长期路线”的新能源节目并读。",
         "可继续串到“安全性叙事被舒适性叙事替代”的消费研究主题。",
         "也适合作为“品牌信众化”和“创始人个人神话”议题的案例。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=64YRrrFLibk"
+        }
       ]
     },
     {
@@ -4515,6 +5092,17 @@
         "这期把“时间”从背景变量抬成了战略主角。",
         "一旦接受这个框架，很多地缘冲突都会从“谁先出手”转成“谁更能熬”。",
         "它也是后续理解日本角色变化和美国长期定力的一把钥匙。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1bSitBJEe2/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=krtwkWFjKdg"
+        }
       ]
     },
     {
@@ -4599,6 +5187,16 @@
         "如果越来越多 AI 创业公司把法律壳、融资主场和总部外迁，未来所谓“本土创新成果”到底还该按创始人国籍算，还是按公司制度归属来算。",
         "在底层模型、资本通道和监管环境都分裂的情况下，AI 创业公司究竟应该把产品、融资和组织分别放在哪个法域里才最有生存机会。",
         "节目把教育问题拉进来，其实是在追问另一件事：一个更擅长筛选执行者而不是鼓励试错者的体系，还能不能继续稳定供给下一代创业者。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1a6ixBmEq7/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=5Cl9xgZNiaY"
+        }
       ]
     },
     {
@@ -4681,6 +5279,16 @@
         "家长若只会把“标准答案”作为爱的一部分传给孩子，最终很可能把孩子推向未来最拥挤的地方。",
         "如果社会真想保住教育公平，就不该只保住统一考试，也该保住不同背景孩子接触更大世界的机会。",
         "这一期和 EP118 合看，会更清楚为什么跨学科和不确定性教育，在今天反而更像稀缺品。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV17UimBQEHk/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=jVFo1c6FwAw"
+        }
       ]
     },
     {
@@ -4760,6 +5368,16 @@
         "它也提示一个更现实的问题：很多关系真正的临界点，往往发生在资源不再单向流动的时候。",
         "节目不判对错，而是强调每一种成年人选择都带着自我承担的代价。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1RLrABPEgt/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0OeqAHNARSw"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -4837,6 +5455,17 @@
         "这期把美国的“收回来”解释成一种更能熬的玩法，而不是简单退缩。",
         "一旦接受这个模型，委内瑞拉和中东就不再是零散事件，而是美洲与外围围栏的一部分。",
         "它也为理解未来谁会被美国推到前台、谁会被留在围栏外提供了框架。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1TmrwBWEoK/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=bLMqW8w9u5Y"
+        }
       ]
     },
     {
@@ -4927,6 +5556,16 @@
         "节目把豪宅看成金融工具而不是消费品，这也意味着未来观察豪宅价格，可能更像是在观察富人的融资能力，而不是观察居住需求。",
         "如果豪宅都开始失守，那会不会意味着不是某几个项目卖不动了，而是整套“靠估值维持抵押体系”的逻辑开始松动了。",
         "反过来说，只要豪宅还在表面坚挺，普通人是不是就更容易被误导，以为整个地产市场已经回暖。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1zDrqBuE7o/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=qLA0-K0wdwY"
+        }
       ]
     },
     {
@@ -5010,6 +5649,17 @@
         "这期能帮助理解为什么同样是事故，有的品牌更容易让用户先替它解释。",
         "也适合作为观察“创始人型品牌如何把用户转化成信众”的典型案例。",
         "如果继续整理小米汽车相关节目，这一条是理解其品牌社会学位置的重要补充。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=_Zxgn1IcfYo"
+        }
       ]
     },
     {
@@ -5087,6 +5737,16 @@
         "真正自由的人不是没人可尊重，而是即使尊重也不丢失自己。",
         "成长最难的部分，常常不是学新东西，而是重新理解你最早习得的爱与权威。",
         "这一期也为理解“为什么有些人明明年纪不小，却始终不像真正的大人”提供了一个可操作框架。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV18nr2BSEC3/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=v5XEy9ASZ8I"
+        }
       ]
     },
     {
@@ -5169,6 +5829,17 @@
         "这期真正抛出来的问题，不是新加坡该不该骂谁，而是小国有没有能力只按自己的利益和风险感来决定表态边界。",
         "如果一个国家能持续提供更高的收入、更稳的住房和更强的法治，它对外部血缘叙事的依赖是不是就会自然下降。",
         "从委内瑞拉、新加坡到更广泛的小国政治，这条线最后都落回同一个问题：普通人究竟为什么愿意继续站在一个政权这边。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1xerUBUEzn/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=fHhvPI5qrHs"
+        }
       ]
     },
     {
@@ -5226,6 +5897,16 @@
       ],
       "extensions": [
         "适合作为西贝专题的后续观察节点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1etk4BTEC9/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=0wpNv_QknHI"
+        }
       ],
       "status": "curated"
     },
@@ -5310,6 +5991,17 @@
         "这期很适合回答一个问题：为什么“好好造车”在某些阶段反而活不下来。",
         "也提醒人们理解资本和产品的关系时，不能只看谁给了钱，还要看这些钱要求企业先变成什么样。",
         "如果后续继续整理中国新能源出清案例，观致会是“良币如何被系统性抹平”的重要样本。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=qMYT3xla9mc"
+        }
       ]
     },
     {
@@ -5392,6 +6084,17 @@
         "这期可以帮助理解为什么有些新能源企业明明长期亏损，却仍然能持续讲出更大的未来故事。",
         "也适合和 EP015 连起来看：前者说地方债如何进入产业，后者说产业如何把自己重新组织成资产包。",
         "如果后续继续整理换电与储能议题，这一条是理解其金融底色的重要前提。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=N_N4rPLD3yA"
+        }
       ]
     },
     {
@@ -5462,6 +6165,16 @@
         "这期最狠的地方，是把婚恋问题直接打回到审美和文明状态。",
         "它不只是反对催婚，也反对把人缩成一个便于控制的对象。",
         "如果继续沿这条线整理，家庭控制和审美退化会是很强的一组长期主题。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1Z6zrBCEem/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=q1JNU-AfzT4"
+        }
       ]
     },
     {
@@ -5539,6 +6252,17 @@
         "当一个叙事能快速穿透到零售端实物销售，往往意味着风险已经走到最后一棒。",
         "这期也适合用来训练自己辨认：你买的是资产，还是一个已经被太多人讲过的故事。",
         "如果没有退出机制，再漂亮的赛道也可能只是更贵的教训。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=dMdWHLdTwPk"
+        }
       ],
       "status": "curated"
     },
@@ -5619,6 +6343,16 @@
         "如果一个社会只奖励精明人，不奖励愿意长期承担的人，它会越来越干。",
         "这期特别适合和“新钱”“短期主义”话题一起看，能形成很强的对照。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1vDzRB5Eio/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=qn1pisJaXuw"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -5698,6 +6432,16 @@
         "对生产者来说，真正危险的不是低价，而是低价背后连同认知一起被垄断。",
         "对消费者来说，最贵的往往不是商品，而是自己不愿承认的文化焦虑。",
         "如果一个人越来越像神，就越该把他重新拉回到“他只是个卖东西的人”。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1eu6PBPEkF/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=dZ7HOZzYfa4"
+        }
       ],
       "status": "curated"
     },
@@ -5780,6 +6524,17 @@
         "这期适合与“新钱阶层”相关内容一起看，能更清楚看到中国式上升欲望如何寻找包装。",
         "对普通人而言，这期最大的提醒是：不要把社会名片误当成基本面。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=D5pb5l-lvhY"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -5856,6 +6611,16 @@
         "这期把“新加坡会不会被取代”从情绪题拉回了结构题。",
         "它也明确区分了补充路线与主秩序之间的巨大差别。",
         "如果要给海南、新加坡、新疆三者做比较，这期提供了很好的起始框架。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ca61B8Enn/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=xjDPQTVNpDs"
+        }
       ]
     },
     {
@@ -5934,6 +6699,17 @@
         "这期可以作为理解“小鹏为何被看作更像幸存者”的入口条目。",
         "也适合和 EP050 对照：一个靠前台神话，一个靠守势体系，两条路径在行业下行期会得到不同结果。",
         "如果后续继续整理新势力洗牌，这一条能帮助判断什么样的品牌更可能熬过总量收缩。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=GKmcyCSi_tw"
+        }
       ]
     },
     {
@@ -6013,6 +6789,16 @@
         "一个赛道如果最擅长讲“你几乎不用承担风险”，那它通常正在把风险藏起来。",
         "把这期和均和集团放在一起看，会发现“假繁荣”在财政和电商世界里高度同构。",
         "真正值得做的跨境，不是追着热词跑，而是先把产品和渠道主权拿在自己手里。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1RxfXBHES7/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=4yHPNu9eNlM"
+        }
       ],
       "status": "curated"
     },
@@ -6094,6 +6880,16 @@
         "对普通人来说，持有现金和等待窗口，本身就是一种很强的投资动作。",
         "真正的战略思维，往往看起来比短线激情更无聊，也更反人性。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1vUFjz9E1f/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=ZafsCC1_Ax8"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -6169,6 +6965,17 @@
         "这期把“新航线”重新翻译成“新命门”。",
         "它也说明了为什么地图上的新机会，最后总会回到规则和驻军问题。",
         "如果未来要做海权专题，格陵兰会是非常好的北极入口。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1PTFfzXEGY/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=jJAqjWE8YRQ"
+        }
       ]
     },
     {
@@ -6265,6 +7072,16 @@
         "节目虽然带着强烈个人归因，但真正有价值的部分，在于它把宝万之争、财务平台和继承人问题串成了一条时间线。",
         "对于还在思考接班的企业，这期最值得借鉴的不是谁上位，而是哪些战时工具必须在和平期及时拆掉。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1BYFyzBEUr/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Tsc97mDT2AU"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -6357,6 +7174,16 @@
         "节目把房票看成准货币工具，这也意味着它不只是地产政策，而是地方财政、信用扩张和风险后移共同作用的结果。",
         "顺着这期往下问，真正关键的可能不是“房票能不能买”，而是地方政府还有多少办法继续用制度设计替代真实现金流。",
         "对普通家庭来说，房票最值得警惕的不是折价，而是它会让人误以为自己拿到的是资产，实际上拿到的可能只是被延后的风险。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1Yyc8zZE17/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=h8btu7nS6oY"
+        }
       ]
     },
     {
@@ -6440,6 +7267,17 @@
         "这期能帮助理解为什么“行业第一”并不自动等于“最安全”。",
         "如果后续行业开始更严格核查渠道和零公里二手车，这类头部品牌受到的冲击未必会小。",
         "也可以和 EP015 一起看，前者说的是企业怎么玩，后者说的是地方政府为什么愿意陪着一起玩。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=7q8lJkluobk"
+        }
       ]
     },
     {
@@ -6513,6 +7351,16 @@
         "节目也在借 NFL 提醒观众，很多现实竞争并不是一路爽到底，而是长时间拉扯后的关键一击。",
         "对普通观众而言，看懂陌生文化并不只是娱乐能力，也是认知边界是否足够宽的问题。",
         "把这期和新加坡、小国身份或文明讨论放在一起看，会更容易理解全球舞台为什么越来越多中心。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1DFZtBuE4z/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=JScFGTDrI5U"
+        }
       ],
       "status": "curated"
     },
@@ -6590,6 +7438,17 @@
         "这期最值得保留的，是它把一场选举放进了东亚大结构里。",
         "它也提供了一个判断政治变化的实用角度：看谁更会用时间，谁更容易被外压反向成全。",
         "如果日本继续前台化，高市会是一个绕不开的人物节点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1YNZRBDEVE/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=imPCPlRKj30"
+        }
       ]
     },
     {
@@ -6675,6 +7534,16 @@
         "节目虽然用新加坡做对照，但真正抛出来的问题适用于更多地方：政府究竟是在帮普通人留下更多钱，还是提前拿走更多钱。",
         "对知识库来说，这一集适合作为连接住房制度、税负和普通人生活感的入口条目。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1jefLBHEoK/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=3lFm-R8WgMA"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -6751,6 +7620,16 @@
         "如果未来社会把“整齐划一”继续当作美，那么机器一定比人更适合那个世界。",
         "在自动化时代重新强调艺术、创造和精神性，并不是奢侈，而可能是普通人自保的现实需要。",
         "这一期也能帮助理解为什么教育系统若继续只生产“标准劳动力”，风险会越来越大。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV19VfyBtEbU/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=h1gveJUyrHk"
+        }
       ]
     },
     {
@@ -6821,6 +7700,16 @@
         "这期把旅游重新拉回了常识和主权边界，而不是情绪。",
         "它真正反对的不是免签，而是把便利误当权利、把姿态误当判断。",
         "如果以后要做跨境生活专题，这会是一篇很好的底层规则条目。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1hEfYBxEzR/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=rWs-uc7rT58"
+        }
       ]
     },
     {
@@ -6897,6 +7786,17 @@
         "当我们说“规则社会会不会太冷”，真正应该问的是：规则有没有给善意留出合理的保护带。",
         "很多人以为社会信任来自宣传教育，但信任往往是判例、比例和兜底机制一点点做出来的。",
         "这一期也提醒我们，法治成熟的关键不只是更严，而是更会处理模糊。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1kuwUztENc/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Q4yx8Anz7mA"
+        }
       ]
     },
     {
@@ -6972,6 +7872,17 @@
         "这期把伊朗问题从战争热闹拉回到接班结构。",
         "它也说明，很多体制的脆弱点平时藏着，只有接班时才会同时裂开。",
         "把玛莎·阿米尼放进结尾，是这期最重要的人本提醒。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1zTPwzcEjD/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Bhk0cW2UHlY"
+        }
       ]
     },
     {
@@ -7065,6 +7976,16 @@
         "长期下行里最难做到的是敬畏时间，这恰好也是这期反复想强调的底层态度。",
         "如果之后还要继续观察楼市，这一集提供的是一套看“托”和“拖”而不是只看“涨不涨”的框架。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1nNPiz8Eyt/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=50v5LTHJ0TM"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -7142,6 +8063,16 @@
         "优质城市未必处处震撼，但往往能让人在细节里感到被理解、被照顾和被尊重。",
         "对城市的评价一旦只剩“是不是更像大国”，普通人的日常体感就会越来越被排挤出公共讨论。",
         "这一期也提醒我们：文化底蕴不是旅游口号，而是一座城市处理生活的方式。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1FKPmzbEmu/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=5fZyPDUW-t4"
+        }
       ]
     },
     {
@@ -7219,6 +8150,16 @@
         "这期最有用的地方，是把海峡战争翻译成了保险和规则战争。",
         "一旦接受这层逻辑，很多地缘新闻会突然变得更容易读懂。",
         "如果后续做能源专题，霍尔木兹会是理解价格、风险和霸权的绝佳入口。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1pZPYz4EWp/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=wuAbLetxrSA"
+        }
       ]
     },
     {
@@ -7299,6 +8240,17 @@
         "这期适合作为“权限设计为何属于安全设计”的典型案例。",
         "也可以与 EP017 对照：前者是概率型硬件风险，后者是权限型软件风险，两者都不是靠事后情绪就能解决的。",
         "如果继续整理智能车议题，这一条能作为“哪些功能不该被做成炫技入口”的基准。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=PC8PiH5UkZQ"
+        }
       ]
     },
     {
@@ -7373,6 +8325,16 @@
         "它也提醒人们，任何把弱者当筹码的社会，都不该轻易被“文化特殊性”开脱。",
         "如果继续整理这一主题，可以把它和公共追责、精英共谋和制度透明度一起并入。",
         "这期与其说在谈伊朗，不如说在谈任何一个把丑恶正常化的权力结构。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1B3Pfz9EGP/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=DfwlxoaXEE0"
+        }
       ],
       "status": "curated"
     },
@@ -7455,6 +8417,17 @@
         "这期可以作为理解“行业压力如何落到个人资产负债表”最直接的入口。",
         "也提醒人们别只问“能不能买”，更要问“买完之后还能不能退出”。",
         "如果后续继续整理新能源消费端风险，这条会是地方债、渠道黑箱和用户后果之间的重要桥梁。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=d4RmX_HqVPY"
+        }
       ]
     },
     {
@@ -7531,6 +8504,16 @@
         "如果继续往下看，会很自然连到 AI 漫剧为什么也依赖补贴和 token 的问题。",
         "节目给普通用户的提醒非常实用：不要把自己最核心的权限交给一个你还不了解的系统。",
         "真正的生产力升级，必须区分“能用”和“值得大规模交给它用”这两件事。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ZDcBzdEzE/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=nXHlbTl2te4"
+        }
       ],
       "status": "curated"
     },
@@ -7610,6 +8593,17 @@
         "节目也提醒观众，很多外部强硬姿态恰恰是内部脆弱的一种反射。",
         "把这期和石油美元、特朗普战略放在一起，会更容易看懂俄乌之外的大棋盘。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV18xcSzkEQX/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=lWZ_euDyyI8"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -7684,6 +8678,16 @@
         "这期最强的地方，是它同时保留了新加坡的优势和焦虑。",
         "它没有把新加坡神化，而是把它放回一个会被地缘与产业重构同时考验的位置。",
         "如果想理解小国为什么会既风光又脆弱，这期非常关键。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1JVwxz4EEE/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=119XkcHwfDs"
+        }
       ]
     },
     {
@@ -7761,6 +8765,16 @@
         "这期把伊朗问题从战争新闻推进到了体制深水区。",
         "它也说明，真正撕裂一个国家的未必是炸弹，而是炸弹之后的接班安排。",
         "如果知识库要保留长期价值，EP097 会是理解伊朗结构危机的关键节点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ZnwNzcEGL/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=GUB7L-QZRMA"
+        }
       ]
     },
     {
@@ -7837,6 +8851,16 @@
         "继续往下整理，会自然连到平台补贴、低价电车和地方杠杆为什么经常一起出现。",
         "节目对“富人思维”的真正强调，其实是影响力和控制关键节点的能力。",
         "对普通人而言，这期最有价值的提醒是：别把低价当成唯一竞争语言。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1J9wUztE6x/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=ozA3KaFbY7s"
+        }
       ],
       "status": "curated"
     },
@@ -7916,6 +8940,16 @@
         "节目对‘放’的定义也很有价值：不是给你画个圈让你动，而是让你真的为后果负责。",
         "对理解未来地方财政风险来说，这期比单看债务数字更重要。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1VEwYzTEGq/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=ftAQm0GABQ4"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -7994,6 +9028,16 @@
         "直达型民生支出看起来笨，却往往比层层资本运作更能稳住基层生活。",
         "对政策观察者来说，这期最值得追问的是“分配是否正在越来越偏向上层结构”。",
         "对普通人来说，理解制度表达尊重的方式，本身就是理解未来社会走向的一部分。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1EswrzNEJk/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=BaJf03v3etA"
+        }
       ],
       "status": "curated"
     },
@@ -8086,6 +9130,16 @@
         "如果从员工和消费者视角出发，这一集也在提醒我们，值得支持的企业未必是最会讲故事的那个，而是最愿意把利益重新分回来的那个。",
         "和 EP114 合起来看，会更清楚地看到企业与地方体系绑定之后，不只是续命方式会变，外部叙事也会跟着一起变形。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1DVAczVEtN/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=GodVPP5GGhM"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -8164,6 +9218,16 @@
         "被包装成“知识”的内容，如果本质仍然是卖货，它就仍然值得按商业逻辑审视。",
         "这期的价值不只是替谁发声，而是帮助识别平台权力如何塑造公共判断。",
         "在流量世界里，说真话的难度，常常不在于真话本身，而在于真话挡了谁的路。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV193AAzpEx5/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=5rFIl1xIJYA"
+        }
       ],
       "status": "curated"
     },
@@ -8246,6 +9310,17 @@
         "这期可以作为理解新能源研发治理问题的总纲，其余很多事故都是它的下游表现。",
         "也能和 EP041、EP091 连起来看，前者说设计捷径，后者说权限失守，这期解释为什么这些东西会一路放行。",
         "如果以后继续整理科研或工程治理相关内容，这条会是非常稳的结构入口。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=kRRq8asLnZ8"
+        }
       ]
     },
     {
@@ -8324,6 +9399,17 @@
         "这期把“中立”从态度词重新变成了方法词。",
         "它也让新加坡、日本和东亚秩序第一次在同一条逻辑线上被讲清楚。",
         "如果想理解新加坡为什么越来越重要，这一集非常关键。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1a1QfB7EBy/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=30I4DmvROkM"
+        }
       ]
     },
     {
@@ -8401,6 +9487,16 @@
         "真正会做战略的人，往往先接受长时间的沉默和不动作。",
         "这期适合作为整个投资内容批判线索的入口。",
         "如果你开始愿意忍受无聊，说明你离长期主义已经近了一点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ApXHBaEmk/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=-zerh-tdk7Y"
+        }
       ],
       "status": "curated"
     },
@@ -8482,6 +9578,17 @@
         "对企业和家庭来说，提早接受“低增长、高收费、重管理”的现实，比等下一轮神话更务实。",
         "这期可以作为地方财政问题的一条总线，把很多分散事件串成一个更完整的图景。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=p8HKAY9xSfQ"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -8559,6 +9666,16 @@
         "继续整理这条线时，代理人战争和离岸总控值得作为下一层展开。",
         "对理解未来美元与黄金的争议，这期提供的是一套变量识别框架。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1tnX5BSE3g/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=Xfjgz-FvRIE"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -8635,6 +9752,16 @@
         "如果继续往下整理，最值得补的是平台退出失败后，创作者资产如何归零的典型案例。",
         "节目对创作者的建议非常实操：多平台分发、做自有 IP、优先跑通非补贴收入。",
         "看懂这期以后，再看所有“平台送钱”的故事，都会先多问一句：它到底在买什么。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV13rX6BwEB4/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=uaiDo_Nr5eM"
+        }
       ],
       "status": "curated"
     },
@@ -8715,6 +9842,16 @@
         "一代人对战争、历史和英雄的理解，往往会被他们最常消费的视觉产品悄悄塑形。",
         "行业真正的危机不只是烂片增多，而是好作品越来越缺乏出现的工业土壤。",
         "这一期也是理解“为什么如今老片显得越来越好”的一个结构性答案。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1qdXCBEE4v/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=d7dEJKbMUd0"
+        }
       ]
     },
     {
@@ -8792,6 +9929,16 @@
         "AI 让更多人能做内容，但也让平台更容易在海量内容中迅速培养出少数幸存者。",
         "越工业化的造梗生态，越会把语言推向速食化和扁平化，因为复杂内容不利于高频复制。",
         "这一期也为品牌营销、MCN 操盘和个人创作者的策略边界提供了现实提醒。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV14x9pBGEUj/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=NkiMe-Uo5BY"
+        }
       ]
     },
     {
@@ -8872,6 +10019,16 @@
         "梦想不是和现实对立的幻觉，很多时候它本身就是现实里最有持久性的驱动力。",
         "真正压垮人的，不总是失败，而是从来没有被允许认真尝试过。",
         "这一期也提示家长和老师：不要把自己的风险厌恶，误当成孩子的人生正确答案。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1Jr9pBwEX6/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=GtcX8NqBLkc"
+        }
       ]
     },
     {
@@ -8947,6 +10104,16 @@
         "如果继续扩展，很值得把开瓶率、库存规模和价格维稳方式做成单独专题。",
         "节目也提醒人们，很多‘品牌升级’背后其实是在做资产负债表修复。",
         "与白酒行业下一期合看，会更清楚金融属性和消费文化崩塌之间的关系。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ZEDcBdEBu/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=eoOJAiGdiy0"
+        }
       ],
       "status": "curated"
     },
@@ -9024,6 +10191,17 @@
         "如果要继续整理，最值得追的是‘失败之后谁还能保住成果继续做下一轮’。",
         "节目对商业航天的判断，也能反过来帮助理解 AI 与新能源赛道的组织差异。",
         "把这期和苏联美学、大计划锁定合看，会看到同一问题在不同场景里的反复出现。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1hgDaBYE3y/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=-AoVG2bhE2o"
+        }
       ],
       "status": "curated"
     },
@@ -9115,6 +10293,16 @@
         "节目虽然语气激烈，但给普通人最实用的提醒其实很简单：先问增长有没有真实货物流、真实利润和真实现金流，再决定要不要相信。",
         "如果未来继续出现各种“突然变好”的数据，这一集提供了一套很好的拆解框架。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1WqD7BUEdn/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=NjOrpNx-hHg"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -9187,6 +10375,17 @@
         "这期把一次战场救援变成了国家信用的案例教学。",
         "它也解释了为什么有些国家会在个体身上投入看似“不划算”的资源。",
         "如果知识库要保留制度比较的深层材料，EP115 的价值很高。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1T2DxByE3Q/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=2KsuSbvB_qQ"
+        }
       ]
     },
     {
@@ -9269,6 +10468,16 @@
         "如果继续整理，会很自然连到海外华人、公民认同和多民族治理这些议题。",
         "节目最终想保留的不是结论统一，而是承认归属可以有多种合法形态。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV11qQABLEDU/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=ekd6oVT0RQQ"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -9346,6 +10555,17 @@
         "这期给东南亚做了一个很强的结构定位：不是边缘区，而是新反应区。",
         "它也让越南不再只是越南，而成为观察整个东盟重新站位的切口。",
         "如果要搭建东南亚专题，EP117 是非常好的中心节点。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1whQbBjEAj/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=JdxN2uUoILM"
+        }
       ]
     },
     {
@@ -9427,6 +10647,16 @@
         "对复杂系统保持敬畏，本来应该是现代公民的基础能力，却在很多课堂上变成了可疑能力。",
         "举报并不总是坏事，但当它主要被用来惩罚有启发性的越界时，教育就会越来越胆小。",
         "这一期也提醒我们：学生最该被保护的，也许不是“绝不被冒犯”，而是还有机会被真正打开。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1fmQvBZEJf/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=jcsD4bq6KUs"
+        }
       ]
     },
     {
@@ -9502,6 +10732,16 @@
         "继续整理这一主题时，年份酒标准、酒桌文化代际差异和酱酒私域玩法都值得单独分条补充。",
         "节目最值得记住的判断是：白酒行业真正失去的不是销量，而是旧秩序组织消费的能力。",
         "如果未来白酒要重建自己，靠的不会是更激进的故事，而是更真实的场景与更透明的规则。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1pndbBoEXv/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=u3ZjvK4FG6E"
+        }
       ],
       "status": "curated"
     },
@@ -9589,6 +10829,17 @@
         "如果欧洲越来越成功地拆掉内部的‘雷点’，下一个最容易被各方重新埋雷的地区，会不会就是东南亚与第一岛链周边。",
         "匈牙利的这次变化也在提醒：一个国家是否被不断争抢，不该只看外部关注度，更该看普通人到底有没有从中真正受益。",
         "年轻人高投票率改写国家走向这件事，未来可能不只发生在匈牙利，也可能成为更多国家内部重组秩序的关键信号。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1BYdbBUEAy/",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=yWHN2_jtmCY"
+        }
       ]
     },
     {
@@ -9682,6 +10933,16 @@
         "对于任何关心财富保全的人，这期最大的启发可能不是复制谁的路径，而是理解“前置完成”为什么比“事后补救”重要得多。",
         "在知识库里，这一集适合作为连接房地产人物、家族信托和时间尺度思维的入口条目。"
       ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1tPdVBWEnX/"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=SIj7VTRSvc4"
+        }
+      ],
       "status": "curated"
     },
     {
@@ -9760,6 +11021,111 @@
         "这期很适合作为新加坡专题里的规则核心条目。",
         "它把“国际法有没有用”这个抽象问题，落回了小国最现实的生存利益。",
         "如果以后只保留一条最能代表新加坡式外交逻辑的节目，EP122 会非常靠前。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "url": "https://www.bilibili.com/video/BV1ocdHB4E7a?spm_id_from=333.788.videopod.sections&vd_source=10d2833a281f736d15b299d593c92082",
+          "access": "member"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=7-KvUMne4OU"
+        }
+      ]
+    },
+    {
+      "id": "EP123",
+      "title": "伊朗为何是现代版“三国荆州”？诸葛亮庞统之争看懂大国博弈底层逻辑",
+      "summary": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。",
+      "curated": true,
+      "sourceFile": "[EP123】 伊朗为何是现代版“三国荆州”？诸葛亮庞统之争看懂大国博弈底层逻辑.srt",
+      "status": "curated",
+      "tags": [
+        "伊朗",
+        "荆州",
+        "诸葛亮",
+        "庞统",
+        "霍尔木兹海峡",
+        "大国博弈",
+        "韬光养晦"
+      ],
+      "people": [],
+      "themes": [
+        "海峡命门与航运秩序",
+        "制裁、遏制与集团竞争"
+      ],
+      "concepts": [
+        "chokepoint-leverage",
+        "sanction-containment"
+      ],
+      "models": [
+        "regional-denial-model",
+        "proxy-containment-ring"
+      ],
+      "relatedEpisodes": [
+        "EP090",
+        "EP107",
+        "EP122"
+      ],
+      "topic": {
+        "background": "节目从停战后的伊朗乱局切入，试图回答一个很现实的问题：为什么伊朗这个国家总让周边局势不断升级，而且很难被简单理解成“谁打赢谁打输”。主持人没有先从新闻细节下手，而是借三国里的荆州，把伊朗放回一个更容易看懂的结构里：它既是周边大国都想争的十字路口，也是任何占住它的人都会立刻暴露在多方围剿下的四战之地。",
+        "conflicts": [
+          "伊朗到底是一个足以撬动中东全局的战略支点，还是一个会把持有者拖入长期消耗的前沿陷阱。",
+          "对美国和以色列来说，伊朗是必须压制的对手；但对沙特、阿联酋等近邻来说，真正更可怕的是一个强势且不可控的近邻霸主。",
+          "对支持伊朗的一方而言，继续把伊朗当成前线荆州死守，和主动收缩、稳住更深层基本盘，哪一种更符合长期利益。",
+          "当一个大国已经公开亮牌、前沿布局也铺开以后，它是否还保有重新收缩、回到“藏在云里”状态的空间。"
+        ],
+        "boundaries": [
+          "这期不是在做中东战报复盘，而是用历史类比解释伊朗在地缘结构上的位置。",
+          "节目对诸葛亮、庞统和荆州的援引，重点在战略结构，不是对三国史实的严格学术考证。",
+          "这里对沙特、阿联酋、美国、以色列和东方大国的讨论，强调的是势力平衡逻辑，不等于完整梳理各方全部政策细节。"
+        ],
+        "mechanism": "伊朗处在高加索、中亚、地中海与霍尔木兹之间的十字路口 -> 这种命门位置让它天然具备能源、路线和集团竞争上的战略杠杆 -> 但越想把这种位置转化成外扩能力，周边近邻越会把它视作即时威胁 -> 于是远方强敌与周边国家反而更容易形成围堵与借力关系 -> 前线节点从“争天下的资本”变成“所有人都盯着拆的雷点” -> 最后真正难的就不再是能不能打一场漂亮仗，而是有没有能力在被集体盯防前及时收缩、保住更深的基本盘与时间空间。",
+        "extensions": [
+          "如果伊朗真是今天的荆州，那么未来决定其命运的，究竟是正面军力，还是周边国家是否继续把它视作近邻威胁。",
+          "一条命门型前沿节点，怎样才能从“人人都想争”的枢纽，变成“没人敢随便拆”的稳定秩序接口。",
+          "当一个国家集团已经部分暴露了自己的前沿布局后，是否还能重新进入低调积累、等待天时的状态。",
+          "历史类比最有价值的地方，也许不在于谁像谁，而在于它提醒我们：很多前沿据点并不是拿下来就赢，而是拿下来后能不能长期守住。"
+        ]
+      },
+      "viewpoints": [
+        {
+          "title": "伊朗最值钱的地方，恰恰也是最容易把持有者拖进消耗战的地方",
+          "body": "节目把伊朗类比成荆州，核心不是为了制造历史趣味，而是为了强调一种双重属性：你拿到这个地方，就有了影响全局的资本；但你也同时把自己放到了多方势力的共同视线里。伊朗卡住高加索、中亚、地中海和霍尔木兹海峡，这让它天然拥有战略价值，但也注定它难以成为一个只享受红利、不承担围堵压力的安全腹地。"
+        },
+        {
+          "title": "真正容易要命的，不是远方强敌，而是周边国家对强势近邻的本能戒备",
+          "body": "节目借孙权与关羽的关系解释海湾国家的心态：一个遥远强敌未必会立刻顺流而下吞掉你，但一个就在上游、手里又有硬实力的近邻，随时可能改写你眼前的安全秩序。从这个角度看，沙特、阿联酋等国并不是单纯在亲美，而是在优先拆掉自己眼里更近、更不受控的那颗雷。"
+        },
+        {
+          "title": "关羽的问题从来不只是能不能打，而是会不会被周边一起拆",
+          "body": "这期把伊朗比作镇守荆州的关羽，真正想说明的不是英雄叙事，而是前沿节点最怕集体围剿。节目认为，伊朗即使拥有不弱的军力和外部支撑，也不意味着它能长期把“命门位置”稳定转成优势；一旦周边近邻、远方强敌和更大集团同时把它当成需要压制的焦点，这种位置反而会从资本变成负担。"
+        },
+        {
+          "title": "诸葛亮式死守前沿很强势，但庞统式收缩也许更符合长期生存",
+          "body": "视频后半段最重要的判断，不是伊朗像不像荆州，而是继续拿伊朗当前沿去压整个中东，到底是不是一笔划算的账。节目认为，诸葛亮方案的问题在于看上去最有进攻性，也最容易让敌人提前完成联合；庞统方案则强调放弃过于暴露的前线，把资源撤回更深的基本盘，以修养生息换时间。这层逻辑，也是节目拿邓公和“龙应藏在云里”去做呼应的原因。"
+        },
+        {
+          "title": "最大的代价往往不是一场败仗，而是过早亮牌后很难再回到可收可放的状态",
+          "body": "节目最后真正担心的，不是前沿布局今天强不强，而是一旦战略空间被全部摊开，后面就很难重新低调回撤。就像蜀汉丢掉荆州之后，益州虽然还在，但已经不是当初那个还能从容等待天时的益州；同样地，一个国家集团如果过早把自己的前沿意图、路径和腾挪空间都暴露出来，后续再谈收缩，味道就会完全变掉。"
+        }
+      ],
+      "extensions": [
+        "这期最有用的地方，是把伊朗从单点新闻事件重新放回了一个“枢纽即负担”的结构里看。",
+        "它也提醒我们，许多看起来像价值节点的前沿据点，最后真正比拼的不是谁先占住，而是谁能承受后续的集体反制。",
+        "如果继续沿着这条线整理，中东、海峡、代理围堵和战略收缩会逐渐并成一张更完整的图。"
+      ],
+      "videoLinks": [
+        {
+          "platform": "bilibili",
+          "status": "unavailable",
+          "note": "已下架"
+        },
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/watch?v=rpwuvbkT_ac"
+        }
       ]
     }
   ],
@@ -14934,6 +16300,10 @@
         {
           "id": "EP122",
           "note": "节目借维文的表态说明，小国越掌握命门，越要维护不收费的国际通行原则。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目直接把伊朗类比成现代荆州，强调十字路口位置既带来争夺资本，也带来四战之地的围剿压力。"
         }
       ],
       "signals": [
@@ -15614,6 +16984,10 @@
         {
           "id": "EP090",
           "note": "霍尔木兹海峡的保险、护航和定价权重组，被节目视作美国遏制对手集团的一部分。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目把海湾国家与美国共同压制伊朗，解释成近邻恐惧与外部围栏叠加后的长期遏制结构。"
         }
       ],
       "signals": [
@@ -16935,6 +18309,10 @@
         {
           "id": "EP107",
           "note": "节目把川普的战略理解为一种通过盟友分担成本、封堵灰色石油流动的代理围堵环。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目把沙特、阿联酋等近邻与美国共同拆伊朗的逻辑，解释成用区域盟友分担围堵成本的现实版本。"
         }
       ],
       "signals": [
@@ -18640,6 +20018,10 @@
         {
           "id": "EP090",
           "note": "节目认为霍尔木兹海峡的保险、护航和定价权重组，本质上服务于美国对对手集团的围栏。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目借荆州类比说明，伊朗越想把枢纽位置转成外扩能力，越容易触发周边近邻与远方强敌的联合拒止。"
         }
       ],
       "signals": [
@@ -21515,6 +22897,10 @@
         {
           "id": "EP122",
           "note": "节目用维文的讲话说明通行权原则为何比短期收费更重要。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目把伊朗当作现代荆州，强调霍尔木兹与欧亚十字路口如何让命门位置同时变成资本和负担。"
         }
       ]
     },
@@ -22351,6 +23737,10 @@
         {
           "id": "EP090",
           "note": "节目把霍尔木兹海峡的保险、护航和定价权争夺视为更大围栏的一部分。"
+        },
+        {
+          "id": "EP123",
+          "note": "节目认为海湾国家与美国共同压制伊朗，不只是战术合作，而是集团遏制和区域围堵的自然结果。"
         }
       ]
     },
@@ -22598,6 +23988,40 @@
       "parents": []
     },
     {
+      "id": "伊朗",
+      "name": "伊朗",
+      "summary": "围绕伊朗的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "伊朗是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP087",
+          "note": "本期围绕哈梅内伊遭定点清除后的舆论与后果展开，核心主张是：与其继续讨论谁是“纸老虎”、谁敢不敢打，不如直接追问权力会落到谁手里。节目认为，真正重要的不是统治者是否被炸，而是这件事如何暴露伊朗的内鬼问题、接班结构和神权体制的后续裂缝；在这一切之外，最值得被记住的仍是像玛莎·阿米尼这样的普通人。"
+        },
+        {
+          "id": "EP090",
+          "note": "本期把霍尔木兹海峡拆成三个层次来讲：物理上伊朗封不死，资本上真正说了算的是保险与承保，权力上真正想改写规则的是美国。节目因此得出一个很有力量的判断：全球航道是否停摆，并不首先取决于导弹和水雷，而是取决于谁定义风险、谁敢承保、谁能提供护航与定价体系。特朗普在这套叙事里被放到了“把失控火药桶变回可控压力阀”的位置上。"
+        },
+        {
+          "id": "EP092",
+          "note": "本期借伊朗学校、妇女儿童处境与爱泼斯坦案的对照，强调文化自豪感和文明底线不是一回事；真正暴露一个社会成色的，不是它怎样讲文明，而是它怎样对待弱者与怎样纵容精英共谋。"
+        },
+        {
+          "id": "EP097",
+          "note": "本期直接把伊朗新领袖上位解释成一场三重国本危机，而不是简单的稳定方案。节目认为，穆杰塔巴·哈梅内伊如果被推上接班位置，短期确实可能稳住神权国家的表面秩序，但长期会同时撕裂国家伦理、宗教合法性与民族平衡，令伊朗在对外更孤立、对内更难自洽。主持人因此把这次接班看成美国和以色列已经达到目的后的次生效应，而不是他们的失败。"
+        },
+        {
+          "id": "EP122",
+          "note": "本期围绕维文在新加坡国会对霍尔木兹海峡、伊朗与通行费问题的回应，完整展示了节目眼中的“小国生存术”。主持人的核心判断是：对掌握咽喉通道的小国而言，国际法不是抽象姿态，而是长期自保的底盘；新加坡真正聪明的地方，不在于趁别人出事多收一点钱，而在于明知自己有短期获利机会时，仍拒绝破坏不收费的海峡原则。"
+        },
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
+        }
+      ],
+      "parents": []
+    },
+    {
       "id": "japan",
       "name": "日本",
       "summary": "围绕日本政治转向、东亚安全重组、历史经验和关键政治人物的专题入口。",
@@ -22656,36 +24080,6 @@
         {
           "id": "EP107",
           "note": "本期围绕美元、黄金与石油美元体系，提出一个强判断：真正侵蚀美元霸权的不是公开数据里的去美元化，而是藏在统计之外的灰色石油网络；特朗普真正想做的，也不是战略收缩，而是用代理围堵重新堵上这个漏洞。"
-        }
-      ],
-      "parents": []
-    },
-    {
-      "id": "伊朗",
-      "name": "伊朗",
-      "summary": "围绕伊朗的节目群入口，用来串联相关案例、争议和延伸讨论。",
-      "description": "伊朗是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
-      "aliases": [],
-      "episodes": [
-        {
-          "id": "EP087",
-          "note": "本期围绕哈梅内伊遭定点清除后的舆论与后果展开，核心主张是：与其继续讨论谁是“纸老虎”、谁敢不敢打，不如直接追问权力会落到谁手里。节目认为，真正重要的不是统治者是否被炸，而是这件事如何暴露伊朗的内鬼问题、接班结构和神权体制的后续裂缝；在这一切之外，最值得被记住的仍是像玛莎·阿米尼这样的普通人。"
-        },
-        {
-          "id": "EP090",
-          "note": "本期把霍尔木兹海峡拆成三个层次来讲：物理上伊朗封不死，资本上真正说了算的是保险与承保，权力上真正想改写规则的是美国。节目因此得出一个很有力量的判断：全球航道是否停摆，并不首先取决于导弹和水雷，而是取决于谁定义风险、谁敢承保、谁能提供护航与定价体系。特朗普在这套叙事里被放到了“把失控火药桶变回可控压力阀”的位置上。"
-        },
-        {
-          "id": "EP092",
-          "note": "本期借伊朗学校、妇女儿童处境与爱泼斯坦案的对照，强调文化自豪感和文明底线不是一回事；真正暴露一个社会成色的，不是它怎样讲文明，而是它怎样对待弱者与怎样纵容精英共谋。"
-        },
-        {
-          "id": "EP097",
-          "note": "本期直接把伊朗新领袖上位解释成一场三重国本危机，而不是简单的稳定方案。节目认为，穆杰塔巴·哈梅内伊如果被推上接班位置，短期确实可能稳住神权国家的表面秩序，但长期会同时撕裂国家伦理、宗教合法性与民族平衡，令伊朗在对外更孤立、对内更难自洽。主持人因此把这次接班看成美国和以色列已经达到目的后的次生效应，而不是他们的失败。"
-        },
-        {
-          "id": "EP122",
-          "note": "本期围绕维文在新加坡国会对霍尔木兹海峡、伊朗与通行费问题的回应，完整展示了节目眼中的“小国生存术”。主持人的核心判断是：对掌握咽喉通道的小国而言，国际法不是抽象姿态，而是长期自保的底盘；新加坡真正聪明的地方，不在于趁别人出事多收一点钱，而在于明知自己有短期获利机会时，仍拒绝破坏不收费的海峡原则。"
         }
       ],
       "parents": []
@@ -22830,6 +24224,28 @@
         {
           "id": "EP107",
           "note": "本期围绕美元、黄金与石油美元体系，提出一个强判断：真正侵蚀美元霸权的不是公开数据里的去美元化，而是藏在统计之外的灰色石油网络；特朗普真正想做的，也不是战略收缩，而是用代理围堵重新堵上这个漏洞。"
+        }
+      ],
+      "parents": []
+    },
+    {
+      "id": "霍尔木兹海峡",
+      "name": "霍尔木兹海峡",
+      "summary": "围绕霍尔木兹海峡的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "霍尔木兹海峡是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP090",
+          "note": "本期把霍尔木兹海峡拆成三个层次来讲：物理上伊朗封不死，资本上真正说了算的是保险与承保，权力上真正想改写规则的是美国。节目因此得出一个很有力量的判断：全球航道是否停摆，并不首先取决于导弹和水雷，而是取决于谁定义风险、谁敢承保、谁能提供护航与定价体系。特朗普在这套叙事里被放到了“把失控火药桶变回可控压力阀”的位置上。"
+        },
+        {
+          "id": "EP122",
+          "note": "本期围绕维文在新加坡国会对霍尔木兹海峡、伊朗与通行费问题的回应，完整展示了节目眼中的“小国生存术”。主持人的核心判断是：对掌握咽喉通道的小国而言，国际法不是抽象姿态，而是长期自保的底盘；新加坡真正聪明的地方，不在于趁别人出事多收一点钱，而在于明知自己有短期获利机会时，仍拒绝破坏不收费的海峡原则。"
+        },
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
         }
       ],
       "parents": []
@@ -23283,24 +24699,6 @@
         {
           "id": "EP116",
           "note": "本期从黄循财访中不回祖宅谈起，说明这不是忘本，而是新加坡作为华人占多数小国必须维持的边界感；同时节目也把这个国家级选择延伸成个人命题：现代人的故乡不必只由血缘坐标决定，能安身、能创造价值的地方也可以成为真正的归属。"
-        }
-      ],
-      "parents": []
-    },
-    {
-      "id": "霍尔木兹海峡",
-      "name": "霍尔木兹海峡",
-      "summary": "围绕霍尔木兹海峡的节目群入口，用来串联相关案例、争议和延伸讨论。",
-      "description": "霍尔木兹海峡是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
-      "aliases": [],
-      "episodes": [
-        {
-          "id": "EP090",
-          "note": "本期把霍尔木兹海峡拆成三个层次来讲：物理上伊朗封不死，资本上真正说了算的是保险与承保，权力上真正想改写规则的是美国。节目因此得出一个很有力量的判断：全球航道是否停摆，并不首先取决于导弹和水雷，而是取决于谁定义风险、谁敢承保、谁能提供护航与定价体系。特朗普在这套叙事里被放到了“把失控火药桶变回可控压力阀”的位置上。"
-        },
-        {
-          "id": "EP122",
-          "note": "本期围绕维文在新加坡国会对霍尔木兹海峡、伊朗与通行费问题的回应，完整展示了节目眼中的“小国生存术”。主持人的核心判断是：对掌握咽喉通道的小国而言，国际法不是抽象姿态，而是长期自保的底盘；新加坡真正聪明的地方，不在于趁别人出事多收一点钱，而在于明知自己有短期获利机会时，仍拒绝破坏不收费的海峡原则。"
         }
       ],
       "parents": []
@@ -24609,6 +26007,20 @@
         {
           "id": "EP009",
           "note": "本期围绕宗馥莉接手娃哈哈后的几步关键动作，讨论娃哈哈为什么在外界看似仍有体量、内部却早已被国资旧账、家族裂痕、宏胜系外置和品牌路线失误一起推向脆断边缘。"
+        }
+      ],
+      "parents": []
+    },
+    {
+      "id": "大国博弈",
+      "name": "大国博弈",
+      "summary": "围绕大国博弈的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "大国博弈是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
         }
       ],
       "parents": []
@@ -26718,6 +28130,20 @@
       "parents": []
     },
     {
+      "id": "荆州",
+      "name": "荆州",
+      "summary": "围绕荆州的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "荆州是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
+        }
+      ],
+      "parents": []
+    },
+    {
       "id": "精神三弑",
       "name": "精神三弑",
       "summary": "围绕精神三弑的节目群入口，用来串联相关案例、争议和延伸讨论。",
@@ -27864,6 +29290,20 @@
         {
           "id": "EP121",
           "note": "本期主张把潘石屹的婚姻、上市、家族信托、卖楼和退出动作全部放回各自的时间窗口里看，而不是用事后阴谋论把三十年的决策压成一个故事。节目核心判断是：潘石屹和张欣真正稀缺的，不是算无遗策，而是更早完成了对资产、法域和退出节奏的前瞻布局。"
+        }
+      ],
+      "parents": []
+    },
+    {
+      "id": "庞统",
+      "name": "庞统",
+      "summary": "围绕庞统的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "庞统是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
         }
       ],
       "parents": []
@@ -29138,6 +30578,20 @@
         {
           "id": "EP056",
           "note": "本期借 1941 年日本对美开战的历史案例，提出一个更重要的判断：战争的本质并不只是武器和军队的比拼，而是谁能让时间站在自己这一边。节目认为，日本最大的失败不在勇气不足，而在于误把“掐表开打”的短窗口当成了长期胜势，最终让时间从盟友变成了敌人。"
+        }
+      ],
+      "parents": []
+    },
+    {
+      "id": "韬光养晦",
+      "name": "韬光养晦",
+      "summary": "围绕韬光养晦的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "韬光养晦是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
         }
       ],
       "parents": []
@@ -31074,6 +32528,20 @@
         {
           "id": "EP063",
           "note": "本期把成长描述成“精神三弑”：弑母、弑父、弑自己。节目强调，这里的“弑”不是简单切断，而是先把关系和权威真正看明白、吃进去，再把它们吐出来，形成理解、边界和尊重。按照这个框架，很多今天流行的“断亲”并不是成熟完成，而更像是卡在第一阶段后的一种防御性疏离。"
+        }
+      ],
+      "parents": []
+    },
+    {
+      "id": "诸葛亮",
+      "name": "诸葛亮",
+      "summary": "围绕诸葛亮的节目群入口，用来串联相关案例、争议和延伸讨论。",
+      "description": "诸葛亮是从节目标签自动沉淀出来的关键词入口。这个页面用于把分散在不同节目里的相关讨论收拢到一起，方便顺着同一主题继续追踪。",
+      "aliases": [],
+      "episodes": [
+        {
+          "id": "EP123",
+          "note": "本期用三国里的荆州困局去翻译伊朗的地缘处境，核心判断是：伊朗之所以反复成为中东风暴眼，不只是因为它和美国、以色列对抗，而是因为它同时具备天下枢纽与四战之地这两种属性。节目进一步提出，更危险的往往不是正面强敌，而是周边邻国对一个强势近邻的集体戒备；从这个意义上说，庞统式的战略收缩和等待时机，可能比诸葛亮式死守前沿更能保住长期生存空间。"
         }
       ],
       "parents": []

@@ -67,5 +67,15 @@
     "节目也在借 NFL 提醒观众，很多现实竞争并不是一路爽到底，而是长时间拉扯后的关键一击。",
     "对普通观众而言，看懂陌生文化并不只是娱乐能力，也是认知边界是否足够宽的问题。",
     "把这期和新加坡、小国身份或文明讨论放在一起看，会更容易理解全球舞台为什么越来越多中心。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1DFZtBuE4z/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=JScFGTDrI5U"
+    }
   ]
 }

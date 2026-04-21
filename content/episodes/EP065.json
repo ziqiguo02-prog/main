@@ -51,5 +51,15 @@
   ],
   "extensions": [
     "适合作为西贝专题的后续观察节点。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1etk4BTEC9/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=0wpNv_QknHI"
+    }
   ]
 }

@@ -74,5 +74,15 @@
     "梦想不是和现实对立的幻觉，很多时候它本身就是现实里最有持久性的驱动力。",
     "真正压垮人的，不总是失败，而是从来没有被允许认真尝试过。",
     "这一期也提示家长和老师：不要把自己的风险厌恶，误当成孩子的人生正确答案。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1Jr9pBwEX6/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=GtcX8NqBLkc"
+    }
   ]
 }

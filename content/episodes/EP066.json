@@ -77,5 +77,16 @@
     "这期很适合回答一个问题：为什么“好好造车”在某些阶段反而活不下来。",
     "也提醒人们理解资本和产品的关系时，不能只看谁给了钱，还要看这些钱要求企业先变成什么样。",
     "如果后续继续整理中国新能源出清案例，观致会是“良币如何被系统性抹平”的重要样本。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=qMYT3xla9mc"
+    }
   ]
 }

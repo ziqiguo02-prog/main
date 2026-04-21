@@ -73,5 +73,15 @@
     "今天很多看似高强度的历史争论，真正争夺的未必是史实，而是身份和阵营。",
     "对真相失去兴趣的社会，不会立刻崩塌，但会慢慢失去讨论任何公共问题的能力。",
     "这一期也适合作为理解网络煽动、文化动员和立场先行话语的基础节点。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1wvq6BGER6/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=U5e0OwgeIhQ"
+    }
   ]
 }

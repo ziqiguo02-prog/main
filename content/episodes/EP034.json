@@ -71,5 +71,15 @@
     "一个知识系统是否健康，看它如何对待学生与年轻教师的质疑，比看它年度通稿更有价值。",
     "很多人把学术腐败理解成道德失范，但它往往首先是一种激励失配。",
     "这一期提醒我们，高校真正需要恢复的，也许不是更多口号，而是让“会不会做学问”重新变成最硬的标准。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "url": "https://www.bilibili.com/video/BV1hbU8BRE38/"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=d9xjCmcyqC8"
+    }
   ]
 }

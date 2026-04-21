@@ -73,5 +73,16 @@
     "教育场景里最危险的不是偶发失误，而是那些已经被正常化的荒诞动作。",
     "如果校园里最能被强调的是服从和整齐，那么它输出到社会中的人也更容易把服从误认成美德。",
     "这期提醒我们：形式主义一旦进入学校，影响的就不只是效率，而是一代人的人格姿态。"
+  ],
+  "videoLinks": [
+    {
+      "platform": "bilibili",
+      "status": "unavailable",
+      "note": "已下架"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/watch?v=3fg9ytHHIRo"
+    }
   ]
 }
