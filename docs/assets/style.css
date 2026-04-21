@@ -187,13 +187,13 @@ input {
 }
 
 .brand-copy .eyebrow {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1.15;
   letter-spacing: 0.01em;
   text-transform: none;
   color: #e7d7b8;
-  max-width: 132px;
-  white-space: normal;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .brand-row {
@@ -239,7 +239,8 @@ input {
   border-radius: 999px;
   align-self: flex-start;
   margin-top: -2px;
-  margin-left: 6px;
+  margin-left: 10px;
+  transform: translateX(4px);
 }
 
 .brand-avatar {
