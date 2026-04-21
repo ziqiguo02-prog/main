@@ -79,7 +79,8 @@
   "videoLinks": [
     {
       "platform": "bilibili",
-      "url": "https://www.bilibili.com/video/BV1QnxLz5Edo/"
+      "status": "unavailable",
+      "note": "已下架"
     },
     {
       "platform": "youtube",

@@ -266,6 +266,7 @@ async function main() {
 
   const bilibiliItems = bilibiliInventory
     .filter((item) => seasonByBvid.has(item.bvid))
+    .filter((item) => item.subtitle_status !== 'error')
     .map((item) => ({
       ...item,
       access: seasonByBvid.get(item.bvid)?.attribute === 8 ? 'member' : 'public'
@@ -286,24 +287,8 @@ async function main() {
     const bilibiliMatch = findMatch(episode.data, bilibiliByEpisodeId, normalizedBilibili);
     const youtubeMatch = findMatch(episode.data, youtubeByEpisodeId, normalizedYoutube);
     const override = overrides[episode.data.id] || {};
-    const existingByPlatform = new Map(
-      (Array.isArray(episode.data.videoLinks) ? episode.data.videoLinks : [])
-        .filter((entry) => entry?.platform)
-        .map((entry) => [entry.platform, entry])
-    );
-
-    const existingBilibili = existingByPlatform.get('bilibili');
-    const existingYoutube = existingByPlatform.get('youtube');
-
     const bilibiliLink = override.bilibili
       ? override.bilibili
-      : existingBilibili?.url
-      ? {
-          platform: 'bilibili',
-          url: existingBilibili.url,
-          ...(existingBilibili.access ? { access: existingBilibili.access } : {}),
-          ...(existingBilibili.note ? { note: existingBilibili.note } : {})
-        }
       : bilibiliMatch
         ? {
             platform: 'bilibili',
@@ -318,12 +303,6 @@ async function main() {
 
     const youtubeLink = override.youtube
       ? override.youtube
-      : existingYoutube?.url
-      ? {
-          platform: 'youtube',
-          url: existingYoutube.url,
-          ...(existingYoutube.note ? { note: existingYoutube.note } : {})
-        }
       : youtubeMatch
         ? {
             platform: 'youtube',

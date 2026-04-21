@@ -80,7 +80,8 @@
   "videoLinks": [
     {
       "platform": "bilibili",
-      "url": "https://www.bilibili.com/video/BV1vhHgztE9k/"
+      "status": "unavailable",
+      "note": "已下架"
     },
     {
       "platform": "youtube",
