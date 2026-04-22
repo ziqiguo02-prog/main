@@ -57,6 +57,8 @@ let sectionProgressBlurTimer = 0;
 let lastScrollSampleAt = performance.now();
 let lastScrollSpeed = 0;
 let sectionProgressPanelOpen = false;
+let sectionProgressActiveIndex = -1;
+let sectionProgressPulseTimer = 0;
 const PERSON_NAV_MIN_REFERENCES = 2;
 const DESKTOP_SIDEBAR_STORAGE_KEY = 'yinfluence-sidebar-collapsed';
 const SNAP_SECTION_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section';
@@ -165,8 +167,32 @@ function getProgressSections() {
 function getSectionProgressLabel(section) {
   if (!(section instanceof HTMLElement)) return '';
   if (section.classList.contains('hero')) return '首页';
-  const label = section.querySelector('.section-title, .detail-title, .search-subtitle, .detail-eyebrow, h1, h2, h3')?.textContent?.trim() || '';
+  const candidates = [
+    ...section.querySelectorAll('.section-title, .detail-title, .search-subtitle, .detail-eyebrow, h1, h2, h3')
+  ]
+    .map((node) => node.textContent?.trim() || '')
+    .filter(Boolean);
+
+  const rawLabel = candidates.find((label) => /[\u3400-\u9fff]/.test(label)) || candidates[0] || '';
+  const label = rawLabel
+    .replace(/\bEP\d+\b/gi, '')
+    .replace(/[A-Za-z]+/g, '')
+    .replace(/[|｜:：•·]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return label.length > 8 ? `${label.slice(0, 8)}…` : label;
+}
+
+function pulseSectionProgressWheel() {
+  if (!sectionProgress) return;
+  sectionProgress.classList.remove('is-pulsing');
+  void sectionProgress.offsetWidth;
+  sectionProgress.classList.add('is-pulsing');
+  window.clearTimeout(sectionProgressPulseTimer);
+  sectionProgressPulseTimer = window.setTimeout(() => {
+    sectionProgress.classList.remove('is-pulsing');
+  }, 420);
 }
 
 function renderSectionProgress() {
@@ -251,6 +277,11 @@ function syncSectionProgress() {
   sectionProgress.querySelector('.section-progress-item.prev')?.classList.toggle('is-empty', !previousLabel);
   sectionProgress.querySelector('.section-progress-item.current')?.classList.toggle('is-empty', !currentLabel);
   sectionProgress.querySelector('.section-progress-item.next')?.classList.toggle('is-empty', !nextLabel);
+
+  if (activeIndex !== sectionProgressActiveIndex) {
+    sectionProgressActiveIndex = activeIndex;
+    pulseSectionProgressWheel();
+  }
 }
 
 function showSectionProgressTemporarily({ blur = false } = {}) {
@@ -274,7 +305,9 @@ function showSectionProgressTemporarily({ blur = false } = {}) {
 function clearSectionProgressEffects() {
   window.clearTimeout(sectionProgressHideTimer);
   window.clearTimeout(sectionProgressBlurTimer);
+  window.clearTimeout(sectionProgressPulseTimer);
   sectionProgress?.classList.remove('is-visible');
+  sectionProgress?.classList.remove('is-pulsing');
   document.body.classList.remove('section-progress-fast');
 }
 
