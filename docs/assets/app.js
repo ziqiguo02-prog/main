@@ -681,11 +681,18 @@ sidebarBackdrop?.addEventListener('click', closeSidebar);
 backToTopButton?.addEventListener('click', () => {
   animateWindowScrollTo(0, { durationScale: 1.25 });
 });
-document.getElementById('floating-home')?.addEventListener('click', (event) => {
-  if (!isHomeRoute()) return;
-  event.preventDefault();
-  animateWindowScrollTo(0, { durationScale: 1.25 });
-});
+function bindHomeSurfaceToTop(selector) {
+  document.querySelectorAll(selector).forEach((node) => {
+    node.addEventListener('click', (event) => {
+      if (!isHomeRoute()) return;
+      event.preventDefault();
+      animateWindowScrollTo(0, { durationScale: 1.25 });
+    });
+  });
+}
+
+bindHomeSurfaceToTop('#floating-home');
+bindHomeSurfaceToTop('.brand-home, .brand-avatar-link');
 function renderRouteWithTransition() {
   if (
     typeof document.startViewTransition === 'function' &&
