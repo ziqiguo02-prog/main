@@ -30,6 +30,7 @@ if ('scrollRestoration' in window.history) {
 let site = null;
 let graphData = null;
 let homeKnowledgeQuery = '';
+let homeRecommendationSeed = 0;
 let sidebarKeywordQuery = '';
 let keywordIndexQuery = '';
 let episodeIndexQuery = '';
@@ -839,7 +840,10 @@ function pickWeightedKeywords(keywords = [], limit = 3) {
 }
 
 function getRecommendedKeywords(limit = 3) {
-  return pickWeightedKeywords(site?.keywords || [], limit);
+  if (!site?.keywords?.length) return [];
+  const offset = Math.abs(homeRecommendationSeed) % Math.max(site.keywords.length, 1);
+  const rotated = [...site.keywords.slice(offset), ...site.keywords.slice(0, offset)];
+  return pickWeightedKeywords(rotated, limit);
 }
 
 function referenceCount(item) {
@@ -1097,8 +1101,19 @@ function setupStickyToolbarBehavior(toolbar, config) {
   } = config;
   let lastObservedScrollY = window.scrollY;
   let idleHideTimer = 0;
+  let anchorScrollY = 0;
+  let anchorVisibleBottom = 0;
 
   const isEngaged = () => toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
+
+  const measureAnchorScrollY = () => {
+    const rect = toolbar.getBoundingClientRect();
+    anchorScrollY = window.scrollY + rect.top;
+    anchorVisibleBottom = anchorScrollY + Math.max(
+      rect.height + (isMobileViewport() ? 132 : 168),
+      window.innerHeight * (isMobileViewport() ? 0.34 : 0.28)
+    );
+  };
 
   const clearIdleHideTimer = () => {
     window.clearTimeout(idleHideTimer);
@@ -1110,9 +1125,11 @@ function setupStickyToolbarBehavior(toolbar, config) {
     if (isEngaged()) return;
     if (toolbar.classList.contains('is-hidden-by-scroll')) return;
     if (window.scrollY <= minimumHideY) return;
+    if (window.scrollY <= anchorVisibleBottom) return;
     idleHideTimer = window.setTimeout(() => {
       if (isEngaged()) return;
       if (window.scrollY <= minimumHideY) return;
+      if (window.scrollY <= anchorVisibleBottom) return;
       toolbar.classList.add('is-hidden-by-scroll');
       toolbar.classList.remove('is-ghost');
       toolbar.style.setProperty(opacityVariable, '0');
@@ -1124,10 +1141,13 @@ function setupStickyToolbarBehavior(toolbar, config) {
     const delta = currentScrollY - lastObservedScrollY;
     const hideThreshold = isMobileViewport() ? 18 : 22;
     const revealThreshold = isMobileViewport() ? 10 : 14;
+    const returnToAnchorThreshold = isMobileViewport() ? 28 : 36;
     const canHide = currentScrollY > minimumHideY && !isEngaged();
     let shouldHide = toolbar.classList.contains('is-hidden-by-scroll');
 
-    if (!canHide) {
+    if (currentScrollY <= Math.max(anchorVisibleBottom, anchorScrollY - returnToAnchorThreshold)) {
+      shouldHide = false;
+    } else if (!canHide) {
       shouldHide = false;
     } else if (delta > hideThreshold) {
       shouldHide = true;
@@ -1177,11 +1197,13 @@ function setupStickyToolbarBehavior(toolbar, config) {
   window.addEventListener('scroll', syncToolbarState, { passive: true, signal });
   window.addEventListener('resize', () => {
     clearIdleHideTimer();
+    measureAnchorScrollY();
     toolbar.classList.remove('is-hidden-by-scroll');
     lastObservedScrollY = window.scrollY;
     syncToolbarState();
   }, { passive: true, signal });
 
+  measureAnchorScrollY();
   syncToolbarState();
 }
 
@@ -1865,6 +1887,17 @@ function renderKnowledgeSuggestions({ containerId, titleId, query, emptyMessage,
   `).join('');
 }
 
+function rerollHomeRecommendations() {
+  homeRecommendationSeed = Math.floor(Math.random() * 1000000);
+  renderKnowledgeSuggestions({
+    containerId: 'home-search-results',
+    titleId: 'home-search-title',
+    query: homeKnowledgeQuery,
+    emptyMessage: '没有匹配的节目、概念、模型、人物或主题',
+    idleTitle: '推荐关键词'
+  });
+}
+
 function renderSidebarKeywordSuggestions() {
   renderKnowledgeSuggestions({
     containerId: 'keyword-suggestions',
@@ -2029,7 +2062,13 @@ function renderHome(focusSectionId = '') {
     </div>
     <section class="home-search-section">
       <div class="home-search-results-panel">
-        <p id="home-search-title" class="search-subtitle">推荐关键词</p>
+        <div class="search-subtitle-row">
+          <p id="home-search-title" class="search-subtitle">推荐关键词</p>
+          <button id="home-search-reroll" class="search-reroll" type="button" aria-label="换一换推荐关键词">
+            <span class="search-reroll-icon" aria-hidden="true">↻</span>
+            <span>换一换</span>
+          </button>
+        </div>
         <div id="home-search-results" class="search-results"></div>
       </div>
     </section>
@@ -2042,12 +2081,14 @@ function renderHome(focusSectionId = '') {
       <p class="section-note">首页优先展示最新节目，完整目录请进入节目索引页查看。</p>
       <div class="grid cards-3">
         ${featuredEpisodes.slice(0, 3).map((episode) => `
-          <a class="card" href="${routeTo(`episodes/${episode.id}`)}">
+          <article class="card" data-episode-href="${routeTo(`episodes/${episode.id}`)}">
             <p class="card-kicker">${escapeHtml(episode.id)} ${episode.curated ? '· 已整理' : '· 待整理'}</p>
-            <h3>${escapeHtml(displayEpisodeTitle(episode.title))}</h3>
+            <a class="card-primary-link" href="${routeTo(`episodes/${episode.id}`)}">
+              <h3>${escapeHtml(displayEpisodeTitle(episode.title))}</h3>
+            </a>
             <p>${escapeHtml(episode.summary || '待整理')}</p>
-            ${chipList((episode.tags || []).slice(0, 5))}
-          </a>
+            ${linkedChipList('keywords', (episode.tags || []).slice(0, 5), site.keywords)}
+          </article>
         `).join('')}
       </div>
     </section>
@@ -2144,10 +2185,22 @@ function renderHome(focusSectionId = '') {
     emptyMessage: '没有匹配的节目、概念、模型、人物或主题',
     idleTitle: '推荐关键词'
   });
+  document.getElementById('home-search-reroll')?.addEventListener('click', () => {
+    rerollHomeRecommendations();
+  });
 
   if (homeSearchToolbar) {
     setupHomeSearchToolbarBehavior(homeSearchToolbar);
   }
+
+  app.querySelectorAll('#home-episodes .card[data-episode-href]').forEach((card) => {
+    card.addEventListener('click', (event) => {
+      if (event.target.closest('a, button, input, textarea, select, summary')) return;
+      const href = card.dataset.episodeHref;
+      if (!href) return;
+      window.location.hash = href;
+    });
+  });
 
   scrollToSection(focusSectionId);
 }
