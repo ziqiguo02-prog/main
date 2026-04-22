@@ -302,6 +302,9 @@ function syncSectionProgress() {
   sectionProgress.querySelector('.section-progress-item.prev')?.classList.toggle('is-empty', !previousLabel);
   sectionProgress.querySelector('.section-progress-item.current')?.classList.toggle('is-empty', !currentLabel);
   sectionProgress.querySelector('.section-progress-item.next')?.classList.toggle('is-empty', !nextLabel);
+  sectionProgressPanel?.querySelectorAll('.section-progress-panel-item').forEach((item, index) => {
+    item.classList.toggle('is-active', index === activeIndex);
+  });
 
   if (activeIndex !== sectionProgressActiveIndex) {
     sectionProgressActiveIndex = activeIndex;
