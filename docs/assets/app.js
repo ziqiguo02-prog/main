@@ -8,6 +8,10 @@ const menuButton = document.getElementById('menu-button');
 const desktopMenuButton = document.getElementById('desktop-menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
 const backToTopButton = document.getElementById('back-to-top');
+const floatingActions = document.getElementById('floating-actions');
+const floatingActionsToggle = document.getElementById('floating-actions-toggle');
+const sectionProgress = document.getElementById('section-progress');
+const sectionProgressPanel = document.getElementById('section-progress-panel');
 const HOME_PLATFORM_LINKS = [
   {
     platform: 'bilibili',
@@ -36,11 +40,35 @@ let peopleIndexQuery = '';
 let themeIndexQuery = '';
 let episodeToolbarController = null;
 let homeSearchToolbarController = null;
+let sectionSnapTimer = 0;
+let scrollDirection = 1;
+let lastScrollY = 0;
+let lastSnapAt = 0;
+let pointerIsDown = false;
+let floatingActionsExpanded = true;
+let contentRevealObserver = null;
+let suspendSnapUntil = 0;
+let snapAnimationFrame = 0;
+let snapPreviousScrollBehavior = '';
+let lastSnapTargetTop = -1;
+let lastUserReleaseAt = 0;
+let sectionProgressHideTimer = 0;
+let sectionProgressBlurTimer = 0;
+let lastScrollSampleAt = performance.now();
+let lastScrollSpeed = 0;
+let sectionProgressPanelOpen = false;
 const PERSON_NAV_MIN_REFERENCES = 2;
 const DESKTOP_SIDEBAR_STORAGE_KEY = 'yinfluence-sidebar-collapsed';
+const SNAP_SECTION_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section';
+const PROGRESS_SECTION_SELECTOR = '.hero, .home-search-section, .section, .detail-header, .detail-section';
+const REVEAL_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section, .card, .list-item, .graph-panel-card, .graph-canvas-card';
 
 function isDesktopViewport() {
   return window.matchMedia('(min-width: 981px)').matches;
+}
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 720px)').matches;
 }
 
 function getDesktopSidebarCollapsedPreference() {
@@ -55,6 +83,7 @@ function applyDesktopSidebarState() {
   const collapsed = isDesktopViewport() && getDesktopSidebarCollapsedPreference();
   document.body.classList.toggle('sidebar-collapsed', collapsed);
   desktopMenuButton?.setAttribute('aria-expanded', String(!collapsed));
+  syncFloatingActionLabels();
 }
 
 function setDesktopSidebarCollapsed(collapsed) {
@@ -70,12 +99,430 @@ function toggleDesktopSidebar() {
   setDesktopSidebarCollapsed(!getDesktopSidebarCollapsedPreference());
 }
 
+function isHomeRoute() {
+  return window.location.hash === '' || window.location.hash === '#' || window.location.hash === '#/' || window.location.hash === '#';
+}
+
+function syncFloatingActionLabels() {
+  if (menuButton) {
+    const menuLabel = isDesktopViewport()
+      ? (getDesktopSidebarCollapsedPreference() ? '展开导航' : '收起导航')
+      : (document.body.classList.contains('sidebar-open') ? '关闭导航' : '打开导航');
+    menuButton.setAttribute('aria-label', menuLabel);
+    menuButton.setAttribute('title', menuLabel);
+  }
+
+  const floatingHomeButton = document.getElementById('floating-home');
+  if (floatingHomeButton) {
+    const homeLabel = isHomeRoute() ? '返回顶部' : '返回首页';
+    floatingHomeButton.setAttribute('aria-label', homeLabel);
+    floatingHomeButton.setAttribute('title', homeLabel);
+  }
+
+  if (backToTopButton) {
+    backToTopButton.setAttribute('title', '柔和返回顶部');
+  }
+}
+
+function setFloatingActionsExpanded(expanded) {
+  floatingActionsExpanded = expanded;
+  floatingActions?.classList.toggle('is-collapsed', !expanded);
+  floatingActionsToggle?.setAttribute('aria-expanded', String(expanded));
+  floatingActionsToggle?.setAttribute('aria-label', expanded ? '收起快捷操作' : '展开快捷操作');
+}
+
+function syncBackToTopVisibility() {
+  const shouldShow = true;
+  backToTopButton?.classList.toggle('visible', shouldShow);
+}
+
+function syncFloatingActionsByScroll(currentScrollY) {
+  if (document.body.classList.contains('section-progress-panel-open')) {
+    setFloatingActionsExpanded(false);
+    return;
+  }
+
+  const delta = currentScrollY - lastScrollY;
+  if (currentScrollY < 72 || delta < -18) {
+    setFloatingActionsExpanded(true);
+    return;
+  }
+
+  const collapseThreshold = isMobileViewport() ? 180 : 140;
+  if (currentScrollY > collapseThreshold && delta > 18) {
+    setFloatingActionsExpanded(false);
+  }
+}
+
+function getProgressSections() {
+  return [...app.querySelectorAll(PROGRESS_SECTION_SELECTOR)].filter((section) => {
+    if (!(section instanceof HTMLElement)) return false;
+    const rect = section.getBoundingClientRect();
+    return rect.height > 0;
+  });
+}
+
+function getSectionProgressLabel(section) {
+  if (!(section instanceof HTMLElement)) return '';
+  if (section.classList.contains('hero')) return '首页';
+  const label = section.querySelector('.section-title, .detail-title, .search-subtitle, .detail-eyebrow, h1, h2, h3')?.textContent?.trim() || '';
+  return label.length > 8 ? `${label.slice(0, 8)}…` : label;
+}
+
+function renderSectionProgress() {
+  const sections = getProgressSections();
+  if (!sectionProgress) return;
+
+  if (sections.length < 2 || window.location.hash.replace(/^#\/?/, '').startsWith('graph')) {
+    sectionProgress.hidden = true;
+    sectionProgress.innerHTML = '';
+    return;
+  }
+
+  sectionProgress.hidden = false;
+  sectionProgress.innerHTML = `
+    <span class="section-progress-wheel">
+      <span class="section-progress-item prev">
+        <span class="section-progress-label" data-role="prev"></span>
+      </span>
+      <span class="section-progress-item current">
+        <span class="section-progress-label" data-role="current"></span>
+      </span>
+      <span class="section-progress-item next">
+        <span class="section-progress-label" data-role="next"></span>
+      </span>
+    </span>
+  `;
+  renderSectionProgressPanel();
+}
+
+function renderSectionProgressPanel() {
+  if (!sectionProgressPanel) return;
+  const sections = getProgressSections();
+  if (sections.length < 2) {
+    sectionProgressPanel.hidden = true;
+    sectionProgressPanel.innerHTML = '';
+    return;
+  }
+
+  sectionProgressPanel.innerHTML = `
+    <div class="section-progress-panel-card">
+      <p class="section-progress-panel-title">页面章节</p>
+      <div class="section-progress-panel-list">
+        ${sections.map((section, index) => `
+          <button class="section-progress-panel-item" type="button" data-section-progress-target="${index}">
+            <span class="section-progress-panel-index">${String(index + 1).padStart(2, '0')}</span>
+            <span class="section-progress-panel-text">${getSectionProgressLabel(section)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function syncSectionProgress() {
+  if (!sectionProgress || sectionProgress.hidden) return;
+
+  const sections = getProgressSections();
+  if (sections.length < 2) return;
+
+  const probeY = window.innerHeight * 0.28;
+  let activeIndex = sections.findIndex((section) => {
+    const rect = section.getBoundingClientRect();
+    return rect.top <= probeY && rect.bottom > probeY;
+  });
+
+  if (activeIndex < 0) {
+    activeIndex = sections.findIndex((section) => section.getBoundingClientRect().top > 0);
+    if (activeIndex < 0) activeIndex = sections.length - 1;
+  }
+
+  const previousLabel = getSectionProgressLabel(sections[activeIndex - 1]);
+  const currentLabel = getSectionProgressLabel(sections[activeIndex]);
+  const nextLabel = getSectionProgressLabel(sections[activeIndex + 1]);
+  const prevNode = sectionProgress.querySelector('[data-role="prev"]');
+  const currentNode = sectionProgress.querySelector('[data-role="current"]');
+  const nextNode = sectionProgress.querySelector('[data-role="next"]');
+
+  if (prevNode) prevNode.textContent = previousLabel;
+  if (currentNode) currentNode.textContent = currentLabel;
+  if (nextNode) nextNode.textContent = nextLabel;
+
+  sectionProgress.querySelector('.section-progress-item.prev')?.classList.toggle('is-empty', !previousLabel);
+  sectionProgress.querySelector('.section-progress-item.current')?.classList.toggle('is-empty', !currentLabel);
+  sectionProgress.querySelector('.section-progress-item.next')?.classList.toggle('is-empty', !nextLabel);
+}
+
+function showSectionProgressTemporarily({ blur = false } = {}) {
+  if (!sectionProgress || sectionProgress.hidden) return;
+  sectionProgress.classList.add('is-visible');
+  if (blur && !sectionProgressPanelOpen) {
+    document.body.classList.add('section-progress-fast');
+    window.clearTimeout(sectionProgressBlurTimer);
+    sectionProgressBlurTimer = window.setTimeout(() => {
+      if (sectionProgressPanelOpen) return;
+      document.body.classList.remove('section-progress-fast');
+    }, 140);
+  }
+  window.clearTimeout(sectionProgressHideTimer);
+  sectionProgressHideTimer = window.setTimeout(() => {
+    if (sectionProgressPanelOpen) return;
+    sectionProgress.classList.remove('is-visible');
+  }, blur ? 1280 : 980);
+}
+
+function clearSectionProgressEffects() {
+  window.clearTimeout(sectionProgressHideTimer);
+  window.clearTimeout(sectionProgressBlurTimer);
+  sectionProgress?.classList.remove('is-visible');
+  document.body.classList.remove('section-progress-fast');
+}
+
+function closeSectionProgressPanel({ keepWheelVisible = false } = {}) {
+  sectionProgressPanelOpen = false;
+  document.body.classList.remove('section-progress-panel-open');
+  if (sectionProgressPanel) {
+    sectionProgressPanel.hidden = true;
+  }
+  if (keepWheelVisible) {
+    showSectionProgressTemporarily({ blur: false });
+    return;
+  }
+  clearSectionProgressEffects();
+}
+
+function setSectionProgressPanelOpen(open) {
+  sectionProgressPanelOpen = open;
+  document.body.classList.toggle('section-progress-panel-open', open);
+  if (!sectionProgressPanel) return;
+  sectionProgressPanel.hidden = !open;
+  if (open) {
+    window.clearTimeout(sectionProgressHideTimer);
+    window.clearTimeout(sectionProgressBlurTimer);
+    sectionProgress.classList.add('is-visible');
+    document.body.classList.remove('section-progress-fast');
+  } else {
+    closeSectionProgressPanel({ keepWheelVisible: true });
+  }
+}
+
+function shouldAssistSectionSnap() {
+  if (!document.body.classList.contains('has-assisted-snap')) return false;
+  if (document.body.classList.contains('sidebar-open')) return false;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  if (window.location.hash.replace(/^#\/?/, '').startsWith('graph')) return false;
+  if (Date.now() < suspendSnapUntil) return false;
+  if (Date.now() - lastUserReleaseAt < 220) return false;
+  const recentScrollSpeed = performance.now() - lastScrollSampleAt > 180 ? 0 : lastScrollSpeed;
+  if (recentScrollSpeed > 1.1) return false;
+  const activeElement = document.activeElement;
+  return !(
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    activeElement instanceof HTMLSelectElement
+  );
+}
+
+function cancelSnapAnimation() {
+  if (!snapAnimationFrame) return;
+  window.cancelAnimationFrame(snapAnimationFrame);
+  snapAnimationFrame = 0;
+  document.documentElement.style.scrollBehavior = snapPreviousScrollBehavior;
+}
+
+function scrollWindowInstantly(top = 0, left = 0) {
+  cancelSnapAnimation();
+  const root = document.documentElement;
+  const previousScrollBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = 'auto';
+  window.scrollTo(left, top);
+  window.requestAnimationFrame(() => {
+    root.style.scrollBehavior = previousScrollBehavior;
+  });
+}
+
+function animateWindowScrollTo(targetTop, options = {}) {
+  cancelSnapAnimation();
+
+  const startTop = window.scrollY;
+  const distance = targetTop - startTop;
+  if (Math.abs(distance) < 3) return;
+
+  const root = document.documentElement;
+  const previousScrollBehavior = root.style.scrollBehavior;
+  snapPreviousScrollBehavior = previousScrollBehavior;
+  root.style.scrollBehavior = 'auto';
+
+  const { durationScale = 1 } = options;
+  const duration = Math.max(400, Math.min(680, Math.abs(distance) * 1.02)) * durationScale;
+  const startTime = performance.now();
+  suspendSnapUntil = Date.now() + duration + 140;
+
+  const easeInOutCubic = (progress) => (
+    progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2
+  );
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeInOutCubic(progress);
+    window.scrollTo(0, startTop + distance * eased);
+
+    if (progress < 1) {
+      snapAnimationFrame = window.requestAnimationFrame(step);
+      return;
+    }
+
+    window.scrollTo(0, targetTop);
+    root.style.scrollBehavior = previousScrollBehavior;
+    snapAnimationFrame = 0;
+    snapPreviousScrollBehavior = '';
+  };
+
+  snapAnimationFrame = window.requestAnimationFrame(step);
+}
+
+function getSnapSections() {
+  const sectionNodes = [...app.querySelectorAll(SNAP_SECTION_SELECTOR)];
+  const episodeCardNodes = document.body.classList.contains('page-episode-index') && isMobileViewport()
+    ? [...app.querySelectorAll('#episode-index-results .list-item')]
+    : [];
+
+  return [...new Set([...sectionNodes, ...episodeCardNodes])].filter((section) => {
+    if (!(section instanceof HTMLElement)) return false;
+    const rect = section.getBoundingClientRect();
+    return rect.height > 0;
+  });
+}
+
+function snapTowardsAdjacentSection() {
+  if (!shouldAssistSectionSnap()) return;
+  if (pointerIsDown) return;
+
+  const now = Date.now();
+  if (now - lastSnapAt < 280) return;
+  const maxScrollTop = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+  const nearDocumentBottom = maxScrollTop - window.scrollY < Math.max(54, window.innerHeight * 0.06);
+  if (nearDocumentBottom && scrollDirection >= 0) return;
+
+  const maxSnapDistance = isMobileViewport() ? 168 : 132;
+  const directionPenalty = isMobileViewport() ? 16 : 12;
+  const sections = getSnapSections().map((section) => {
+    const rect = section.getBoundingClientRect();
+    const visiblePixels = Math.max(Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 20), 0);
+    const visibleRatio = visiblePixels / Math.max(Math.min(rect.height, window.innerHeight), 1);
+    return {
+      section,
+      rect,
+      targetTop: window.scrollY + rect.top - 20,
+      visibleRatio
+    };
+  });
+
+  if (sections.length < 2) return;
+
+  const target = sections
+    .map((entry) => {
+      const distance = Math.abs(entry.targetTop - window.scrollY);
+      const anchorDistance = Math.abs(entry.rect.top - 20);
+      const directionalBias = scrollDirection >= 0
+        ? (entry.targetTop < window.scrollY ? directionPenalty : 0)
+        : (entry.targetTop > window.scrollY ? directionPenalty : 0);
+      const interstitialBonus = entry.rect.top < window.innerHeight * 0.42 && entry.rect.bottom > window.innerHeight * 0.58 ? 16 : 0;
+      const coverageBonus = Math.min(entry.visibleRatio * 28, 18) + interstitialBonus;
+
+      return {
+        ...entry,
+        distance,
+        score: anchorDistance + directionalBias - coverageBonus
+      };
+    })
+    .filter((entry) => entry.distance >= 10 && entry.distance <= maxSnapDistance && entry.targetTop < maxScrollTop - 4)
+    .sort((a, b) => a.score - b.score || a.distance - b.distance)[0];
+
+  if (!target) return;
+  if (Math.abs(target.targetTop - lastSnapTargetTop) < 10) return;
+
+  lastSnapAt = now;
+  lastSnapTargetTop = target.targetTop;
+  animateWindowScrollTo(Math.max(target.targetTop, 0), { durationScale: 0.9 });
+}
+
+function scheduleSectionSnap() {
+  window.clearTimeout(sectionSnapTimer);
+  if (!shouldAssistSectionSnap()) return;
+  sectionSnapTimer = window.setTimeout(() => {
+    snapTowardsAdjacentSection();
+  }, 140);
+}
+
+function teardownRevealAnimations() {
+  contentRevealObserver?.disconnect();
+  contentRevealObserver = null;
+}
+
+function setupRevealAnimations() {
+  teardownRevealAnimations();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const revealTargets = [...document.querySelectorAll(REVEAL_SELECTOR)].filter((node) => node instanceof HTMLElement);
+  if (!revealTargets.length) return;
+
+  const initialViewportBottom = window.innerHeight * 1.02;
+
+  revealTargets.forEach((node, index) => {
+    node.classList.add('reveal-ready');
+    node.style.setProperty('--reveal-delay', `${Math.min(index * 36, 220)}ms`);
+
+    const rect = node.getBoundingClientRect();
+    const isInitiallyVisible = rect.top < initialViewportBottom && rect.bottom > 0;
+    if (isInitiallyVisible) {
+      node.classList.add('is-visible');
+    }
+  });
+
+  const deferredTargets = revealTargets.filter((node) => !node.classList.contains('is-visible'));
+  if (!deferredTargets.length) return;
+
+  contentRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      contentRevealObserver?.unobserve(entry.target);
+    });
+  }, {
+    threshold: 0.12,
+    rootMargin: '0px 0px -8% 0px'
+  });
+
+  window.requestAnimationFrame(() => {
+    deferredTargets.forEach((node) => {
+      contentRevealObserver?.observe(node);
+    });
+  });
+}
+
+function refreshViewportBehaviors({ resetDock = false } = {}) {
+  applyDesktopSidebarState();
+  syncBackToTopVisibility();
+  if (resetDock || !isMobileViewport()) {
+    setFloatingActionsExpanded(true);
+  }
+  if (!isMobileViewport()) {
+    floatingActions?.classList.remove('is-collapsed');
+  }
+  syncFloatingActionLabels();
+}
+
 function openSidebar() {
   sidebar.classList.add('open');
   document.body.classList.add('sidebar-open');
   if (sidebarBackdrop) {
     sidebarBackdrop.hidden = false;
   }
+  syncFloatingActionLabels();
 }
 
 function closeSidebar() {
@@ -84,9 +531,14 @@ function closeSidebar() {
   if (sidebarBackdrop) {
     sidebarBackdrop.hidden = true;
   }
+  syncFloatingActionLabels();
 }
 
 menuButton.addEventListener('click', () => {
+  if (isDesktopViewport()) {
+    toggleDesktopSidebar();
+    return;
+  }
   if (document.body.classList.contains('sidebar-open')) {
     closeSidebar();
     return;
@@ -100,16 +552,104 @@ desktopMenuButton?.addEventListener('click', () => {
 sidebarClose.addEventListener('click', closeSidebar);
 sidebarBackdrop?.addEventListener('click', closeSidebar);
 backToTopButton?.addEventListener('click', () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  animateWindowScrollTo(0, { durationScale: 1.25 });
 });
-window.addEventListener('hashchange', renderRoute);
-window.addEventListener('resize', applyDesktopSidebarState);
+document.getElementById('floating-home')?.addEventListener('click', (event) => {
+  if (!isHomeRoute()) return;
+  event.preventDefault();
+  animateWindowScrollTo(0, { durationScale: 1.25 });
+});
+function renderRouteWithTransition() {
+  if (
+    typeof document.startViewTransition === 'function' &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    document.startViewTransition(() => {
+      renderRoute();
+    });
+    return;
+  }
+
+  renderRoute();
+}
+
+window.addEventListener('hashchange', renderRouteWithTransition);
+window.addEventListener('resize', () => {
+  refreshViewportBehaviors();
+  scheduleSectionSnap();
+});
+window.addEventListener('scroll', () => {
+  const currentScrollY = window.scrollY;
+  const now = performance.now();
+  const elapsed = Math.max(now - lastScrollSampleAt, 16);
+  const scrollDelta = Math.abs(currentScrollY - lastScrollY);
+  scrollDirection = currentScrollY >= lastScrollY ? 1 : -1;
+  const speed = scrollDelta / elapsed;
+  lastScrollSpeed = speed;
+  if (lastSnapTargetTop >= 0 && Math.abs(currentScrollY - lastSnapTargetTop) > window.innerHeight * 0.7) {
+    lastSnapTargetTop = -1;
+  }
+  syncFloatingActionsByScroll(currentScrollY);
+  syncBackToTopVisibility();
+  syncSectionProgress();
+  showSectionProgressTemporarily({ blur: speed > 2.1 && scrollDelta > (isMobileViewport() ? 56 : 72) });
+  scheduleSectionSnap();
+  lastScrollY = currentScrollY;
+  lastScrollSampleAt = now;
+}, { passive: true });
+window.addEventListener('pointerdown', () => {
+  pointerIsDown = true;
+  cancelSnapAnimation();
+}, { passive: true });
+window.addEventListener('pointerup', () => {
+  pointerIsDown = false;
+  lastUserReleaseAt = Date.now();
+  scheduleSectionSnap();
+}, { passive: true });
+window.addEventListener('touchstart', () => {
+  pointerIsDown = true;
+  cancelSnapAnimation();
+}, { passive: true });
+window.addEventListener('touchend', () => {
+  pointerIsDown = false;
+  lastUserReleaseAt = Date.now();
+  scheduleSectionSnap();
+}, { passive: true });
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeSidebar();
   }
 });
+window.addEventListener('resize', () => {
+  renderSectionProgress();
+  syncSectionProgress();
+}, { passive: true });
+floatingActionsToggle?.addEventListener('click', () => {
+  setFloatingActionsExpanded(!floatingActionsExpanded);
+});
+sectionProgress?.addEventListener('click', () => {
+  if (sectionProgress.hidden) return;
+  setSectionProgressPanelOpen(!sectionProgressPanelOpen);
+});
+sectionProgressPanel?.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-section-progress-target]');
+  if (!(target instanceof HTMLElement)) return;
+  const index = Number(target.dataset.sectionProgressTarget);
+  const sections = getProgressSections();
+  const section = sections[index];
+  if (!(section instanceof HTMLElement)) return;
+  closeSectionProgressPanel();
+  const top = Math.max(window.scrollY + section.getBoundingClientRect().top - 20, 0);
+  animateWindowScrollTo(top, { durationScale: 1.05 });
+});
 document.addEventListener('click', (event) => {
+  if (
+    sectionProgressPanelOpen &&
+    !sectionProgress?.contains(event.target) &&
+    !sectionProgressPanel?.contains(event.target)
+  ) {
+    closeSectionProgressPanel();
+  }
   const trigger = event.target.closest('[data-nav-back]');
   if (!trigger) return;
   event.preventDefault();
@@ -488,129 +1028,126 @@ function scrollEpisodeResultsIntoView() {
   });
 }
 
-function setupEpisodeToolbarBehavior(toolbar) {
-  episodeToolbarController?.abort();
-  episodeToolbarController = new AbortController();
-  const { signal } = episodeToolbarController;
-  let fadeStartY = 0;
+function setupStickyToolbarBehavior(toolbar, config) {
+  config.abortController?.abort();
+  const controller = new AbortController();
+  config.assignController(controller);
+  const { signal } = controller;
+  const {
+    opacityVariable,
+    minimumHideY = isMobileViewport() ? 48 : 72,
+    idleHideDelay = isMobileViewport() ? 1050 : 1200
+  } = config;
+  let lastObservedScrollY = window.scrollY;
+  let idleHideTimer = 0;
 
-  const measureFadeStart = () => {
-    const rect = toolbar.getBoundingClientRect();
-    fadeStartY = rect.top + window.scrollY;
+  const isEngaged = () => toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
+
+  const clearIdleHideTimer = () => {
+    window.clearTimeout(idleHideTimer);
+    idleHideTimer = 0;
+  };
+
+  const scheduleIdleHide = () => {
+    clearIdleHideTimer();
+    if (isEngaged()) return;
+    if (toolbar.classList.contains('is-hidden-by-scroll')) return;
+    if (window.scrollY <= minimumHideY) return;
+    idleHideTimer = window.setTimeout(() => {
+      if (isEngaged()) return;
+      if (window.scrollY <= minimumHideY) return;
+      toolbar.classList.add('is-hidden-by-scroll');
+      toolbar.classList.remove('is-ghost');
+      toolbar.style.setProperty(opacityVariable, '0');
+    }, idleHideDelay);
   };
 
   const syncToolbarState = () => {
-    const isEngaged = toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
-    if (isEngaged) {
-      toolbar.style.setProperty('--episode-toolbar-opacity', '1');
-      toolbar.classList.remove('is-ghost');
-      return;
+    const currentScrollY = window.scrollY;
+    const delta = currentScrollY - lastObservedScrollY;
+    const hideThreshold = isMobileViewport() ? 18 : 22;
+    const revealThreshold = isMobileViewport() ? 10 : 14;
+    const canHide = currentScrollY > minimumHideY && !isEngaged();
+    let shouldHide = toolbar.classList.contains('is-hidden-by-scroll');
+
+    if (!canHide) {
+      shouldHide = false;
+    } else if (delta > hideThreshold) {
+      shouldHide = true;
+    } else if (delta < -revealThreshold) {
+      shouldHide = false;
     }
 
-    const scrolledPast = Math.max(window.scrollY - fadeStartY, 0);
-    const isPastStart = scrolledPast > 0;
-    toolbar.style.setProperty('--episode-toolbar-opacity', isPastStart ? '0.7' : '1');
-    toolbar.classList.toggle('is-ghost', isPastStart);
+    if (shouldHide || isEngaged() || currentScrollY <= minimumHideY) {
+      clearIdleHideTimer();
+    }
+
+    toolbar.classList.toggle('is-hidden-by-scroll', shouldHide);
+    toolbar.classList.toggle('is-engaged', isEngaged());
+    toolbar.classList.toggle('is-ghost', !shouldHide && !isEngaged() && currentScrollY > minimumHideY);
+    toolbar.style.setProperty(opacityVariable, shouldHide ? '0' : (isEngaged() || currentScrollY <= minimumHideY ? '1' : '0.86'));
+
+    if (!shouldHide && !isEngaged() && currentScrollY > minimumHideY) {
+      scheduleIdleHide();
+    }
+
+    lastObservedScrollY = currentScrollY;
   };
 
-  toolbar.addEventListener('pointerdown', () => {
+  const engageToolbar = () => {
+    clearIdleHideTimer();
     toolbar.dataset.engaged = 'true';
-    toolbar.style.setProperty('--episode-toolbar-opacity', '1');
     toolbar.classList.add('is-engaged');
-    toolbar.classList.remove('is-ghost');
-  }, { signal });
+    toolbar.classList.remove('is-hidden-by-scroll', 'is-ghost');
+    toolbar.style.setProperty(opacityVariable, '1');
+  };
 
-  toolbar.addEventListener('focusin', () => {
-    toolbar.dataset.engaged = 'true';
-    toolbar.style.setProperty('--episode-toolbar-opacity', '1');
-    toolbar.classList.add('is-engaged');
-    toolbar.classList.remove('is-ghost');
-  }, { signal });
-
-  document.addEventListener('click', (event) => {
-    if (toolbar.contains(event.target)) return;
+  const releaseToolbar = () => {
     delete toolbar.dataset.engaged;
     toolbar.classList.remove('is-engaged');
     syncToolbarState();
+  };
+
+  toolbar.addEventListener('pointerdown', engageToolbar, { signal });
+  toolbar.addEventListener('focusin', engageToolbar, { signal });
+
+  document.addEventListener('click', (event) => {
+    if (toolbar.contains(event.target)) return;
+    if (toolbar.matches(':focus-within')) return;
+    releaseToolbar();
   }, { signal });
 
-  window.addEventListener('scroll', () => {
-    if (!toolbar.matches(':focus-within')) {
-      delete toolbar.dataset.engaged;
-      toolbar.classList.remove('is-engaged');
-    }
+  window.addEventListener('scroll', syncToolbarState, { passive: true, signal });
+  window.addEventListener('resize', () => {
+    clearIdleHideTimer();
+    toolbar.classList.remove('is-hidden-by-scroll');
+    lastObservedScrollY = window.scrollY;
     syncToolbarState();
   }, { passive: true, signal });
 
-  window.addEventListener('resize', () => {
-    measureFadeStart();
-    syncToolbarState();
-  }, { passive: true, signal });
-  measureFadeStart();
   syncToolbarState();
 }
 
+function setupEpisodeToolbarBehavior(toolbar) {
+  setupStickyToolbarBehavior(toolbar, {
+    abortController: episodeToolbarController,
+    opacityVariable: '--episode-toolbar-opacity',
+    minimumHideY: isMobileViewport() ? 38 : 76,
+    assignController(controller) {
+      episodeToolbarController = controller;
+    }
+  });
+}
+
 function setupHomeSearchToolbarBehavior(toolbar) {
-  homeSearchToolbarController?.abort();
-  homeSearchToolbarController = new AbortController();
-  const { signal } = homeSearchToolbarController;
-  let fadeStartY = 0;
-
-  const measureFadeStart = () => {
-    const rect = toolbar.getBoundingClientRect();
-    fadeStartY = rect.top + window.scrollY;
-  };
-
-  const syncToolbarState = () => {
-    const isEngaged = toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
-    if (isEngaged) {
-      toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
-      toolbar.classList.remove('is-ghost');
-      return;
+  setupStickyToolbarBehavior(toolbar, {
+    abortController: homeSearchToolbarController,
+    opacityVariable: '--home-search-toolbar-opacity',
+    minimumHideY: isMobileViewport() ? 34 : 68,
+    assignController(controller) {
+      homeSearchToolbarController = controller;
     }
-
-    const scrolledPast = Math.max(window.scrollY - fadeStartY, 0);
-    const isPastStart = scrolledPast > 0;
-    toolbar.style.setProperty('--home-search-toolbar-opacity', isPastStart ? '0.7' : '1');
-    toolbar.classList.toggle('is-ghost', isPastStart);
-  };
-
-  toolbar.addEventListener('pointerdown', () => {
-    toolbar.dataset.engaged = 'true';
-    toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
-    toolbar.classList.add('is-engaged');
-    toolbar.classList.remove('is-ghost');
-  }, { signal });
-
-  toolbar.addEventListener('focusin', () => {
-    toolbar.dataset.engaged = 'true';
-    toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
-    toolbar.classList.add('is-engaged');
-    toolbar.classList.remove('is-ghost');
-  }, { signal });
-
-  document.addEventListener('click', (event) => {
-    if (toolbar.contains(event.target)) return;
-    delete toolbar.dataset.engaged;
-    toolbar.classList.remove('is-engaged');
-    syncToolbarState();
-  }, { signal });
-
-  window.addEventListener('scroll', () => {
-    if (!toolbar.matches(':focus-within')) {
-      delete toolbar.dataset.engaged;
-      toolbar.classList.remove('is-engaged');
-    }
-    syncToolbarState();
-  }, { passive: true, signal });
-
-  window.addEventListener('resize', () => {
-    measureFadeStart();
-    syncToolbarState();
-  }, { passive: true, signal });
-
-  measureFadeStart();
-  syncToolbarState();
+  });
 }
 
 function buildEpisodeRangePagination(episodeRanges, selectedRangeStart, isCompact = false) {
@@ -1534,11 +2071,8 @@ function renderHome(focusSectionId = '') {
     idleTitle: '推荐关键词'
   });
 
-  if (homeSearchToolbar && isMobile) {
+  if (homeSearchToolbar) {
     setupHomeSearchToolbarBehavior(homeSearchToolbar);
-  } else if (homeSearchToolbar) {
-    homeSearchToolbar.style.setProperty('--home-search-toolbar-opacity', '1');
-    homeSearchToolbar.classList.remove('is-ghost', 'is-engaged');
   }
 
   scrollToSection(focusSectionId);
@@ -1617,8 +2151,9 @@ function renderEpisodeIndex() {
           class="range-nav-button mobile${newerRange ? '' : ' disabled'}"
           type="button"
           data-episode-range="${newerRange?.start ?? ''}"
+          aria-label="${newerRange ? `切换到更新区间 ${newerRange.label}` : '没有更近的区间'}"
           ${newerRange ? '' : 'disabled'}
-        >${newerRange?.label || '—'}</button>
+        >←</button>
         <div class="episode-range-tabs mobile" aria-label="节目区间分页">
           <span class="range-current-pill" aria-current="page">${selectedRange.label}</span>
         </div>
@@ -1626,11 +2161,40 @@ function renderEpisodeIndex() {
           class="range-nav-button mobile${olderRange ? '' : ' disabled'}"
           type="button"
           data-episode-range="${olderRange?.start ?? ''}"
+          aria-label="${olderRange ? `切换到更早区间 ${olderRange.label}` : '没有更早的区间'}"
           ${olderRange ? '' : 'disabled'}
-        >${olderRange?.label || '—'}</button>
+        >→</button>
       </div>
       <p id="episode-search-note" class="episode-range-status mobile${initialSearchState.query ? '' : ' hidden'}">${initialSearchState.query ? `匹配 ${initialSearchState.filteredEpisodes.length} 集` : ''}</p>
     </div>
+  `;
+  const keywordSectionMarkup = `
+    <section class="detail-section">
+      <div class="section-header">
+        <h2 class="section-title">按关键词看节目群</h2>
+        <a class="section-note" href="#/keywords">更多关键词专题 →</a>
+      </div>
+      <p class="detail-copy">这里只显示最多相关的 ${keywordClusterLimit} 个关键词专题。点进去可查看该关键词下的相关节目群。</p>
+      <div class="grid cards-3">
+        ${topKeywordClusters.map((keyword) => `
+          <a class="card" href="${routeTo(`keywords/${keyword.id}`)}">
+            <p class="card-kicker">关键词专题</p>
+            <h3>${escapeHtml(keyword.name)}</h3>
+            <p>${escapeHtml(keyword.summary)}</p>
+            <div class="meta-row">
+              <span class="chip">${keyword.episodes.length} 期相关节目</span>
+              ${(keyword.aliases || []).length ? `<span class="chip">${escapeHtml(keyword.aliases[0])}</span>` : ''}
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    </section>
+  `;
+  const episodeSectionMarkup = `
+    <section class="detail-section episode-index-section">
+      ${isMobile ? mobileToolbarMarkup : desktopToolbarMarkup}
+      <div id="episode-index-results">${renderEpisodeIndexEpisodeList(initialSearchState.filteredEpisodes)}</div>
+    </section>
   `;
 
   app.innerHTML = `
@@ -1640,30 +2204,7 @@ function renderEpisodeIndex() {
         <p class="detail-eyebrow">节目总览</p>
         <h1 class="detail-title">节目索引</h1>
       </div>
-      <section class="detail-section">
-        <div class="section-header">
-          <h2 class="section-title">按关键词看节目群</h2>
-          <a class="section-note" href="#/keywords">更多关键词专题 →</a>
-        </div>
-        <p class="detail-copy">这里只显示最多相关的 ${keywordClusterLimit} 个关键词专题。点进去可查看该关键词下的相关节目群。</p>
-        <div class="grid cards-3">
-          ${topKeywordClusters.map((keyword) => `
-            <a class="card" href="${routeTo(`keywords/${keyword.id}`)}">
-              <p class="card-kicker">关键词专题</p>
-              <h3>${escapeHtml(keyword.name)}</h3>
-              <p>${escapeHtml(keyword.summary)}</p>
-              <div class="meta-row">
-                <span class="chip">${keyword.episodes.length} 期相关节目</span>
-                ${(keyword.aliases || []).length ? `<span class="chip">${escapeHtml(keyword.aliases[0])}</span>` : ''}
-              </div>
-            </a>
-          `).join('')}
-        </div>
-      </section>
-      <section class="detail-section episode-index-section">
-        ${isMobile ? mobileToolbarMarkup : desktopToolbarMarkup}
-        <div id="episode-index-results">${renderEpisodeIndexEpisodeList(initialSearchState.filteredEpisodes)}</div>
-      </section>
+      ${isMobile ? `${episodeSectionMarkup}${keywordSectionMarkup}` : `${keywordSectionMarkup}${episodeSectionMarkup}`}
     </section>
   `;
 
@@ -2353,10 +2894,17 @@ function renderRoute() {
   episodeToolbarController = null;
   homeSearchToolbarController?.abort();
   homeSearchToolbarController = null;
+  teardownRevealAnimations();
+  cancelSnapAnimation();
+  closeSectionProgressPanel();
+  clearSectionProgressEffects();
   destroyGraphView();
   const hash = window.location.hash.replace(/^#\/?/, '');
   const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
   const [section, id] = parts;
+  document.body.classList.toggle('has-assisted-snap', section !== 'graph');
+  document.body.classList.toggle('page-home', !section);
+  document.body.classList.toggle('page-episode-index', section === 'episodes' && !id);
 
   document.title = `${site.meta.title}`;
 
@@ -2394,8 +2942,19 @@ function renderRoute() {
     renderNotFound('页面不存在');
   }
 
+  setupRevealAnimations();
+  renderSectionProgress();
   closeSidebar();
-  window.scrollTo(0, 0);
+  window.clearTimeout(sectionSnapTimer);
+  suspendSnapUntil = Date.now() + 420;
+  lastSnapTargetTop = -1;
+  scrollWindowInstantly(0, 0);
+  lastScrollY = 0;
+  lastScrollSampleAt = performance.now();
+  refreshViewportBehaviors({ resetDock: true });
+  window.requestAnimationFrame(() => {
+    syncSectionProgress();
+  });
 }
 
 async function init() {
@@ -2405,9 +2964,9 @@ async function init() {
   ]);
   site = await siteResponse.json();
   graphData = await graphResponse.json();
-  applyDesktopSidebarState();
+  refreshViewportBehaviors({ resetDock: true });
   renderSidebar();
-  renderRoute();
+  renderRouteWithTransition();
 }
 
 init().catch((error) => {
