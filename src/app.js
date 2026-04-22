@@ -5,6 +5,7 @@ const sidebar = document.getElementById('sidebar');
 const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 const sidebarBody = document.getElementById('sidebar-body');
 const menuButton = document.getElementById('menu-button');
+const desktopMenuButton = document.getElementById('desktop-menu-button');
 const sidebarClose = document.getElementById('sidebar-close');
 const backToTopButton = document.getElementById('back-to-top');
 const HOME_PLATFORM_LINKS = [
@@ -34,7 +35,40 @@ let modelIndexQuery = '';
 let peopleIndexQuery = '';
 let themeIndexQuery = '';
 let episodeToolbarController = null;
+let homeSearchToolbarController = null;
 const PERSON_NAV_MIN_REFERENCES = 2;
+const DESKTOP_SIDEBAR_STORAGE_KEY = 'yinfluence-sidebar-collapsed';
+
+function isDesktopViewport() {
+  return window.matchMedia('(min-width: 981px)').matches;
+}
+
+function getDesktopSidebarCollapsedPreference() {
+  try {
+    return window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function applyDesktopSidebarState() {
+  const collapsed = isDesktopViewport() && getDesktopSidebarCollapsedPreference();
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  desktopMenuButton?.setAttribute('aria-expanded', String(!collapsed));
+}
+
+function setDesktopSidebarCollapsed(collapsed) {
+  try {
+    window.localStorage.setItem(DESKTOP_SIDEBAR_STORAGE_KEY, collapsed ? 'true' : 'false');
+  } catch {
+    // Ignore storage failures and still apply the UI state.
+  }
+  applyDesktopSidebarState();
+}
+
+function toggleDesktopSidebar() {
+  setDesktopSidebarCollapsed(!getDesktopSidebarCollapsedPreference());
+}
 
 function openSidebar() {
   sidebar.classList.add('open');
@@ -52,13 +86,24 @@ function closeSidebar() {
   }
 }
 
-menuButton.addEventListener('click', openSidebar);
+menuButton.addEventListener('click', () => {
+  if (document.body.classList.contains('sidebar-open')) {
+    closeSidebar();
+    return;
+  }
+  openSidebar();
+});
+desktopMenuButton?.addEventListener('click', () => {
+  if (!isDesktopViewport()) return;
+  setDesktopSidebarCollapsed(false);
+});
 sidebarClose.addEventListener('click', closeSidebar);
 sidebarBackdrop?.addEventListener('click', closeSidebar);
 backToTopButton?.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 window.addEventListener('hashchange', renderRoute);
+window.addEventListener('resize', applyDesktopSidebarState);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeSidebar();
@@ -501,6 +546,69 @@ function setupEpisodeToolbarBehavior(toolbar) {
     measureFadeStart();
     syncToolbarState();
   }, { passive: true, signal });
+  measureFadeStart();
+  syncToolbarState();
+}
+
+function setupHomeSearchToolbarBehavior(toolbar) {
+  homeSearchToolbarController?.abort();
+  homeSearchToolbarController = new AbortController();
+  const { signal } = homeSearchToolbarController;
+  let fadeStartY = 0;
+
+  const measureFadeStart = () => {
+    const rect = toolbar.getBoundingClientRect();
+    fadeStartY = rect.top + window.scrollY;
+  };
+
+  const syncToolbarState = () => {
+    const isEngaged = toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
+    if (isEngaged) {
+      toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
+      toolbar.classList.remove('is-ghost');
+      return;
+    }
+
+    const scrolledPast = Math.max(window.scrollY - fadeStartY, 0);
+    const isPastStart = scrolledPast > 0;
+    toolbar.style.setProperty('--home-search-toolbar-opacity', isPastStart ? '0.7' : '1');
+    toolbar.classList.toggle('is-ghost', isPastStart);
+  };
+
+  toolbar.addEventListener('pointerdown', () => {
+    toolbar.dataset.engaged = 'true';
+    toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
+    toolbar.classList.add('is-engaged');
+    toolbar.classList.remove('is-ghost');
+  }, { signal });
+
+  toolbar.addEventListener('focusin', () => {
+    toolbar.dataset.engaged = 'true';
+    toolbar.style.setProperty('--home-search-toolbar-opacity', '1');
+    toolbar.classList.add('is-engaged');
+    toolbar.classList.remove('is-ghost');
+  }, { signal });
+
+  document.addEventListener('click', (event) => {
+    if (toolbar.contains(event.target)) return;
+    delete toolbar.dataset.engaged;
+    toolbar.classList.remove('is-engaged');
+    syncToolbarState();
+  }, { signal });
+
+  window.addEventListener('scroll', () => {
+    if (!toolbar.matches(':focus-within')) {
+      delete toolbar.dataset.engaged;
+      toolbar.classList.remove('is-engaged');
+    }
+    syncToolbarState();
+  }, { passive: true, signal });
+
+  window.addEventListener('resize', () => {
+    measureFadeStart();
+    syncToolbarState();
+  }, { passive: true, signal });
+
   measureFadeStart();
   syncToolbarState();
 }
@@ -1165,7 +1273,10 @@ function renderSidebar() {
 
   sidebarBody.innerHTML = `
     <div class="sidebar-section">
-      <p class="sidebar-title">导航</p>
+      <div class="sidebar-title-row">
+        <p class="sidebar-title">导航</p>
+        <button class="sidebar-toggle-inline" id="sidebar-toggle-inline" type="button" aria-label="收起导航">☰</button>
+      </div>
       <a class="sidebar-link" href="#/">首页 <span class="count-badge">Home</span></a>
       <a class="sidebar-link" href="#/episodes">节目 <span class="count-badge">${site.stats.episodes}</span></a>
       <a class="sidebar-link" href="#/concepts">概念 <span class="count-badge">${site.stats.concepts}</span></a>
@@ -1229,9 +1340,13 @@ function renderSidebar() {
               ? routeTo(`concepts/${firstMatch.id}`)
               : firstMatch.type === 'model'
                 ? routeTo(`models/${firstMatch.id}`)
-                : routeTo(`themes/${firstMatch.id}`);
+            : routeTo(`themes/${firstMatch.id}`);
       }
     });
+  document.getElementById('sidebar-toggle-inline')?.addEventListener('click', () => {
+    if (!isDesktopViewport()) return;
+    toggleDesktopSidebar();
+  });
   renderSidebarKeywordSuggestions();
 }
 
@@ -1246,8 +1361,34 @@ function scrollToSection(id) {
 }
 
 function renderHome(focusSectionId = '') {
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
   const episodesByNewest = [...site.episodes].sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
   const featuredEpisodes = episodesByNewest;
+  const statCards = [
+    {
+      href: '#/graph',
+      value: graphStatValue(),
+      label: '图谱节点'
+    },
+    {
+      href: '#/episodes',
+      value: site.stats.episodes,
+      label: '节目索引'
+    },
+    {
+      href: '#/concepts',
+      value: site.stats.concepts,
+      label: '概念卡片'
+    },
+    {
+      href: '#/models',
+      value: site.stats.models,
+      label: '思想模型'
+    }
+  ];
+  const visibleStatCards = isMobile
+    ? []
+    : statCards;
 
   app.innerHTML = `
     <section class="hero">
@@ -1257,29 +1398,26 @@ function renderHome(focusSectionId = '') {
       <div class="hero-platform-links">
         ${HOME_PLATFORM_LINKS.map((link) => renderVideoLinkIcon(link)).join('')}
       </div>
-      <div class="stats">
-        <a class="stat-card" href="#/graph">
-          <div class="stat-value">${graphStatValue()}</div>
-          <div class="stat-label">图谱节点</div>
-        </a>
-        <a class="stat-card" href="#/episodes">
-          <div class="stat-value">${site.stats.episodes}</div>
-          <div class="stat-label">节目索引</div>
-        </a>
-        <a class="stat-card" href="#/concepts">
-          <div class="stat-value">${site.stats.concepts}</div>
-          <div class="stat-label">概念卡片</div>
-        </a>
-        <a class="stat-card" href="#/models">
-          <div class="stat-value">${site.stats.models}</div>
-          <div class="stat-label">思想模型</div>
-        </a>
-      </div>
-      <div class="search-box home-search-box">
-        <div class="search-row">
-          <input id="search-input" type="text" placeholder="搜索知识库：节目、概念、模型、人物、主题，如 EP019 / 特朗普 / 安全阀治理">
-          <button id="search-submit" class="search-submit" type="button">搜索</button>
+      ${visibleStatCards.length ? `
+        <div class="stats">
+          ${visibleStatCards.map((item) => `
+            <a class="stat-card" href="${item.href}">
+              <div class="stat-value">${item.value}</div>
+              <div class="stat-label">${item.label}</div>
+            </a>
+          `).join('')}
         </div>
+      ` : ''}
+    </section>
+
+    <div class="home-search-toolbar${isMobile ? ' mobile' : ''}">
+      <div class="search-row">
+        <input id="search-input" type="text" placeholder="搜索知识库：节目、概念、模型、人物、主题，如 EP019 / 特朗普 / 安全阀治理">
+        <button id="search-submit" class="search-submit" type="button">搜索</button>
+      </div>
+    </div>
+    <section class="home-search-section">
+      <div class="home-search-results-panel">
         <p id="home-search-title" class="search-subtitle">推荐关键词</p>
         <div id="home-search-results" class="search-results"></div>
       </div>
@@ -1368,6 +1506,7 @@ function renderHome(focusSectionId = '') {
 
   const searchInput = document.getElementById('search-input');
   const searchSubmit = document.getElementById('search-submit');
+  const homeSearchToolbar = document.querySelector('.home-search-toolbar');
   searchInput.value = homeKnowledgeQuery;
   searchInput.addEventListener('input', (event) => {
     homeKnowledgeQuery = event.target.value;
@@ -1394,6 +1533,13 @@ function renderHome(focusSectionId = '') {
     emptyMessage: '没有匹配的节目、概念、模型、人物或主题',
     idleTitle: '推荐关键词'
   });
+
+  if (homeSearchToolbar && isMobile) {
+    setupHomeSearchToolbarBehavior(homeSearchToolbar);
+  } else if (homeSearchToolbar) {
+    homeSearchToolbar.style.setProperty('--home-search-toolbar-opacity', '1');
+    homeSearchToolbar.classList.remove('is-ghost', 'is-engaged');
+  }
 
   scrollToSection(focusSectionId);
 }
@@ -2205,6 +2351,8 @@ function renderRoute() {
   if (!site) return;
   episodeToolbarController?.abort();
   episodeToolbarController = null;
+  homeSearchToolbarController?.abort();
+  homeSearchToolbarController = null;
   destroyGraphView();
   const hash = window.location.hash.replace(/^#\/?/, '');
   const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
@@ -2257,6 +2405,7 @@ async function init() {
   ]);
   site = await siteResponse.json();
   graphData = await graphResponse.json();
+  applyDesktopSidebarState();
   renderSidebar();
   renderRoute();
 }

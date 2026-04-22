@@ -1980,6 +1980,53 @@ git push yinfluence-origin main
 1. Cloudflare 有没有拉到新的 commit
 2. Cloudflare Build 是否真的部署 `docs/`
 3. 是否需要清缓存
+4. 线上返回的 `index.html` 是否真的已经换成最新结构
+
+硬检查方法：
+
+1. 先核对 GitHub 远端 `main` 的最新 commit
+2. 再直接请求线上首页 HTML
+3. 看线上 HTML 里是否已经出现本次改动的关键标记
+
+例如如果本次改动包含：
+
+- `brand-lockup`
+- `brand-avatar-link`
+- `desktop-menu-button`
+
+而线上 HTML 仍然没有这些标记，就说明：
+
+- 不是 CSS 没生效
+- 不是图片没加载
+- 而是 Cloudflare 生产环境还在 serving 旧 deployment / 旧构建
+
+也就是说：
+
+- GitHub 新了，不代表线上一定新了
+- 必须以线上实际返回的 HTML 为准，而不是只看仓库
+
+### Cloudflare 本地直推的阻塞说明
+
+如果要用 `wrangler deploy` 直接发布，当前环境必须满足以下任一条件：
+
+- 本机已经 `wrangler login`
+- 或已经设置 `CLOUDFLARE_API_TOKEN`
+
+否则会出现：
+
+- `You are not authenticated`
+- 或 `set a CLOUDFLARE_API_TOKEN`
+
+这类错误
+
+一旦出现这类错误，说明当前终端没有直接控制 Cloudflare 的权限。
+这时能做的事情是：
+
+1. 先确保 GitHub 上的 `docs/` 已经是最新
+2. 再去 Cloudflare 后台确认：
+   - 绑定仓库是不是 `yinfluence/main`
+   - production deployment 对应的 commit 是不是最新
+   - output directory 是不是 `docs`
 
 也就是说：
 
