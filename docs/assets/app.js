@@ -167,14 +167,19 @@ function getProgressSections() {
 function getSectionProgressLabel(section) {
   if (!(section instanceof HTMLElement)) return '';
   if (section.classList.contains('hero')) return '首页';
-  const candidates = [
-    ...section.querySelectorAll('.section-title, .detail-title, .search-subtitle, .detail-eyebrow, h1, h2, h3')
-  ]
-    .map((node) => node.textContent?.trim() || '')
-    .filter(Boolean);
+  const selectorPriority = ['.detail-title', '.section-title', 'h1', 'h2', 'h3', '.search-subtitle', '.detail-eyebrow'];
+  const genericEnglishLabels = new Set(['keywords', 'keyword node', 'mental model', 'concept card', 'theme node']);
+  const candidates = selectorPriority.flatMap((selector) => (
+    [...section.querySelectorAll(selector)]
+      .map((node) => node.textContent?.trim() || '')
+      .filter(Boolean)
+  ));
 
-  const rawLabel = candidates.find((label) => /[\u3400-\u9fff]/.test(label)) || candidates[0] || '';
-  const label = rawLabel
+  const preferredLabel = candidates.find((label) => /[\u3400-\u9fff]/.test(label))
+    || candidates.find((label) => !genericEnglishLabels.has(label.toLowerCase()))
+    || '';
+
+  const label = preferredLabel
     .replace(/\bEP\d+\b/gi, '')
     .replace(/[A-Za-z]+/g, '')
     .replace(/[|｜:：•·]+/g, ' ')
