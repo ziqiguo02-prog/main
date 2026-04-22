@@ -22,6 +22,72 @@ const HOME_PLATFORM_LINKS = [
     url: 'https://www.youtube.com/@颖响力'
   }
 ];
+const WEBSITE_LOG_ENTRIES = [
+  {
+    date: '2026-04-22',
+    title: '首页、关键词页与轮盘交互重做',
+    items: [
+      '关键词页改成按内容类别浏览，不再按引用量堆成大块。',
+      '右侧轮盘与章节面板多轮调整，标签来源、章节高亮和视觉层级重新梳理。',
+      '首页节目卡片点击逻辑拆开：整卡跳节目，标签独立跳关键词。'
+    ]
+  },
+  {
+    date: '2026-04-22',
+    title: '移动端节奏与排版继续打磨',
+    items: [
+      '首页与节目索引的搜索栏显隐边界重新校准。',
+      '移动端首页、节目索引的留白、标题区、卡片节奏做了收紧。',
+      '首页推荐关键词增加“换一换”，推荐区标题与按钮重新设计。',
+      '首页统计卡片 hover 与小标签高亮做了更细的层次化处理。'
+    ]
+  },
+  {
+    date: '2026-04-22',
+    title: '引用、导航与分组逻辑继续补齐',
+    items: [
+      '子页里的 EP 文案统一改成可跳转引用，减少“看到但点不了”的情况。',
+      '轮盘标签优先取中文标题与分组标题，不再误读到英文壳文案或第一张卡片词。',
+      '首页与知识图谱区域的小入口分别梳理主跳转与次级跳转逻辑。'
+    ]
+  },
+  {
+    date: '2026-04-22',
+    title: '整体字体系与可读性升级',
+    items: [
+      '页面主标题、模块标题、卡片标题、正文、辅助说明重新拉开层级。',
+      '深色 hover 卡片的标题与正文对比重新校准，避免深底棕字看不清。',
+      '推荐关键词、统计卡片与侧栏目录的文字层次重新梳理。'
+    ]
+  },
+  {
+    date: '2026-04-21',
+    title: '首页入口、视频链路与发布流打通',
+    items: [
+      '首页平台入口与节目视频入口统一上线。',
+      '构建流程改成同步刷新 docs 发布目录，减少本地与发布版不一致。',
+      'GitHub Pages 分支发布链路与 Workers 构建路径一起整理。'
+    ]
+  },
+  {
+    date: '2026-04-21',
+    title: '侧栏与首页导航结构开始成型',
+    items: [
+      '侧栏头像、品牌区和首页节目标签固定到底部排布。',
+      '首页搜索、人物入口、知识卡片和视频可用性做了首轮修复。',
+      '知识图谱入口与侧栏身份区开始稳定到当前结构。'
+    ]
+  },
+  {
+    date: '2026-04-20',
+    title: '知识库网页首轮可发布版本',
+    items: [
+      '知识卡片、引用关系和页面发布流程完成首轮稳定化。',
+      '网站从 branch-backed GitHub Pages 源成功发布。',
+      '内容引用修复和基础卡片结构开始在线可用。'
+    ]
+  }
+];
 
 if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'manual';
@@ -1936,12 +2002,7 @@ function renderSidebarKeywordSuggestions() {
 }
 
 function renderSidebar() {
-  const topKeywords = site.keywords.slice(0, 3);
-  const topConcepts = site.concepts.slice(0, 5);
-  const topModels = site.models.slice(0, 5);
-  const topPeople = getPeopleKeywords(PERSON_NAV_MIN_REFERENCES).slice(0, 5);
   const peopleCount = getPeopleKeywords(PERSON_NAV_MIN_REFERENCES).length;
-
   sidebarBody.innerHTML = `
     <div class="sidebar-section">
       <div class="sidebar-title-row">
@@ -1960,33 +2021,13 @@ function renderSidebar() {
       <p class="sidebar-title">搜索知识库</p>
       <div class="sidebar-search-wrap">
         <input id="keyword-search-input" class="sidebar-search-input" type="text" placeholder="搜索关键词、节目、概念、模型，如 咽喉杠杆 / 西贝 / EP031">
-        <p id="keyword-suggestions-title" class="sidebar-subtitle">推荐关键词</p>
-        <div id="keyword-suggestions" class="sidebar-suggestions"></div>
       </div>
     </div>
     <div class="sidebar-section">
-      <p class="sidebar-title">关键词</p>
-      ${topKeywords.map((keyword) => `<a class="sidebar-item" href="${routeTo(`keywords/${keyword.id}`)}">${escapeHtml(keyword.name)}</a>`).join('')}
-      <a class="sidebar-more" href="#/keywords">更多关键词 →</a>
+      <a class="sidebar-link sidebar-link-log" href="#/updates">网页日志 <span class="count-badge">${WEBSITE_LOG_ENTRIES.length}</span></a>
     </div>
     <div class="sidebar-section">
-      <p class="sidebar-title">人物</p>
-      ${topPeople.length ? topPeople.map((keyword) => `<a class="sidebar-item" href="${routeTo(`keywords/${keyword.id}`)}">${escapeHtml(keyword.name)}</a>`).join('') : '<div class="sidebar-empty">当前没有达到阈值的人物。</div>'}
-      <a class="sidebar-more" href="#/people">更多人物 →</a>
-    </div>
-    <div class="sidebar-section">
-      <p class="sidebar-title">核心概念</p>
-      ${topConcepts.map((concept) => `<a class="sidebar-item" href="${routeTo(`concepts/${concept.id}`)}">${escapeHtml(concept.name)}</a>`).join('')}
-      <a class="sidebar-more" href="#/concepts">更多概念 →</a>
-    </div>
-    <div class="sidebar-section">
-      <p class="sidebar-title">思想模型</p>
-      ${topModels.map((model) => `<a class="sidebar-item" href="${routeTo(`models/${model.id}`)}">${escapeHtml(model.name)}</a>`).join('')}
-      <a class="sidebar-more" href="#/models">更多模型 →</a>
-    </div>
-    <div class="sidebar-section">
-      <p class="sidebar-title">知识网</p>
-      <a class="sidebar-item" href="#/graph">知识图谱 <span class="count-badge">${graphStatValue()}</span></a>
+      <a class="sidebar-link" href="#/graph">知识图谱 <span class="count-badge">${graphStatValue()}</span></a>
     </div>
   `;
 
@@ -2018,7 +2059,31 @@ function renderSidebar() {
     if (!isDesktopViewport()) return;
     toggleDesktopSidebar();
   });
-  renderSidebarKeywordSuggestions();
+}
+
+function renderWebsiteLog() {
+  app.innerHTML = `
+    <section class="detail">
+      <div class="detail-header">
+        <a class="back-link" href="#/">← 返回首页</a>
+        <p class="detail-eyebrow">Website Log</p>
+        <h1 class="detail-title">网页日志</h1>
+      </div>
+      <section class="detail-section">
+        <div class="list">
+          ${WEBSITE_LOG_ENTRIES.map((entry) => `
+            <article class="list-item website-log-entry">
+              <p class="inline-label">${escapeHtml(entry.date)}</p>
+              <h3>${escapeHtml(entry.title)}</h3>
+              <ul>
+                ${entry.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+              </ul>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+    </section>
+  `;
 }
 
 function scrollToSection(id) {
@@ -3091,6 +3156,8 @@ function renderRoute() {
     renderHome();
   } else if (section === 'graph') {
     renderGraphPage();
+  } else if (section === 'updates') {
+    renderWebsiteLog();
   } else if (section === 'home' && id === 'episodes') {
     renderHome('home-episodes');
   } else if (section === 'episodes' && !id) {
