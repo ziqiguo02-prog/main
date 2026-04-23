@@ -658,12 +658,11 @@ body.section-progress-panel-open .section-progress-panel {
   height: 46px;
   border: 1px solid rgba(184, 138, 60, 0.22);
   border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(244, 233, 214, 0.92));
-  color: var(--navy);
+  background: linear-gradient(180deg, rgba(42, 53, 70, 0.96), rgba(23, 31, 43, 0.94));
+  color: #f2ddab;
   box-shadow:
-    0 18px 36px rgba(20, 26, 34, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 18px 28px rgba(18, 24, 33, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: translateY(0);
   transform-origin: center center;
   opacity: 0;
@@ -697,12 +696,11 @@ body.section-progress-panel-open .section-progress-panel {
 .floating-actions-menu .menu-button:hover,
 .floating-home:hover,
 .back-to-top:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 253, 249, 1), rgba(249, 239, 221, 0.98));
-  border-color: rgba(184, 138, 60, 0.36);
+  background: linear-gradient(180deg, rgba(54, 67, 86, 0.98), rgba(26, 35, 49, 0.96));
+  border-color: rgba(210, 177, 105, 0.34);
   box-shadow:
-    0 22px 38px rgba(20, 26, 34, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    0 22px 34px rgba(18, 24, 33, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 
@@ -1824,7 +1822,7 @@ a.section-note:focus-visible {
 }
 
 .home-episode-carousel-track.is-animating {
-  transition: transform 0.76s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.644s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .home-episode-carousel-track.is-transition-incoming.is-active {
@@ -1860,7 +1858,7 @@ a.section-note:focus-visible {
 }
 
 .home-episode-mobile-transition-strip.is-animating {
-  transition: transform 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.644s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .home-episode-mobile-transition-pane {
@@ -4073,36 +4071,36 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero-title-row.has-mobile-avatar {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 14px;
-    width: 100%;
-    padding-right: 0;
+    display: block;
+    position: relative;
+    width: fit-content;
+    max-width: calc(100% - 72px);
+    min-height: 0;
   }
 
   .hero-title-row.has-mobile-avatar h1 {
-    flex: 0 1 auto;
     min-width: 0;
-    max-width: calc(100% - 82px);
-    text-wrap: balance;
+    max-width: 100%;
+    text-wrap: nowrap;
   }
 
   .hero-title-row.has-mobile-avatar .hero-title-trigger {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    white-space: normal;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0;
+    white-space: nowrap;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
     display: inline-flex;
-    position: static;
+    position: absolute;
+    left: calc(100% + 24px);
+    top: 2px;
     align-items: flex-start;
     justify-content: center;
-    margin-top: 2px;
-    margin-left: 2px;
+    margin-top: 0;
+    margin-left: 0;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar {
@@ -4320,23 +4318,27 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero-title-row.has-mobile-avatar {
-    gap: 10px;
+    max-width: calc(100% - 86px);
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
-    margin-top: 2px;
-    margin-left: 0;
+    left: calc(100% + 20px);
+    top: 0;
   }
 
   .hero-mobile-avatar {
-    width: 68px;
-    height: 68px;
+    width: 60px;
+    height: 60px;
   }
 
   .hero h1 {
-    font-size: clamp(31px, 10.4vw, 45px);
+    font-size: clamp(25px, 8.1vw, 36px);
     line-height: 0.94;
     letter-spacing: -0.05em;
+  }
+
+  .hero-platform-links {
+    margin-top: 6px;
   }
 
   .home-search-section {
@@ -4475,13 +4477,13 @@ body.page-home .section.split > div .list-item:active p {
   .home-episode-carousel-shell.mobile .home-episode-carousel-viewport,
   .home-episode-carousel-shell.mobile .home-episode-mobile-transition-pane,
   .home-episode-carousel-shell.mobile .home-episode-mobile-single {
-    height: 476px;
-    min-height: 476px;
+    height: auto;
+    min-height: 0;
   }
 
   .home-episode-carousel-shell.mobile .home-episode-mobile-single .home-episode-card,
   .home-episode-carousel-shell.mobile .home-episode-mobile-transition-pane .home-episode-card {
-    height: 100%;
+    height: auto;
   }
 
   .home-episode-mobile-index {
@@ -4618,7 +4620,7 @@ body.page-home .section.split > div .list-item:active p {
   .home-episode-mobile-pane .home-episode-card,
   .home-episode-preview-card,
   .home-episode-mobile-single .home-episode-card {
-    height: 476px;
+    height: auto;
   }
 
   body.page-home #home-episodes .home-episode-card .card-kicker,

@@ -25,6 +25,18 @@ const HOME_PLATFORM_LINKS = [
 ];
 const WEBSITE_LOG_ENTRIES = [
   {
+    date: '2026-04-23',
+    title: '移动端首页继续收紧，视频链接与交互问题修复',
+    items: [
+      '移动端首页 Hero 区继续反复校准：标题、头像、平台按钮的相对位置重新梳理，避免头像把标题和按钮布局拖坏。',
+      '移动端首页节目卡片改成更紧凑的内容优先布局，删掉冗余按钮与提示，把更多可视空间留给节目简介本身。',
+      '首页节目卡片的触摸点击判定放宽，减少手指轻微位移时“点了却没打开节目”的情况。',
+      '移动端左侧导航打开时增加真实滚动锁，避免侧栏打开后背景页面继续跟着滑动。',
+      '重新同步节目视频链接数据，修复大量节目页里 YouTube 显示“未找到”的问题。',
+      '首页最新节目“新”标签增加兜底判断，避免部署数据异常时最新一期不亮新标。'
+    ]
+  },
+  {
     date: '2026-04-22',
     title: '首页恢复可用并收敛轮播与搜索联动',
     items: [
@@ -158,6 +170,8 @@ let hasRenderedRoute = false;
 let lastRenderedHash = window.location.hash || '#/';
 let sidebarLockedScrollY = 0;
 const PERSON_NAV_MIN_REFERENCES = 2;
+const HOME_EPISODE_AUTO_ADVANCE_MS = 7000;
+const HOME_EPISODE_ANIMATION_MS = 644;
 const DESKTOP_SIDEBAR_STORAGE_KEY = 'yinfluence-sidebar-collapsed';
 const SNAP_SECTION_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section';
 const PROGRESS_SECTION_SELECTOR = '.hero, .home-search-section, .section, .detail-header, .detail-section';
@@ -2255,7 +2269,7 @@ function scheduleHomeEpisodeAutoAdvance(maxIndex) {
   const waitMs = Math.max(homeEpisodeAutoAdvancePausedUntil - Date.now(), 0);
   homeEpisodeCarouselTimer = window.setTimeout(() => {
     advanceHomeEpisodeCarousel(1, maxIndex);
-  }, Math.max(10000, waitMs));
+  }, Math.max(HOME_EPISODE_AUTO_ADVANCE_MS, waitMs));
 }
 
 function pauseHomeEpisodeAutoAdvance(durationMs = 6500) {
@@ -2737,7 +2751,7 @@ function renderHomeEpisodeCarousel({ direction = 0 } = {}) {
     const outgoingIndex = getHomeEpisodeOutgoingIndex(homeEpisodeCarousel.currentIndex, direction, homeEpisodeCarousel.maxIndex);
     const outgoingEpisode = featuredEpisodes[outgoingIndex];
     const incomingEpisode = featuredEpisodes[homeEpisodeCarousel.currentIndex];
-    const animationDuration = 460;
+    const animationDuration = HOME_EPISODE_ANIMATION_MS;
 
     homeEpisodeCarouselShell.innerHTML = renderHomeEpisodeMobileTransitionMarkup(outgoingEpisode, incomingEpisode, direction);
     const mobileViewport = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-viewport');
@@ -2774,7 +2788,7 @@ function renderHomeEpisodeCarousel({ direction = 0 } = {}) {
   const currentScrollX = window.scrollX;
   const outgoingTrack = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-track');
   const viewport = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-viewport');
-  const animationDuration = 760;
+  const animationDuration = HOME_EPISODE_ANIMATION_MS;
   window.clearTimeout(sectionSnapTimer);
   suspendSnapUntil = Date.now() + 960;
   lastSnapTargetTop = -1;
