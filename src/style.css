@@ -4073,32 +4073,36 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero-title-row.has-mobile-avatar {
-    display: block;
-    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
     width: 100%;
-    padding-right: 98px;
+    padding-right: 0;
   }
 
   .hero-title-row.has-mobile-avatar h1 {
+    flex: 0 1 auto;
     min-width: 0;
-    max-width: 100%;
-    text-wrap: nowrap;
+    max-width: calc(100% - 82px);
+    text-wrap: balance;
   }
 
   .hero-title-row.has-mobile-avatar .hero-title-trigger {
-    display: inline-flex;
-    align-items: baseline;
-    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    white-space: normal;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
     display: inline-flex;
-    position: absolute;
-    top: 1px;
-    right: 40px;
+    position: static;
     align-items: flex-start;
     justify-content: center;
-    margin-top: 0;
+    margin-top: 2px;
+    margin-left: -2px;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar {
@@ -4316,21 +4320,21 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero-title-row.has-mobile-avatar {
-    padding-right: 92px;
+    gap: 6px;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
-    top: 0;
-    right: 26px;
+    margin-top: 2px;
+    margin-left: -4px;
   }
 
   .hero-mobile-avatar {
-    width: 72px;
-    height: 72px;
+    width: 68px;
+    height: 68px;
   }
 
   .hero h1 {
-    font-size: clamp(30px, 10.2vw, 44px);
+    font-size: clamp(31px, 10.4vw, 45px);
     line-height: 0.94;
     letter-spacing: -0.05em;
   }
@@ -4471,8 +4475,8 @@ body.page-home .section.split > div .list-item:active p {
   .home-episode-carousel-shell.mobile .home-episode-carousel-viewport,
   .home-episode-carousel-shell.mobile .home-episode-mobile-transition-pane,
   .home-episode-carousel-shell.mobile .home-episode-mobile-single {
-    height: 588px;
-    min-height: 588px;
+    height: 540px;
+    min-height: 540px;
   }
 
   .home-episode-carousel-shell.mobile .home-episode-mobile-single .home-episode-card,
@@ -4614,7 +4618,7 @@ body.page-home .section.split > div .list-item:active p {
   .home-episode-mobile-pane .home-episode-card,
   .home-episode-preview-card,
   .home-episode-mobile-single .home-episode-card {
-    height: 588px;
+    height: 540px;
   }
 
   body.page-home #home-episodes .home-episode-card .card-kicker,
@@ -4634,10 +4638,21 @@ body.page-home .section.split > div .list-item:active p {
     margin-top: 8px;
   }
 
+  body.page-home #home-episodes .home-episode-card .chip-row {
+    margin-top: 14px;
+    min-height: 0;
+    max-height: none;
+  }
+
+  body.page-home #home-episodes .home-episode-card .home-episode-card-actions {
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
   body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
     font-size: 15.5px;
     line-height: 1.76;
-    -webkit-line-clamp: 8;
+    -webkit-line-clamp: 9;
     min-height: 0;
   }
 

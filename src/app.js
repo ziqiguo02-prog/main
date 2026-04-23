@@ -1010,8 +1010,8 @@ function summarizeHomeEpisodeSummary(value, { mobile = false } = {}) {
 
   const sentences = text.match(/[^。！？!?]+[。！？!?]?/g)?.map((item) => item.trim()).filter(Boolean) || [text];
   let summary = sentences[0] || text;
-  const maxChars = Math.max(108, Math.min(220, Math.round(text.length * 0.94)));
-  const minChars = Math.min(maxChars - 12, Math.max(84, Math.round(text.length * 0.7)));
+  const maxChars = Math.max(124, Math.min(252, Math.round(text.length * 1.02)));
+  const minChars = Math.min(maxChars - 14, Math.max(96, Math.round(text.length * 0.78)));
 
   let index = 1;
   while (summary.length < minChars && index < sentences.length) {
