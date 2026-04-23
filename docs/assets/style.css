@@ -1725,8 +1725,10 @@ body.page-home .section:last-of-type .grid.cards-2 {
 
 .home-episodes-footer-mobile {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
   padding: 0 4px 2px;
 }
 
@@ -4074,12 +4076,19 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
     display: block;
     position: relative;
     width: 100%;
-    padding-right: 100px;
+    padding-right: 98px;
   }
 
   .hero-title-row.has-mobile-avatar h1 {
     min-width: 0;
     max-width: 100%;
+    text-wrap: nowrap;
+  }
+
+  .hero-title-row.has-mobile-avatar .hero-title-trigger {
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
@@ -4307,12 +4316,12 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero-title-row.has-mobile-avatar {
-    padding-right: 96px;
+    padding-right: 92px;
   }
 
   .hero-title-row.has-mobile-avatar .hero-mobile-avatar-link {
     top: 0;
-    right: 34px;
+    right: 26px;
   }
 
   .hero-mobile-avatar {
@@ -4321,7 +4330,7 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   }
 
   .hero h1 {
-    font-size: clamp(34px, 12vw, 52px);
+    font-size: clamp(30px, 10.2vw, 44px);
     line-height: 0.94;
     letter-spacing: -0.05em;
   }
@@ -4459,26 +4468,25 @@ body.page-home .section.split > div .list-item:active p {
     min-height: 0;
   }
 
-  .home-episode-mobile-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 4px;
-    padding: 0 4px;
-    color: rgba(86, 76, 63, 0.78);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .home-episode-carousel-shell.mobile .home-episode-carousel-viewport,
+  .home-episode-carousel-shell.mobile .home-episode-mobile-transition-pane,
+  .home-episode-carousel-shell.mobile .home-episode-mobile-single {
+    height: 588px;
+    min-height: 588px;
+  }
+
+  .home-episode-carousel-shell.mobile .home-episode-mobile-single .home-episode-card,
+  .home-episode-carousel-shell.mobile .home-episode-mobile-transition-pane .home-episode-card {
+    height: 100%;
   }
 
   .home-episode-mobile-index {
+    font-size: 12px;
     font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: rgba(64, 54, 42, 0.82);
-  }
-
-  .home-episode-mobile-hint {
-    color: rgba(110, 98, 83, 0.72);
+    white-space: nowrap;
   }
 
   .home-episode-carousel-shell.mobile .home-episode-side-button {
@@ -4606,7 +4614,7 @@ body.page-home .section.split > div .list-item:active p {
   .home-episode-mobile-pane .home-episode-card,
   .home-episode-preview-card,
   .home-episode-mobile-single .home-episode-card {
-    height: 592px;
+    height: 588px;
   }
 
   body.page-home #home-episodes .home-episode-card .card-kicker,
@@ -4629,7 +4637,7 @@ body.page-home .section.split > div .list-item:active p {
   body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
     font-size: 15.5px;
     line-height: 1.76;
-    -webkit-line-clamp: 6;
+    -webkit-line-clamp: 8;
     min-height: 0;
   }
 

@@ -1010,8 +1010,8 @@ function summarizeHomeEpisodeSummary(value, { mobile = false } = {}) {
 
   const sentences = text.match(/[^。！？!?]+[。！？!?]?/g)?.map((item) => item.trim()).filter(Boolean) || [text];
   let summary = sentences[0] || text;
-  const maxChars = Math.max(68, Math.min(132, Math.round(text.length * 0.75)));
-  const minChars = Math.min(maxChars - 8, Math.max(50, Math.round(text.length * 0.52)));
+  const maxChars = Math.max(108, Math.min(220, Math.round(text.length * 0.94)));
+  const minChars = Math.min(maxChars - 12, Math.max(84, Math.round(text.length * 0.7)));
 
   let index = 1;
   while (summary.length < minChars && index < sentences.length) {
@@ -2495,24 +2495,23 @@ function renderHomeEpisodePreviewPaneMarkup(episode, direction) {
   `;
 }
 
+function renderHomeEpisodeMobileFooterMarkup(episode, totalEpisodes) {
+  return `
+    <div class="home-episodes-footer-mobile">
+      <span class="home-episode-mobile-index">${getHomeEpisodePositionLabel(episode, totalEpisodes)}</span>
+      <a class="home-episodes-more-link" href="#/episodes">查看更多</a>
+    </div>
+  `;
+}
+
 function renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, { mobilePreview = false } = {}) {
-  const showMobilePreview = mobilePreview && homeEpisodeCarousel.visibleCount === 1 && homeEpisodeCarousel.maxIndex > 0;
-  const previousEpisode = showMobilePreview
-    ? featuredEpisodes[getWrappedHomeEpisodeIndex(homeEpisodeCarousel.currentIndex - 1, homeEpisodeCarousel.maxIndex)]
-    : null;
+  const showMobilePreview = mobilePreview && homeEpisodeCarousel.visibleCount === 1;
   const currentEpisode = showMobilePreview
     ? featuredEpisodes[homeEpisodeCarousel.currentIndex]
-    : null;
-  const nextEpisode = showMobilePreview
-    ? featuredEpisodes[getWrappedHomeEpisodeIndex(homeEpisodeCarousel.currentIndex + 1, homeEpisodeCarousel.maxIndex)]
     : null;
 
   return `
     ${showMobilePreview ? `
-      <div class="home-episode-mobile-toolbar" aria-hidden="true">
-        <span class="home-episode-mobile-index">${getHomeEpisodePositionLabel(currentEpisode, featuredEpisodes.length)}</span>
-        <span class="home-episode-mobile-hint">左右滑动切换</span>
-      </div>
       <div class="home-episode-carousel-viewport">
         <div class="home-episode-carousel-track is-mobile-single">
           <div class="home-episode-mobile-single">
@@ -2520,6 +2519,7 @@ function renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, 
           </div>
         </div>
       </div>
+      ${renderHomeEpisodeMobileFooterMarkup(currentEpisode, featuredEpisodes.length)}
     ` : `
       <button
         id="home-episodes-prev"
@@ -2553,10 +2553,6 @@ function renderHomeEpisodeMobileTransitionMarkup(outgoingEpisode, incomingEpisod
   const initialShift = direction > 0 ? '0%' : '-50%';
 
   return `
-    <div class="home-episode-mobile-toolbar" aria-hidden="true">
-      <span class="home-episode-mobile-index">${getHomeEpisodePositionLabel(incomingEpisode, getHomeFeaturedEpisodes().length)}</span>
-      <span class="home-episode-mobile-hint">左右滑动切换</span>
-    </div>
     <div class="home-episode-carousel-viewport is-mobile-transition">
       <div class="home-episode-mobile-transition-strip" style="transform: translate3d(${initialShift}, 0, 0);">
         ${orderedEpisodes.map((episode) => `
@@ -2566,6 +2562,7 @@ function renderHomeEpisodeMobileTransitionMarkup(outgoingEpisode, incomingEpisod
         `).join('')}
       </div>
     </div>
+    ${renderHomeEpisodeMobileFooterMarkup(incomingEpisode, getHomeFeaturedEpisodes().length)}
   `;
 }
 
@@ -2935,16 +2932,10 @@ function renderHome(focusSectionId = '') {
       <a class="section-note" href="#/episodes">查看全部节目</a>
     </div>
   `;
-  const episodeFooterMarkup = isMobile ? `
-    <div class="home-episodes-footer-mobile">
-      <a class="home-episodes-more-link" href="#/episodes">查看更多节目</a>
-    </div>
-  ` : '';
   const episodeSectionMarkup = `
     <section id="home-episodes" class="section${isMobile ? ' home-episodes-priority' : ''}">
       ${episodeHeaderMarkup}
       <div class="home-episode-carousel-shell${isMobile ? ' mobile' : ''}"></div>
-      ${episodeFooterMarkup}
     </section>
   `;
   const homeTopSectionsMarkup = isMobile
