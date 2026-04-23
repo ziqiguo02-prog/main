@@ -386,7 +386,7 @@ input {
 .section-progress-item.prev,
 .section-progress-item.next {
   min-height: 30px;
-  font-size: 12.5px;
+  font-size: 14.5px;
   opacity: 0.86;
   font-weight: 900;
   transform: scale(0.86);
@@ -394,7 +394,7 @@ input {
 
 .section-progress-item.current {
   min-height: 48px;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 900;
   color: #f2ddab;
   background: linear-gradient(180deg, rgba(54, 67, 86, 0.98), rgba(26, 35, 49, 0.96));
@@ -4354,12 +4354,12 @@ body.page-episode-index #episode-index-results .list-item:active h3 {
   .section-progress-item.prev,
   .section-progress-item.next {
     min-height: 22px;
-    font-size: 10px;
+    font-size: 12.5px;
   }
 
   .section-progress-item.current {
     min-height: 32px;
-    font-size: 12px;
+    font-size: 15px;
   }
 
   .floating-actions-menu {
