@@ -58,6 +58,7 @@ body {
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 20px;
+  scrollbar-gutter: stable;
 }
 
 body.sidebar-open {
@@ -86,39 +87,203 @@ body::after {
     linear-gradient(180deg, transparent 0, rgba(255, 255, 255, 0.12) 100%);
 }
 
-::view-transition-old(root) {
-  animation: pageFadeOut 180ms cubic-bezier(0.4, 0, 1, 1);
+html::view-transition-old(root),
+html::view-transition-new(root) {
+  animation: none;
 }
 
-::view-transition-new(root) {
-  animation: pageFadeIn 260ms cubic-bezier(0.22, 1, 0.36, 1);
+html::view-transition-group(page-shell) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes pageFadeOut {
+html::view-transition-old(page-shell),
+html::view-transition-new(page-shell) {
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  overflow: clip;
+  border-radius: 32px;
+  will-change: transform, opacity, filter, clip-path;
+}
+
+html::view-transition-old(page-shell) {
+  animation: pageShellFadeOut 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+html::view-transition-new(page-shell) {
+  animation: pageShellFadeIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html[data-route-transition="content-home"]::view-transition-old(page-shell) {
+  animation-name: pageShellHomeOut;
+}
+
+html[data-route-transition="content-home"]::view-transition-new(page-shell) {
+  animation-name: pageShellHomeIn;
+}
+
+html[data-route-transition="episode-forward"]::view-transition-group(page-shell),
+html[data-route-transition="episode-backward"]::view-transition-group(page-shell) {
+  animation-duration: 540ms;
+}
+
+html[data-route-transition="episode-forward"]::view-transition-old(page-shell) {
+  animation: episodePageTurnOutForward 320ms cubic-bezier(0.45, 0, 0.9, 0.42) both;
+}
+
+html[data-route-transition="episode-forward"]::view-transition-new(page-shell) {
+  animation: episodePageTurnInForward 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html[data-route-transition="episode-backward"]::view-transition-old(page-shell) {
+  animation: episodePageTurnOutBackward 320ms cubic-bezier(0.45, 0, 0.9, 0.42) both;
+}
+
+html[data-route-transition="episode-backward"]::view-transition-new(page-shell) {
+  animation: episodePageTurnInBackward 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageShellFadeOut {
   from {
     opacity: 1;
     filter: blur(0);
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 
   to {
-    opacity: 0;
+    opacity: 0.08;
     filter: blur(4px);
-    transform: translateY(8px);
+    transform: translate3d(-20px, 0, 0) scale(0.992);
   }
 }
 
-@keyframes pageFadeIn {
+@keyframes pageShellFadeIn {
   from {
     opacity: 0;
-    filter: blur(8px);
-    transform: translateY(14px);
+    filter: blur(10px);
+    transform: translate3d(26px, 0, 0) scale(0.996);
   }
 
   to {
     opacity: 1;
     filter: blur(0);
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes pageShellHomeOut {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    opacity: 0.02;
+    filter: blur(5px);
+    transform: translate3d(22px, 0, 0) scale(0.992);
+  }
+}
+
+@keyframes pageShellHomeIn {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translate3d(-24px, 0, 0) scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes episodePageTurnOutForward {
+  from {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    clip-path: inset(0 0 0 0 round 32px);
+    transform: perspective(1900px) rotateY(0deg) translate3d(0, 0, 0) scale(1);
+    transform-origin: left center;
+  }
+
+  to {
+    opacity: 0.1;
+    filter: brightness(0.92) blur(1.4px);
+    clip-path: inset(0 28% 0 0 round 32px);
+    transform: perspective(1900px) rotateY(-16deg) translate3d(-6%, 0, 0) scale(0.988);
+    transform-origin: left center;
+  }
+}
+
+@keyframes episodePageTurnInForward {
+  from {
+    opacity: 0.28;
+    filter: brightness(1.04) blur(1px);
+    clip-path: inset(0 0 0 22% round 32px);
+    transform: perspective(1900px) rotateY(17deg) translate3d(9%, 0, 0) scale(0.992);
+    transform-origin: right center;
+  }
+
+  58% {
+    opacity: 1;
+    filter: brightness(1.01) blur(0.2px);
+    clip-path: inset(0 0 0 6% round 32px);
+    transform: perspective(1900px) rotateY(-2deg) translate3d(-1.2%, 0, 0) scale(0.998);
+    transform-origin: right center;
+  }
+
+  to {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    clip-path: inset(0 0 0 0 round 32px);
+    transform: perspective(1900px) rotateY(0deg) translate3d(0, 0, 0) scale(1);
+    transform-origin: right center;
+  }
+}
+
+@keyframes episodePageTurnOutBackward {
+  from {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    clip-path: inset(0 0 0 0 round 32px);
+    transform: perspective(1900px) rotateY(0deg) translate3d(0, 0, 0) scale(1);
+    transform-origin: right center;
+  }
+
+  to {
+    opacity: 0.1;
+    filter: brightness(0.92) blur(1.4px);
+    clip-path: inset(0 0 0 28% round 32px);
+    transform: perspective(1900px) rotateY(16deg) translate3d(6%, 0, 0) scale(0.988);
+    transform-origin: right center;
+  }
+}
+
+@keyframes episodePageTurnInBackward {
+  from {
+    opacity: 0.28;
+    filter: brightness(1.04) blur(1px);
+    clip-path: inset(0 22% 0 0 round 32px);
+    transform: perspective(1900px) rotateY(-17deg) translate3d(-9%, 0, 0) scale(0.992);
+    transform-origin: left center;
+  }
+
+  58% {
+    opacity: 1;
+    filter: brightness(1.01) blur(0.2px);
+    clip-path: inset(0 6% 0 0 round 32px);
+    transform: perspective(1900px) rotateY(2deg) translate3d(1.2%, 0, 0) scale(0.998);
+    transform-origin: left center;
+  }
+
+  to {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    clip-path: inset(0 0 0 0 round 32px);
+    transform: perspective(1900px) rotateY(0deg) translate3d(0, 0, 0) scale(1);
+    transform-origin: left center;
   }
 }
 
@@ -804,6 +969,7 @@ body.section-progress-panel-open .section-progress-panel {
   border-radius: 14px;
   background: rgba(255,255,255,0.05);
   color: #f2ece2;
+  font-size: 16px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
@@ -981,6 +1147,7 @@ body.section-progress-panel-open .section-progress-panel {
   margin-left: var(--sidebar-width);
   padding: 18px 42px 72px;
   transition: margin-left 0.24s ease;
+  view-transition-name: page-shell;
 }
 
 body.sidebar-collapsed .sidebar {
@@ -1539,17 +1706,24 @@ a.section-note:focus-visible {
   min-height: 566px;
 }
 
+.home-episode-carousel-viewport {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  align-self: stretch;
+}
+
 .home-episode-carousel-track {
-  --home-episode-shift: 0px;
   --home-episode-drag-offset: 0px;
   --home-episode-preview-peek: 26px;
   --home-episode-preview-gap: 14px;
   --home-episode-preview-card-width: 240px;
   min-width: 0;
-  overflow: hidden;
+  width: 100%;
   transform: translate3d(0, 0, 0);
   opacity: 1;
-  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+  will-change: auto;
+  backface-visibility: hidden;
 }
 
 .home-episode-carousel-track .home-episode-grid {
@@ -1558,15 +1732,41 @@ a.section-note:focus-visible {
   align-items: stretch;
 }
 
-.home-episode-carousel-track.is-animating-out,
-.home-episode-carousel-track.is-animating-in {
-  opacity: 0;
-  transform: translate3d(var(--home-episode-shift), 0, 0);
+.home-episode-carousel-viewport.is-transitioning {
+  isolation: isolate;
+}
+
+.home-episode-carousel-viewport.is-transitioning .home-episode-carousel-track {
+  position: absolute;
+  inset: 0;
+}
+
+.home-episode-carousel-track.is-transition-incoming,
+.home-episode-carousel-track.is-transition-outgoing {
+  pointer-events: none;
+  will-change: transform;
+}
+
+.home-episode-carousel-track.is-transition-incoming {
+  z-index: 1;
+  transform: translate3d(var(--home-episode-enter-shift, 0px), 0, 0);
+}
+
+.home-episode-carousel-track.is-transition-outgoing {
+  z-index: 2;
+  transform: translate3d(0, 0, 0);
 }
 
 .home-episode-carousel-track.is-animating {
-  opacity: 1;
+  transition: transform 0.76s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-episode-carousel-track.is-transition-incoming.is-active {
   transform: translate3d(0, 0, 0);
+}
+
+.home-episode-carousel-track.is-transition-outgoing.is-active {
+  transform: translate3d(var(--home-episode-leave-shift, 0px), 0, 0);
 }
 
 .home-episode-carousel-track.is-mobile-preview {
@@ -1581,6 +1781,25 @@ a.section-note:focus-visible {
 .home-episode-carousel-track.is-mobile-single {
   overflow: hidden;
   touch-action: pan-y;
+}
+
+.home-episode-carousel-viewport.is-mobile-transition {
+  overflow: hidden;
+}
+
+.home-episode-mobile-transition-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(100%, 100%));
+  width: 200%;
+  will-change: transform;
+}
+
+.home-episode-mobile-transition-strip.is-animating {
+  transition: transform 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-episode-mobile-transition-pane {
+  min-width: 0;
 }
 
 .home-episode-mobile-single {
@@ -1663,6 +1882,8 @@ a.section-note:focus-visible {
 
 .home-episode-carousel-track .home-episode-grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 .home-episode-carousel-track .home-episode-grid-3 .home-episode-card {
@@ -1671,6 +1892,8 @@ a.section-note:focus-visible {
 
 .home-episode-carousel-track .home-episode-grid-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 .home-episode-carousel-track .home-episode-grid-2 .home-episode-card {
@@ -1679,6 +1902,8 @@ a.section-note:focus-visible {
 
 .home-episode-carousel-track .home-episode-grid-1 {
   grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 .home-episode-carousel-track .home-episode-grid-1 .home-episode-card {
@@ -1734,6 +1959,9 @@ body.page-home .home-episode-grid,
 
 body.page-home .home-episode-card {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 body.page-home #home-episodes .home-episode-card::before {
@@ -1750,10 +1978,20 @@ body.page-home #home-episodes .home-episode-card h3 {
 
 body.page-home .home-episode-card .card-primary-link h3 {
   min-height: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.page-home #home-episodes .home-episode-card > p:not(.card-kicker):not(.inline-label) {
   color: rgba(31, 29, 26, 0.7);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.page-home #home-episodes .home-episode-card .chip {
@@ -1761,6 +1999,14 @@ body.page-home #home-episodes .home-episode-card .chip {
   border-color: rgba(164, 144, 116, 0.12);
   color: rgba(88, 68, 49, 0.88);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.86);
+}
+
+body.page-home #home-episodes .home-episode-card .chip-row {
+  margin-top: auto;
+  align-content: flex-start;
+  min-height: 70px;
+  max-height: 70px;
+  overflow: hidden;
 }
 
 body.page-home #home-episodes .home-episode-card a.chip:hover,
@@ -2128,6 +2374,7 @@ body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
   border-radius: 18px;
   background: rgba(255,255,255,0.72);
   color: var(--ink);
+  font-size: 16px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.76),
     0 10px 24px rgba(22, 33, 48, 0.03);
@@ -2152,6 +2399,7 @@ body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
   border: 1px solid rgba(184, 138, 60, 0.18);
   border-radius: 18px;
   background: rgba(255,255,255,0.72);
+  font-size: 16px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.76),
     0 10px 24px rgba(22, 33, 48, 0.03);
@@ -2163,7 +2411,7 @@ body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
   min-height: 30px;
   padding: 6px 10px;
   border-radius: 9px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .episode-search-row input:focus {
@@ -2178,7 +2426,7 @@ body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
   min-height: 32px;
   padding: 4px 8px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .episode-index-toolbar.mobile .search-clear {
@@ -4214,13 +4462,14 @@ body.page-home .section.split > div .list-item:active p {
     font-size: 24px;
     line-height: 1.2;
     text-wrap: initial;
+    -webkit-line-clamp: 3;
   }
 
   body.page-home .home-episode-card > p:not(.card-kicker):not(.inline-label) {
     font-size: 14.5px;
     line-height: 1.74;
-    -webkit-line-clamp: 5;
-    min-height: 9.4em;
+    -webkit-line-clamp: 4;
+    min-height: 0;
   }
 
   .home-episode-preview-title {
@@ -4231,6 +4480,11 @@ body.page-home .section.split > div .list-item:active p {
   body.page-home #home-episodes .home-episode-card .chip {
     font-size: 12.5px;
     padding: 8px 13px;
+  }
+
+  body.page-home #home-episodes .home-episode-card .chip-row {
+    min-height: 64px;
+    max-height: 64px;
   }
 
   .home-episode-open-link {

@@ -12,6 +12,7 @@ const floatingActions = document.getElementById('floating-actions');
 const floatingActionsToggle = document.getElementById('floating-actions-toggle');
 const sectionProgress = document.getElementById('section-progress');
 const sectionProgressPanel = document.getElementById('section-progress-panel');
+const viewportMeta = document.querySelector('meta[name="viewport"]');
 const HOME_PLATFORM_LINKS = [
   {
     platform: 'bilibili',
@@ -152,11 +153,15 @@ let sectionProgressActiveIndex = -1;
 let sectionProgressPulseTimer = 0;
 let lastHomeEpisodeVisibleCount = 3;
 let lastHomeMobileLayout = false;
+let mobileViewportResetTimer = 0;
+let hasRenderedRoute = false;
+let lastRenderedHash = window.location.hash || '#/';
 const PERSON_NAV_MIN_REFERENCES = 2;
 const DESKTOP_SIDEBAR_STORAGE_KEY = 'yinfluence-sidebar-collapsed';
 const SNAP_SECTION_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section';
 const PROGRESS_SECTION_SELECTOR = '.hero, .home-search-section, .section, .detail-header, .detail-section';
 const REVEAL_SELECTOR = '.hero, .home-search-toolbar, .home-search-section, .section, .detail-header, .detail-section, .card, .list-item, .graph-panel-card, .graph-canvas-card';
+const DEFAULT_VIEWPORT_CONTENT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
 
 function isDesktopViewport() {
   return window.matchMedia('(min-width: 981px)').matches;
@@ -168,6 +173,71 @@ function isMobileViewport() {
 
 function useMobileHomeLayout() {
   return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function isTextEntryElement(element) {
+  return (
+    element instanceof HTMLInputElement
+    || element instanceof HTMLTextAreaElement
+    || element instanceof HTMLSelectElement
+  );
+}
+
+function blurSearchInputs() {
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement)) return false;
+  if (!activeElement.closest('.sidebar-search-wrap, .home-search-toolbar, .episode-index-toolbar, .keyword-toolbar')) {
+    return false;
+  }
+  if (!isTextEntryElement(activeElement)) return false;
+  activeElement.blur();
+  return true;
+}
+
+function normalizeMobileViewport({ force = false } = {}) {
+  if (!isMobileViewport()) return;
+
+  const didBlurSearchInput = blurSearchInputs();
+  const currentScale = window.visualViewport?.scale || 1;
+  if (!force && !didBlurSearchInput && currentScale <= 1.01) return;
+  if (!(viewportMeta instanceof HTMLMetaElement)) return;
+
+  window.clearTimeout(mobileViewportResetTimer);
+  viewportMeta.setAttribute('content', `${DEFAULT_VIEWPORT_CONTENT}, maximum-scale=1`);
+
+  window.requestAnimationFrame(() => {
+    scrollWindowInstantly(window.scrollY, window.scrollX);
+    mobileViewportResetTimer = window.setTimeout(() => {
+      viewportMeta.setAttribute('content', DEFAULT_VIEWPORT_CONTENT);
+    }, 220);
+  });
+}
+
+function parseHashRoute(hashValue) {
+  const hash = String(hashValue || '').replace(/^#\/?/, '');
+  const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
+  const [section = '', id = ''] = parts;
+
+  return {
+    section,
+    id,
+    episodeNumber: section === 'episodes' && id ? episodeNumberFromId(id) : NaN
+  };
+}
+
+function getRouteTransitionKind(previousHash, nextHash) {
+  const previousRoute = parseHashRoute(previousHash);
+  const nextRoute = parseHashRoute(nextHash);
+
+  if (previousRoute.section === 'episodes' && previousRoute.id && nextRoute.section === 'episodes' && nextRoute.id) {
+    if (Number.isFinite(previousRoute.episodeNumber) && Number.isFinite(nextRoute.episodeNumber)) {
+      if (nextRoute.episodeNumber > previousRoute.episodeNumber) return 'episode-forward';
+      if (nextRoute.episodeNumber < previousRoute.episodeNumber) return 'episode-backward';
+    }
+    return 'episode-forward';
+  }
+
+  return nextRoute.section ? 'content-forward' : 'content-home';
 }
 
 function getDesktopSidebarCollapsedPreference() {
@@ -717,6 +787,7 @@ function closeSidebar() {
   if (sidebarBackdrop) {
     sidebarBackdrop.hidden = true;
   }
+  normalizeMobileViewport();
   syncFloatingActionLabels();
 }
 
@@ -753,12 +824,20 @@ function bindHomeSurfaceToTop(selector) {
 bindHomeSurfaceToTop('#floating-home');
 bindHomeSurfaceToTop('.brand-home, .brand-avatar-link');
 function renderRouteWithTransition() {
+  const nextHash = window.location.hash || '#/';
+  const transitionKind = getRouteTransitionKind(lastRenderedHash, nextHash);
+
   if (
+    hasRenderedRoute &&
     typeof document.startViewTransition === 'function' &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
-    document.startViewTransition(() => {
+    document.documentElement.dataset.routeTransition = transitionKind;
+    const transition = document.startViewTransition(() => {
       renderRoute();
+    });
+    transition.finished.finally(() => {
+      delete document.documentElement.dataset.routeTransition;
     });
     return;
   }
@@ -2066,6 +2145,7 @@ function routeForSearchMatch(match) {
 function openFirstSearchMatch(query) {
   const [firstMatch] = getKnowledgeSearchMatches(query);
   if (!firstMatch) return;
+  normalizeMobileViewport({ force: true });
   window.location.hash = routeForSearchMatch(firstMatch);
 }
 
@@ -2234,6 +2314,7 @@ function renderSidebar() {
       if (event.key !== 'Enter') return;
       const [firstMatch] = getSidebarSearchMatches();
       if (firstMatch) {
+        normalizeMobileViewport({ force: true });
         window.location.hash = firstMatch.type === 'episode'
           ? routeTo(`episodes/${firstMatch.id}`)
           : firstMatch.type === 'keyword'
@@ -2248,6 +2329,11 @@ function renderSidebar() {
   document.getElementById('sidebar-toggle-inline')?.addEventListener('click', () => {
     if (!isDesktopViewport()) return;
     toggleDesktopSidebar();
+  });
+  sidebarBody.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href^="#/"]');
+    if (!link) return;
+    normalizeMobileViewport({ force: true });
   });
 }
 
@@ -2317,6 +2403,12 @@ function getWrappedHomeEpisodeIndex(index, maxIndex) {
   return index;
 }
 
+function getHomeEpisodeOutgoingIndex(currentIndex, direction, maxIndex) {
+  return direction > 0
+    ? getWrappedHomeEpisodeIndex(currentIndex - 1, maxIndex)
+    : getWrappedHomeEpisodeIndex(currentIndex + 1, maxIndex);
+}
+
 function renderHomeEpisodeCardMarkup(episode, { preview = false, mobileAction = false } = {}) {
   const summary = summarizeHomeEpisodeSummary(episode.summary, { mobile: mobileAction });
   return `
@@ -2366,9 +2458,11 @@ function renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, 
         <span class="home-episode-mobile-index">第 ${homeEpisodeCarousel.currentIndex + 1} / ${featuredEpisodes.length} 集</span>
         <span class="home-episode-mobile-hint">左右滑动切换</span>
       </div>
-      <div class="home-episode-carousel-track is-mobile-single">
-        <div class="home-episode-mobile-single">
-          ${renderHomeEpisodeCardMarkup(currentEpisode, { mobileAction: true })}
+      <div class="home-episode-carousel-viewport">
+        <div class="home-episode-carousel-track is-mobile-single">
+          <div class="home-episode-mobile-single">
+            ${renderHomeEpisodeCardMarkup(currentEpisode, { mobileAction: true })}
+          </div>
         </div>
       </div>
     ` : `
@@ -2379,9 +2473,11 @@ function renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, 
         aria-label="显示更新一个节目"
         ${homeEpisodeCarousel.maxIndex > 0 ? '' : 'disabled'}
       >‹</button>
-      <div class="home-episode-carousel-track">
-        <div class="grid cards-3 home-episode-grid home-episode-grid-${homeEpisodeCarousel.visibleCount}">
-          ${homeEpisodeCarousel.visibleEpisodes.map((episode) => renderHomeEpisodeCardMarkup(episode)).join('')}
+      <div class="home-episode-carousel-viewport">
+        <div class="home-episode-carousel-track">
+          <div class="home-episode-grid home-episode-grid-${homeEpisodeCarousel.visibleCount}">
+            ${homeEpisodeCarousel.visibleEpisodes.map((episode) => renderHomeEpisodeCardMarkup(episode)).join('')}
+          </div>
         </div>
       </div>
       <button
@@ -2392,6 +2488,29 @@ function renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, 
         ${homeEpisodeCarousel.maxIndex > 0 ? '' : 'disabled'}
       >›</button>
     `}
+  `;
+}
+
+function renderHomeEpisodeMobileTransitionMarkup(outgoingEpisode, incomingEpisode, direction) {
+  const orderedEpisodes = direction > 0
+    ? [outgoingEpisode, incomingEpisode]
+    : [incomingEpisode, outgoingEpisode];
+  const initialShift = direction > 0 ? '0%' : '-100%';
+
+  return `
+    <div class="home-episode-mobile-toolbar" aria-hidden="true">
+      <span class="home-episode-mobile-index">第 ${homeEpisodeCarouselIndex + 1} / ${getHomeFeaturedEpisodes().length} 集</span>
+      <span class="home-episode-mobile-hint">左右滑动切换</span>
+    </div>
+    <div class="home-episode-carousel-viewport is-mobile-transition">
+      <div class="home-episode-mobile-transition-strip" style="transform: translate3d(${initialShift}, 0, 0);">
+        ${orderedEpisodes.map((episode) => `
+          <div class="home-episode-mobile-transition-pane">
+            ${renderHomeEpisodeCardMarkup(episode, { mobileAction: true })}
+          </div>
+        `).join('')}
+      </div>
+    </div>
   `;
 }
 
@@ -2564,53 +2683,122 @@ function renderHomeEpisodeCarousel({ direction = 0 } = {}) {
     return;
   }
 
+  if (isMobile) {
+    const currentScrollY = window.scrollY;
+    const currentScrollX = window.scrollX;
+    const outgoingIndex = getHomeEpisodeOutgoingIndex(homeEpisodeCarousel.currentIndex, direction, homeEpisodeCarousel.maxIndex);
+    const outgoingEpisode = featuredEpisodes[outgoingIndex];
+    const incomingEpisode = featuredEpisodes[homeEpisodeCarousel.currentIndex];
+    const animationDuration = 460;
+
+    homeEpisodeCarouselShell.innerHTML = renderHomeEpisodeMobileTransitionMarkup(outgoingEpisode, incomingEpisode, direction);
+    const mobileViewport = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-viewport');
+    const mobileStrip = homeEpisodeCarouselShell.querySelector('.home-episode-mobile-transition-strip');
+    if (!(mobileViewport instanceof HTMLElement) || !(mobileStrip instanceof HTMLElement)) {
+      mount();
+      homeEpisodeCarouselAnimating = false;
+      return;
+    }
+
+    const lockedHeight = mobileViewport.getBoundingClientRect().height;
+    if (lockedHeight > 0) {
+      mobileViewport.style.height = `${lockedHeight}px`;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        mobileStrip.classList.add('is-animating');
+        mobileStrip.style.transform = direction > 0
+          ? 'translate3d(-100%, 0, 0)'
+          : 'translate3d(0, 0, 0)';
+      });
+    });
+
+    window.setTimeout(() => {
+      mount();
+      scrollWindowInstantly(currentScrollY, currentScrollX);
+      homeEpisodeCarouselAnimating = false;
+    }, animationDuration);
+    return;
+  }
+
   const currentScrollY = window.scrollY;
   const currentScrollX = window.scrollX;
   const outgoingTrack = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-track');
-  const outgoingShift = `${direction > 0 ? (isMobile ? -116 : -34) : (isMobile ? 116 : 34)}px`;
-  const incomingShift = `${direction > 0 ? (isMobile ? 116 : 34) : (isMobile ? -116 : -34)}px`;
+  const viewport = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-viewport');
+  const animationDuration = 760;
   window.clearTimeout(sectionSnapTimer);
   suspendSnapUntil = Date.now() + 960;
   lastSnapTargetTop = -1;
 
-  if (!(outgoingTrack instanceof HTMLElement)) {
+  if (!(outgoingTrack instanceof HTMLElement) || !(viewport instanceof HTMLElement)) {
     mount();
-    scrollWindowInstantly(currentScrollY, currentScrollX);
+    if (!isMobile) {
+      scrollWindowInstantly(currentScrollY, currentScrollX);
+    }
     return;
   }
 
-  outgoingTrack.style.setProperty('--home-episode-shift', outgoingShift);
-  outgoingTrack.classList.add('is-animating-out');
-
-  window.setTimeout(() => {
+  const outgoingClone = outgoingTrack.cloneNode(true);
+  if (!(outgoingClone instanceof HTMLElement)) {
     mount();
-    scrollWindowInstantly(currentScrollY, currentScrollX);
-    window.requestAnimationFrame(() => {
+    if (!isMobile) {
       scrollWindowInstantly(currentScrollY, currentScrollX);
-    });
-    const incomingTrack = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-track');
-    if (incomingTrack instanceof HTMLElement) {
-      incomingTrack.style.setProperty('--home-episode-shift', incomingShift);
-      incomingTrack.classList.add('is-animating-in');
-      window.requestAnimationFrame(() => {
-        incomingTrack.classList.add('is-animating');
-      });
-      window.setTimeout(() => {
-        incomingTrack.classList.remove('is-animating', 'is-animating-in');
-        incomingTrack.style.removeProperty('--home-episode-shift');
-        homeEpisodeCarouselAnimating = false;
-      }, 280);
-      return;
     }
     homeEpisodeCarouselAnimating = false;
-  }, 150);
+    return;
+  }
+
+  mount();
+  if (!isMobile) {
+    scrollWindowInstantly(currentScrollY, currentScrollX);
+  }
+
+  const nextViewport = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-viewport');
+  const incomingTrack = homeEpisodeCarouselShell.querySelector('.home-episode-carousel-track');
+  if (!(nextViewport instanceof HTMLElement) || !(incomingTrack instanceof HTMLElement)) {
+    homeEpisodeCarouselAnimating = false;
+    return;
+  }
+
+  const incomingCards = [...incomingTrack.querySelectorAll('.home-episode-card')];
+  const firstCard = incomingCards[0];
+  const secondCard = incomingCards[1];
+  const gap = secondCard instanceof HTMLElement && firstCard instanceof HTMLElement
+    ? Math.max(secondCard.getBoundingClientRect().left - firstCard.getBoundingClientRect().right, 0)
+    : 16;
+  const cardWidth = firstCard instanceof HTMLElement ? firstCard.getBoundingClientRect().width : nextViewport.getBoundingClientRect().width;
+  const stepDistance = Math.max(cardWidth + gap, 1);
+  const leaveShift = `${direction > 0 ? -stepDistance : stepDistance}px`;
+  const enterShift = `${direction > 0 ? stepDistance : -stepDistance}px`;
+
+  outgoingClone.classList.add('is-transition-outgoing');
+  outgoingClone.style.setProperty('--home-episode-leave-shift', leaveShift);
+  incomingTrack.classList.add('is-transition-incoming');
+  incomingTrack.style.setProperty('--home-episode-enter-shift', enterShift);
+  nextViewport.classList.add('is-transitioning');
+  nextViewport.prepend(outgoingClone);
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      outgoingClone.classList.add('is-animating', 'is-active');
+      incomingTrack.classList.add('is-animating', 'is-active');
+    });
+  });
+
+  window.setTimeout(() => {
+    outgoingClone.remove();
+    incomingTrack.classList.remove('is-transition-incoming', 'is-animating', 'is-active');
+    incomingTrack.style.removeProperty('--home-episode-enter-shift');
+    nextViewport.classList.remove('is-transitioning');
+    scrollWindowInstantly(currentScrollY, currentScrollX);
+    homeEpisodeCarouselAnimating = false;
+  }, animationDuration);
 }
 
 function renderHome(focusSectionId = '') {
   const isMobile = useMobileHomeLayout();
   const featuredEpisodes = getHomeFeaturedEpisodes();
-  const homeEpisodeCarousel = homeEpisodeCarouselState(featuredEpisodes);
-  lastHomeEpisodeVisibleCount = homeEpisodeCarousel.visibleCount;
   lastHomeMobileLayout = isMobile;
   const peopleCount = getPeopleKeywords(PERSON_NAV_MIN_REFERENCES).length;
   const statCards = [
@@ -2702,9 +2890,7 @@ function renderHome(focusSectionId = '') {
         </div>
         <a class="section-note" href="#/episodes">查看全部节目</a>
       </div>
-      <div class="home-episode-carousel-shell${isMobile ? ' mobile' : ''}">
-        ${renderHomeEpisodeCarouselMarkup(homeEpisodeCarousel, featuredEpisodes, { mobilePreview: isMobile })}
-      </div>
+      <div class="home-episode-carousel-shell${isMobile ? ' mobile' : ''}"></div>
       </div>
     </section>
 
@@ -2824,6 +3010,8 @@ function renderHome(focusSectionId = '') {
     setupHomeSearchToolbarBehavior(homeSearchToolbar);
   }
 
+  renderHomeEpisodeCarousel();
+
   app.querySelectorAll('#home-episodes .card[data-episode-href]').forEach((card) => {
     card.addEventListener('click', (event) => {
       if (event.target.closest('.chip, button, input, textarea, select, summary')) return;
@@ -2847,10 +3035,6 @@ function renderHome(focusSectionId = '') {
       window.location.hash = href;
     });
   });
-  const homeEpisodeCarouselShell = document.querySelector('.home-episode-carousel-shell');
-  if (homeEpisodeCarouselShell) {
-    bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, isMobile);
-  }
 
   scrollToSection(focusSectionId);
 }
@@ -3745,6 +3929,11 @@ function renderRoute() {
   lastScrollY = 0;
   lastScrollSampleAt = performance.now();
   refreshViewportBehaviors({ resetDock: true });
+  lastRenderedHash = window.location.hash || '#/';
+  hasRenderedRoute = true;
+  window.requestAnimationFrame(() => {
+    normalizeMobileViewport();
+  });
   window.requestAnimationFrame(() => {
     syncSectionProgress();
   });

@@ -2,11 +2,11 @@
   "meta": {
     "title": "颖响力知识图谱",
     "subtitle": "节目、概念、模型、人物、主题之间的可视化连接网络",
-    "nodeCount": 434,
-    "linkCount": 784,
+    "nodeCount": 435,
+    "linkCount": 793,
     "typeCounts": {
       "model": 53,
-      "episode": 123,
+      "episode": 124,
       "concept": 111,
       "person": 61,
       "theme": 86
@@ -22,7 +22,7 @@
       "route": "models/risk-transfer-chain",
       "summary": "系统不会立刻吞下风险，而是先沿着银行、企业、票据、供应链和普通人之间不断转手、延后和下沉。",
       "status": null,
-      "degree": 31
+      "degree": 32
     },
     {
       "id": "episode:EP001",
@@ -69,6 +69,17 @@
       "degree": 13
     },
     {
+      "id": "concept:hidden-debt",
+      "key": "hidden-debt",
+      "label": "隐形债务",
+      "fullLabel": "隐形债务",
+      "type": "concept",
+      "route": "concepts/hidden-debt",
+      "summary": "表外、体外和合作链条里的债务不在显性报表中充分呈现，却会在危机时重新压回主体。",
+      "status": null,
+      "degree": 13
+    },
+    {
       "id": "model:balance-sheet-maintenance",
       "key": "balance-sheet-maintenance",
       "label": "资产负债表维持",
@@ -78,17 +89,6 @@
       "summary": "当系统进入压力期，各方优先做的不是立刻出清，而是先保住估值、抵押物和报表表面完整。",
       "status": null,
       "degree": 13
-    },
-    {
-      "id": "concept:hidden-debt",
-      "key": "hidden-debt",
-      "label": "隐形债务",
-      "fullLabel": "隐形债务",
-      "type": "concept",
-      "route": "concepts/hidden-debt",
-      "summary": "表外、体外和合作链条里的债务不在显性报表中充分呈现，却会在危机时重新压回主体。",
-      "status": null,
-      "degree": 12
     },
     {
       "id": "episode:EP120",
@@ -267,6 +267,28 @@
       "degree": 9
     },
     {
+      "id": "episode:EP124",
+      "key": "EP124",
+      "label": "EP124",
+      "fullLabel": "EP124 · 广深地铁集体被砍！三四线城市疯狂修！中国转移支付的魔幻反噬藏不住了",
+      "type": "episode",
+      "route": "episodes/EP124",
+      "summary": "本期从广州地铁四期大幅缩水、深圳地铁 18 号线被打回切入，判断中国靠“土地财政 + 基建拉动”维持了几十年的增长模式已经走到尽头。节目真正想讨论的不是某两条地铁为什么被砍，而是转移支付、地方财政和区域发展之间的关系如何发生了反噬：最能造血的一线城市被抽走资源，连刚需项目都开始收缩；而大量缺乏造血能力的三四线城市却继续靠转移支付维持基建与体制工资，形成一种依赖输血、维持表面繁荣、却越来越难产生真实竞争力的结构。",
+      "status": "curated",
+      "degree": 9
+    },
+    {
+      "id": "theme:local-fiscal-stress-and-hidden-debt",
+      "key": "local-fiscal-stress-and-hidden-debt",
+      "label": "地方财政与隐性债务",
+      "fullLabel": "地方财政与隐性债务",
+      "type": "theme",
+      "route": "themes/local-fiscal-stress-and-hidden-debt",
+      "summary": "地方财政吃紧后，系统会通过更复杂的融资、资产包装和风险转移来维持运转。",
+      "status": null,
+      "degree": 8
+    },
+    {
       "id": "theme:maritime-chokepoints-and-route-order",
       "key": "maritime-chokepoints-and-route-order",
       "label": "海峡命门与航运秩序",
@@ -285,6 +307,17 @@
       "type": "theme",
       "route": "themes/ev-collapse-and-exit-risk",
       "summary": "聚焦新能源项目在失速、清算和品牌出清阶段，风险如何向债权人、用户和地方政府层层传导。",
+      "status": null,
+      "degree": 8
+    },
+    {
+      "id": "model:distribution-bias",
+      "key": "distribution-bias",
+      "label": "资源分配偏置",
+      "fullLabel": "资源分配偏置",
+      "type": "model",
+      "route": "models/distribution-bias",
+      "summary": "系统会优先保护更强势、更有组织和更能讲故事的环节，而把成本和压力慢慢压向更弱的一端。",
       "status": null,
       "degree": 8
     },
@@ -564,13 +597,13 @@
       "degree": 7
     },
     {
-      "id": "theme:local-fiscal-stress-and-hidden-debt",
-      "key": "local-fiscal-stress-and-hidden-debt",
-      "label": "地方财政与隐性债务",
-      "fullLabel": "地方财政与隐性债务",
+      "id": "theme:big-government-and-incentive-reversal",
+      "key": "big-government-and-incentive-reversal",
+      "label": "大政府与激励反转",
+      "fullLabel": "大政府与激励反转",
       "type": "theme",
-      "route": "themes/local-fiscal-stress-and-hidden-debt",
-      "summary": "地方财政吃紧后，系统会通过更复杂的融资、资产包装和风险转移来维持运转。",
+      "route": "themes/big-government-and-incentive-reversal",
+      "summary": "当大政府失去高速增长红利后，原本向前看的发展激励会慢慢转成向后看的收缩与回补。",
       "status": null,
       "degree": 7
     },
@@ -626,17 +659,6 @@
       "type": "model",
       "route": "models/institutional-fit",
       "summary": "制度适配解释能力能否兑现，取决于组织被放在怎样的法律、资本和治理环境中。",
-      "status": null,
-      "degree": 7
-    },
-    {
-      "id": "model:distribution-bias",
-      "key": "distribution-bias",
-      "label": "资源分配偏置",
-      "fullLabel": "资源分配偏置",
-      "type": "model",
-      "route": "models/distribution-bias",
-      "summary": "系统会优先保护更强势、更有组织和更能讲故事的环节，而把成本和压力慢慢压向更弱的一端。",
       "status": null,
       "degree": 7
     },
@@ -927,13 +949,13 @@
       "degree": 6
     },
     {
-      "id": "theme:big-government-and-incentive-reversal",
-      "key": "big-government-and-incentive-reversal",
-      "label": "大政府与激励反转",
-      "fullLabel": "大政府与激励反转",
-      "type": "theme",
-      "route": "themes/big-government-and-incentive-reversal",
-      "summary": "当大政府失去高速增长红利后，原本向前看的发展激励会慢慢转成向后看的收缩与回补。",
+      "id": "concept:phantom-growth",
+      "key": "phantom-growth",
+      "label": "幻象增长",
+      "fullLabel": "幻象增长",
+      "type": "concept",
+      "route": "concepts/phantom-growth",
+      "summary": "系统通过报表、交易、融资和场面把增长做出来，但真实产业和真实利润并没有同步长出来。",
       "status": null,
       "degree": 6
     },
@@ -1220,17 +1242,6 @@
       "type": "model",
       "route": "models/rule-anchored-small-state-model",
       "summary": "小国要长期活下来，不能只靠地理好运，更要靠规则信誉、理性政府和可预期的制度自我约束。",
-      "status": null,
-      "degree": 5
-    },
-    {
-      "id": "concept:phantom-growth",
-      "key": "phantom-growth",
-      "label": "幻象增长",
-      "fullLabel": "幻象增长",
-      "type": "concept",
-      "route": "concepts/phantom-growth",
-      "summary": "系统通过报表、交易、融资和场面把增长做出来，但真实产业和真实利润并没有同步长出来。",
       "status": null,
       "degree": 5
     },
@@ -1675,6 +1686,17 @@
       "degree": 4
     },
     {
+      "id": "theme:middle-class-descent-and-stratification",
+      "key": "middle-class-descent-and-stratification",
+      "label": "中产下坠与分层社会",
+      "fullLabel": "中产下坠与分层社会",
+      "type": "theme",
+      "route": "themes/middle-class-descent-and-stratification",
+      "summary": "当中间层缺乏缓冲带时，经济下行会迅速转成身份下坠、关系断裂和社会分层加固。",
+      "status": null,
+      "degree": 4
+    },
+    {
       "id": "concept:organizational-silence",
       "key": "organizational-silence",
       "label": "组织失声",
@@ -1840,6 +1862,17 @@
       "degree": 3
     },
     {
+      "id": "concept:subsidy-leverage-engine",
+      "key": "subsidy-leverage-engine",
+      "label": "补贴杠杆引擎",
+      "fullLabel": "补贴杠杆引擎",
+      "type": "concept",
+      "route": "concepts/subsidy-leverage-engine",
+      "summary": "财政补贴被当成种子资金，撬动基金、估值、招商和社会资本，形成杠杆引擎。",
+      "status": null,
+      "degree": 3
+    },
+    {
       "id": "model:subsidized-adoption-flywheel",
       "key": "subsidized-adoption-flywheel",
       "label": "补贴驱动采纳飞轮",
@@ -1880,6 +1913,17 @@
       "type": "model",
       "route": "models/proxy-containment-ring",
       "summary": "代理围堵环解释大国如何通过盟友、代理人和通道控制分摊成本、封堵对手。",
+      "status": null,
+      "degree": 3
+    },
+    {
+      "id": "theme:local-government-financialization",
+      "key": "local-government-financialization",
+      "label": "地方政府资本化与补贴杠杆",
+      "fullLabel": "地方政府资本化与补贴杠杆",
+      "type": "theme",
+      "route": "themes/local-government-financialization",
+      "summary": "讨论地方政府如何从传统招商者变成资本玩家，并把补贴、基金和估值故事捆到一起。",
       "status": null,
       "degree": 3
     },
@@ -2247,17 +2291,6 @@
       "degree": 3
     },
     {
-      "id": "theme:middle-class-descent-and-stratification",
-      "key": "middle-class-descent-and-stratification",
-      "label": "中产下坠与分层社会",
-      "fullLabel": "中产下坠与分层社会",
-      "type": "theme",
-      "route": "themes/middle-class-descent-and-stratification",
-      "summary": "当中间层缺乏缓冲带时，经济下行会迅速转成身份下坠、关系断裂和社会分层加固。",
-      "status": null,
-      "degree": 3
-    },
-    {
       "id": "concept:active-neutrality",
       "key": "active-neutrality",
       "label": "主动中立",
@@ -2489,17 +2522,6 @@
       "degree": 2
     },
     {
-      "id": "concept:subsidy-leverage-engine",
-      "key": "subsidy-leverage-engine",
-      "label": "补贴杠杆引擎",
-      "fullLabel": "补贴杠杆引擎",
-      "type": "concept",
-      "route": "concepts/subsidy-leverage-engine",
-      "summary": "财政补贴被当成种子资金，撬动基金、估值、招商和社会资本，形成杠杆引擎。",
-      "status": null,
-      "degree": 2
-    },
-    {
       "id": "model:wealth-power-reproduction",
       "key": "wealth-power-reproduction",
       "label": "财富权力再生产",
@@ -2540,17 +2562,6 @@
       "type": "theme",
       "route": "themes/planned-systems-and-innovation",
       "summary": "讨论统一目标和强组织动员如何带来短期速度，又如何在长期压缩创新、纠错与自发能动性。",
-      "status": null,
-      "degree": 2
-    },
-    {
-      "id": "theme:local-government-financialization",
-      "key": "local-government-financialization",
-      "label": "地方政府资本化与补贴杠杆",
-      "fullLabel": "地方政府资本化与补贴杠杆",
-      "type": "theme",
-      "route": "themes/local-government-financialization",
-      "summary": "讨论地方政府如何从传统招商者变成资本玩家，并把补贴、基金和估值故事捆到一起。",
       "status": null,
       "degree": 2
     },
@@ -8617,6 +8628,51 @@
     {
       "source": "episode:EP123",
       "target": "theme:sanctions-and-power-containment",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "concept:hidden-debt",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "concept:subsidy-leverage-engine",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "concept:phantom-growth",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "model:risk-transfer-chain",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "model:distribution-bias",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "theme:local-fiscal-stress-and-hidden-debt",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "theme:local-government-financialization",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "theme:big-government-and-incentive-reversal",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP124",
+      "target": "theme:middle-class-descent-and-stratification",
       "kind": "episode-theme"
     },
     {
