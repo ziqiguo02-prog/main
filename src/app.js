@@ -141,7 +141,7 @@ let scrollDirection = 1;
 let lastScrollY = 0;
 let lastSnapAt = 0;
 let pointerIsDown = false;
-let floatingActionsExpanded = true;
+let floatingActionsExpanded = false;
 let floatingActionsIdleTimer = 0;
 let homeEpisodeCarouselTimer = 0;
 let homeEpisodeAutoAdvancePausedUntil = 0;
@@ -314,11 +314,14 @@ function setFloatingActionsExpanded(expanded) {
 function scheduleFloatingActionsAutoCollapse() {
   window.clearTimeout(floatingActionsIdleTimer);
   if (!floatingActionsExpanded) return;
+  const collapseDelay = isMobileViewport() && isHomeRoute() && window.scrollY < 72
+    ? 10000
+    : 1400;
   floatingActionsIdleTimer = window.setTimeout(() => {
     if (!floatingActionsExpanded) return;
     if (document.body.classList.contains('section-progress-panel-open')) return;
     setFloatingActionsExpanded(false);
-  }, 1400);
+  }, collapseDelay);
 }
 
 function syncBackToTopVisibility() {
@@ -774,7 +777,11 @@ function setupRevealAnimations() {
 function refreshViewportBehaviors({ resetDock = false } = {}) {
   applyDesktopSidebarState();
   syncBackToTopVisibility();
-  if (resetDock || !isMobileViewport()) {
+  if (!isMobileViewport()) {
+    setFloatingActionsExpanded(true);
+  } else if (isHomeRoute() && window.scrollY < 72) {
+    setFloatingActionsExpanded(false);
+  } else if (resetDock) {
     setFloatingActionsExpanded(true);
   }
   if (!isMobileViewport()) {
