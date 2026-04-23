@@ -1372,26 +1372,37 @@ function setupStickyToolbarBehavior(toolbar, config) {
     opacityVariable,
     minimumHideY = isMobileViewport() ? 48 : 72,
     idleHideDelay = isMobileViewport() ? 1050 : 1200,
-    anchorBoundarySelector = ''
+    anchorBoundarySelector = '',
+    revealAfterSelector = '',
+    revealOffset = 0,
+    fixedOverlay = false
   } = config;
   let lastObservedScrollY = window.scrollY;
   let idleHideTimer = 0;
   let anchorScrollY = 0;
   let anchorVisibleBottom = 0;
+  let revealAfterScrollY = 0;
 
   const isEngaged = () => toolbar.dataset.engaged === 'true' || toolbar.matches(':focus-within');
 
   const measureAnchorScrollY = () => {
     const rect = toolbar.getBoundingClientRect();
-    anchorScrollY = window.scrollY + rect.top;
+    anchorScrollY = fixedOverlay ? 0 : window.scrollY + rect.top;
     const boundary = anchorBoundarySelector ? document.querySelector(anchorBoundarySelector) : null;
     if (boundary instanceof HTMLElement) {
       const boundaryRect = boundary.getBoundingClientRect();
       const boundaryPadding = isMobileViewport() ? 28 : 42;
       anchorVisibleBottom = window.scrollY + boundaryRect.bottom - boundaryPadding;
+    } else {
+      anchorVisibleBottom = fixedOverlay ? 0 : anchorScrollY + rect.height + (isMobileViewport() ? 44 : 56);
+    }
+    const revealTarget = revealAfterSelector ? document.querySelector(revealAfterSelector) : null;
+    if (revealTarget instanceof HTMLElement) {
+      const revealRect = revealTarget.getBoundingClientRect();
+      revealAfterScrollY = Math.max(window.scrollY + revealRect.top - revealOffset, 0);
       return;
     }
-    anchorVisibleBottom = anchorScrollY + rect.height + (isMobileViewport() ? 44 : 56);
+    revealAfterScrollY = 0;
   };
 
   const clearIdleHideTimer = () => {
@@ -1404,10 +1415,12 @@ function setupStickyToolbarBehavior(toolbar, config) {
     if (isEngaged()) return;
     if (toolbar.classList.contains('is-hidden-by-scroll')) return;
     if (window.scrollY <= minimumHideY) return;
+    if (window.scrollY < revealAfterScrollY) return;
     if (window.scrollY <= anchorVisibleBottom) return;
     idleHideTimer = window.setTimeout(() => {
       if (isEngaged()) return;
       if (window.scrollY <= minimumHideY) return;
+      if (window.scrollY < revealAfterScrollY) return;
       if (window.scrollY <= anchorVisibleBottom) return;
       toolbar.classList.add('is-hidden-by-scroll');
       toolbar.classList.remove('is-ghost');
@@ -1424,8 +1437,11 @@ function setupStickyToolbarBehavior(toolbar, config) {
     const returnToAnchorThreshold = isMobileViewport() ? 28 : 36;
     const canHide = currentScrollY > minimumHideY && !isEngaged();
     let shouldHide = toolbar.classList.contains('is-hidden-by-scroll');
+    const beforeRevealGate = !isEngaged() && currentScrollY < revealAfterScrollY;
 
-    if (currentScrollY <= Math.max(anchorVisibleBottom, anchorScrollY - returnToAnchorThreshold)) {
+    if (beforeRevealGate) {
+      shouldHide = true;
+    } else if (currentScrollY <= Math.max(anchorVisibleBottom, anchorScrollY - returnToAnchorThreshold)) {
       shouldHide = false;
     } else if (!canHide) {
       shouldHide = false;
@@ -1441,7 +1457,7 @@ function setupStickyToolbarBehavior(toolbar, config) {
 
     toolbar.classList.toggle('is-hidden-by-scroll', shouldHide);
     toolbar.classList.toggle('is-engaged', isEngaged());
-    toolbar.classList.toggle('is-ghost', !shouldHide && !isEngaged() && currentScrollY > minimumHideY);
+    toolbar.classList.toggle('is-ghost', !beforeRevealGate && !shouldHide && !isEngaged() && currentScrollY > minimumHideY);
     toolbar.style.setProperty(opacityVariable, shouldHide ? '0' : (isEngaged() || currentScrollY <= minimumHideY ? '1' : '0.86'));
 
     if (!shouldHide && !isEngaged() && currentScrollY > minimumHideY) {
@@ -1499,11 +1515,15 @@ function setupEpisodeToolbarBehavior(toolbar) {
 }
 
 function setupHomeSearchToolbarBehavior(toolbar) {
+  const useFloatOnlyMobileSearch = toolbar.classList.contains('home-search-toolbar-float-only');
   setupStickyToolbarBehavior(toolbar, {
     abortController: homeSearchToolbarController,
     opacityVariable: '--home-search-toolbar-opacity',
-    minimumHideY: isMobileViewport() ? 34 : 68,
-    anchorBoundarySelector: '.home-search-section',
+    minimumHideY: useFloatOnlyMobileSearch ? 0 : (isMobileViewport() ? 34 : 68),
+    anchorBoundarySelector: useFloatOnlyMobileSearch ? '' : '.home-search-section',
+    revealAfterSelector: useFloatOnlyMobileSearch ? '.home-search-section' : '',
+    revealOffset: useFloatOnlyMobileSearch ? 72 : 0,
+    fixedOverlay: useFloatOnlyMobileSearch,
     assignController(controller) {
       homeSearchToolbarController = controller;
     }
@@ -2853,40 +2873,29 @@ function renderHome(focusSectionId = '') {
       </div>
     </div>
   ` : '';
-
-  app.innerHTML = `
-    <section class="hero">
-      <div class="hero-title-row">
-        <h1>
-          <button id="hero-title-trigger" class="hero-title-trigger" type="button">
-            <span class="hero-title-primary">颖响力</span>
-            <span class="hero-title-secondary">知识库</span>
-          </button>
-        </h1>
-        ${heroFireworksMarkup}
-      </div>
-      <div class="hero-platform-links">
-        ${HOME_PLATFORM_LINKS.map((link) => renderVideoLinkIcon(link)).join('')}
-      </div>
-      ${visibleStatCards.length ? `
-        <div class="stats">
-          ${visibleStatCards.map((item) => `
-            <a class="stat-card" href="${item.href}" data-stat-tone="${item.tone}">
-              <div class="stat-value">${item.value}</div>
-              <div class="stat-label">${item.label}</div>
-            </a>
-          `).join('')}
-        </div>
-      ` : ''}
-    </section>
-
-    <div class="home-search-toolbar${isMobile ? ' mobile' : ''}">
+  const heroMobileAvatarMarkup = isMobile ? `
+    <a class="hero-mobile-avatar-link" href="#/" aria-label="返回首页">
+      <img
+        class="hero-mobile-avatar"
+        src="./assets/yinfluence-avatar.png"
+        alt="颖响力头像"
+        width="54"
+        height="54"
+        loading="eager"
+        decoding="async"
+      >
+    </a>
+  ` : '';
+  const homeSearchToolbarMarkup = `
+    <div class="home-search-toolbar${isMobile ? ' mobile home-search-toolbar-float-only' : ''}">
       <div class="search-row">
         <input id="search-input" type="text" placeholder="搜索知识库：节目、概念、模型、人物、主题，如 EP019 / 特朗普 / 安全阀治理">
         <button id="search-submit" class="search-submit" type="button">搜索</button>
       </div>
     </div>
-    <section class="home-search-section">
+  `;
+  const homeSearchSectionMarkup = `
+    <section class="home-search-section${isMobile ? ' home-search-section-after-episodes' : ''}">
       <div class="home-search-results-panel">
         <div class="search-subtitle-row">
           <p id="home-search-title" class="search-subtitle">推荐关键词</p>
@@ -2898,18 +2907,31 @@ function renderHome(focusSectionId = '') {
         <div id="home-search-results" class="search-results"></div>
       </div>
     </section>
-
-    <section id="home-episodes" class="section">
-      <div class="section-header">
-        <div class="section-heading-shell">
-          <h2 class="section-title">节目索引</h2>
-        </div>
-        <a class="section-note" href="#/episodes">查看全部节目</a>
+  `;
+  const episodeHeaderMarkup = isMobile ? '' : `
+    <div class="section-header">
+      <div class="section-heading-shell">
+        <h2 class="section-title">节目索引</h2>
       </div>
+      <a class="section-note" href="#/episodes">查看全部节目</a>
+    </div>
+  `;
+  const episodeFooterMarkup = isMobile ? `
+    <div class="home-episodes-footer-mobile">
+      <a class="home-episodes-more-link" href="#/episodes">查看更多节目</a>
+    </div>
+  ` : '';
+  const episodeSectionMarkup = `
+    <section id="home-episodes" class="section${isMobile ? ' home-episodes-priority' : ''}">
+      ${episodeHeaderMarkup}
       <div class="home-episode-carousel-shell${isMobile ? ' mobile' : ''}"></div>
-      </div>
+      ${episodeFooterMarkup}
     </section>
-
+  `;
+  const homeTopSectionsMarkup = isMobile
+    ? `${episodeSectionMarkup}${homeSearchSectionMarkup}`
+    : `${homeSearchSectionMarkup}${episodeSectionMarkup}`;
+  const desktopReferenceSectionsMarkup = `
     <section class="section split">
       <div>
         <div class="section-header">
@@ -2971,6 +2993,38 @@ function renderHome(focusSectionId = '') {
         </article>
       </div>
     </section>
+  `;
+
+  app.innerHTML = `
+    <section class="hero">
+      <div class="hero-title-row${isMobile ? ' has-mobile-avatar' : ''}">
+        <h1>
+          <button id="hero-title-trigger" class="hero-title-trigger" type="button">
+            <span class="hero-title-primary">颖响力</span>
+            <span class="hero-title-secondary">知识库</span>
+          </button>
+        </h1>
+        ${heroMobileAvatarMarkup}
+        ${heroFireworksMarkup}
+      </div>
+      <div class="hero-platform-links">
+        ${HOME_PLATFORM_LINKS.map((link) => renderVideoLinkIcon(link)).join('')}
+      </div>
+      ${visibleStatCards.length ? `
+        <div class="stats">
+          ${visibleStatCards.map((item) => `
+            <a class="stat-card" href="${item.href}" data-stat-tone="${item.tone}">
+              <div class="stat-value">${item.value}</div>
+              <div class="stat-label">${item.label}</div>
+            </a>
+          `).join('')}
+        </div>
+      ` : ''}
+    </section>
+
+    ${homeSearchToolbarMarkup}
+    ${homeTopSectionsMarkup}
+    ${isMobile ? '' : desktopReferenceSectionsMarkup}
   `;
 
   const searchInput = document.getElementById('search-input');
