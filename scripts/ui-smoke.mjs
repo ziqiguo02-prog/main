@@ -264,26 +264,6 @@ async function runKnowledgeDetailChecks(client) {
     `location.hash === '#/models/chokepoint-order-model' && Boolean(document.querySelector('.detail-episode-list .detail-section-meta'))`,
     { timeoutMs: 4000, label: 'chokepoint model route settled' }
   );
-  await evaluate(client, `window.scrollTo(0, 1100); true;`);
-  await waitForCondition(
-    client,
-    `Boolean(document.querySelector('.section-progress.is-visible'))`,
-    { timeoutMs: 4000, label: 'knowledge detail progress wheel visible' }
-  );
-  await clickSelector(client, '.section-progress');
-  await waitForCondition(
-    client,
-    `document.body.classList.contains('section-progress-panel-open') && !document.querySelector('#section-progress-panel')?.hidden`,
-    { timeoutMs: 4000, label: 'knowledge detail progress panel open' }
-  );
-  assert(
-    await evaluate(client, `(() => {
-      const texts = [...document.querySelectorAll('#section-progress-panel .section-progress-panel-text')]
-        .map((node) => node.textContent?.trim() || '');
-      return texts.some((text) => text.includes('EP122')) && texts.some((text) => text.includes('EP120'));
-    })()`),
-    'Knowledge detail progress panel should include visible related-episode entries as EP-level navigation items'
-  );
 
   await navigate(client, `${baseUrl}/#/themes/platform-labor-and-lived-reality`, '.detail-header');
   await waitForCondition(

@@ -32,7 +32,7 @@ const WEBSITE_LOG_ENTRIES = [
       '概念页先收成总览 / 分析 / 证据三层结构，再把同一套详情页模板推广到模型页和主题页；主题页如果只有“主题说明”，不再强行做成折叠项。',
       '知识页里的相关节目区重新按“节目卡主体”和“关键词入口”分层，默认计数改成“当前显示 x / 共 y 期”，避免默认只露出 3 张卡时误读成总数写错。',
       '正文里的 EP 内联说明浮窗改成全局浮层，不再被局部卡片或折叠容器裁切；相关卡片和正文里的可点击态也重新拉开层级。',
-      '概念 / 思想模型 / 人物 / 主题索引页删掉“当前显示、按引用率排序、每类先显示 3 个”这类无效提示，并把头部说明改成更像导航导语的版本。',
+      '概念 / 思想模型 / 人物 / 主题索引页删掉“当前显示、按引用率排序、每类先显示 3 个”这类无效提示，并把头部说明改成更像导航导语的版本；关键词页也同步去掉页内搜索和统计提示，避免和右侧搜索入口重复。',
       '概念 / 模型 / 人物 / 主题索引页默认不再自动展开第一组，交给用户自己选择要先看哪一类。',
       '首页与侧栏头像显示方式改成完整可见，不再把头像顶部裁掉；知识页之间的切换也改回很轻的过渡，不再出现之前那种明显卡顿和二段跳闪。'
     ]
@@ -4230,23 +4230,8 @@ function renderConceptIndex() {
 }
 
 function renderKeywordIndex() {
-  const query = keywordIndexQuery.trim().toLowerCase();
   const sortedKeywords = [...site.keywords].sort((a, b) => keywordCount(b) - keywordCount(a) || a.name.localeCompare(b.name, 'zh-Hans-CN'));
-  const episodesByNewest = [...site.episodes].sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
-  const matches = query
-    ? sortedKeywords.filter((keyword) => {
-        const haystack = `${keyword.name} ${keyword.summary || ''} ${(keyword.aliases || []).join(' ')}`.toLowerCase();
-        return haystack.includes(query);
-      })
-    : [];
-  const matchedEpisodes = query
-    ? episodesByNewest.filter((episode) => episodeMatchesQuery(episode, keywordIndexQuery)).slice(0, 12)
-    : [];
-  const coreKeywords = sortedKeywords.filter((keyword) => keywordCount(keyword) >= 3);
-  const midKeywords = sortedKeywords.filter((keyword) => keywordCount(keyword) === 2);
-  const tailKeywords = sortedKeywords.filter((keyword) => keywordCount(keyword) === 1);
   const visibleKeywords = sortedKeywords.filter((keyword) => keywordCount(keyword) >= 2);
-  const visibleMatches = query ? matches.filter((keyword) => keywordCount(keyword) >= 2) : [];
   const keywordCategoryOrder = [
     '人物',
     '国家与地缘',
@@ -4276,81 +4261,13 @@ function renderKeywordIndex() {
         <a class="back-link" href="#/">← 返回首页</a>
         <p class="detail-eyebrow">Keywords</p>
         <h1 class="detail-title">关键词</h1>
-        <p class="detail-summary">关键词层用于承接人物、品牌、公司、产品和议题入口。这里按关联节目数量分层显示，只展示至少出现 2 次的关键词。</p>
+        <p class="detail-summary">这里整理的是已经形成稳定讨论线的关键词入口，适合按人物、公司、品牌、产品或议题继续往下找相关节目。</p>
       </div>
       <section class="detail-section">
-        <div class="keyword-toolbar">
-          <div class="search-box keyword-search-box">
-            <input id="keyword-index-search" type="text" placeholder="搜索关键词，如 房价 / 西贝 / 小米汽车">
-          </div>
-          <div class="keyword-stats">
-            <span class="chip">分类浏览 ${keywordSections ? [...groupedKeywords.entries()].filter(([, items]) => items.length).length : 0}</span>
-            <span class="chip">人物 ${groupedKeywords.get('人物')?.length || 0}</span>
-            <span class="chip">当前显示 ${visibleKeywords.length}</span>
-            <span class="chip">单次关键词暂不显示 ${tailKeywords.length}</span>
-          </div>
-        </div>
-        ${query ? `
-          <div class="keyword-search-results">
-            <p class="detail-copy">这里同时显示匹配到的关键词和节目。输入 31、31集、EP31、三十一集 都可以找到 EP031。</p>
-            ${visibleMatches.length ? `
-              <section class="embedded-section">
-                <p class="inline-label">匹配关键词</p>
-                ${renderKeywordList(visibleMatches)}
-              </section>
-            ` : ''}
-            <section class="embedded-section">
-              <p class="inline-label">匹配节目</p>
-              ${matchedEpisodes.length ? `
-                <div class="list">
-                  ${matchedEpisodes.map((episode) => `
-                    <a class="list-item" href="${routeTo(`episodes/${episode.id}`)}">
-                      <h3>${escapeHtml(episode.id)}｜${escapeHtml(displayEpisodeTitle(episode.title))}</h3>
-                      <p>${escapeHtml(episode.summary || '待整理')}</p>
-                    </a>
-                  `).join('')}
-                </div>
-              ` : (!visibleMatches.length ? '<div class="empty-state">没有匹配到关键词或节目。</div>' : '<div class="empty-state">没有匹配到节目。</div>')}
-            </section>
-          </div>
-        ` : keywordSections}
+        ${keywordSections}
       </section>
     </section>
   `;
-
-  const searchInput = document.getElementById('keyword-index-search');
-  if (searchInput) {
-    searchInput.value = keywordIndexQuery;
-    searchInput.addEventListener('input', (event) => {
-      keywordIndexQuery = event.target.value;
-      renderKeywordIndex();
-    });
-    searchInput.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
-
-      const exactEpisodeId = normalizeEpisodeIdQuery(keywordIndexQuery);
-      if (exactEpisodeId) {
-        const foundEpisode = site.episodes.find((episode) => episode.id === exactEpisodeId);
-        if (foundEpisode) {
-          window.location.hash = routeTo(`episodes/${foundEpisode.id}`);
-          return;
-        }
-      }
-
-      const exactKeyword = site.keywords.find((keyword) => {
-        const aliases = keyword.aliases || [];
-        return (
-          normalizeValue(keyword.name) === normalizeValue(keywordIndexQuery) ||
-          normalizeValue(keyword.id) === normalizeValue(keywordIndexQuery) ||
-          aliases.some((alias) => normalizeValue(alias) === normalizeValue(keywordIndexQuery))
-        );
-      });
-
-      if (exactKeyword) {
-        window.location.hash = routeTo(`keywords/${exactKeyword.id}`);
-      }
-    });
-  }
 }
 
 function renderModelIndex() {
