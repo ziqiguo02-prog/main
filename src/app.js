@@ -27,6 +27,18 @@ const HOME_PLATFORM_LINKS = [
 const WEBSITE_LOG_ENTRIES = [
   {
     date: '2026-04-24',
+    title: '知识页模板、索引文案、头像与轻量切换继续校正',
+    items: [
+      '概念页先收成总览 / 分析 / 证据三层结构，再把同一套详情页模板推广到模型页和主题页；主题页如果只有“主题说明”，不再强行做成折叠项。',
+      '知识页里的相关节目区重新按“节目卡主体”和“关键词入口”分层，默认计数改成“当前显示 x / 共 y 期”，避免默认只露出 3 张卡时误读成总数写错。',
+      '正文里的 EP 内联说明浮窗改成全局浮层，不再被局部卡片或折叠容器裁切；相关卡片和正文里的可点击态也重新拉开层级。',
+      '概念 / 思想模型 / 人物 / 主题索引页删掉“当前显示、按引用率排序、每类先显示 3 个”这类无效提示，并把头部说明改成更像导航导语的版本。',
+      '概念 / 模型 / 人物 / 主题索引页默认不再自动展开第一组，交给用户自己选择要先看哪一类。',
+      '首页与侧栏头像显示方式改成完整可见，不再把头像顶部裁掉；知识页之间的切换也改回很轻的过渡，不再出现之前那种明显卡顿和二段跳闪。'
+    ]
+  },
+  {
+    date: '2026-04-24',
     title: '节目索引关键词可跳转、轮盘定位修正与可点击态强化',
     items: [
       '节目索引卡片改成和首页一致：整卡进入节目详情，关键词标签单独进入对应关键词页。',
@@ -158,6 +170,7 @@ if ('scrollRestoration' in window.history) {
 
 let site = null;
 let graphData = null;
+const expandedKnowledgeEpisodeSections = new Set();
 let homeKnowledgeQuery = '';
 let homeRecommendationSeed = 0;
 let homeEpisodeCarouselIndex = 0;
@@ -215,6 +228,8 @@ let mobileViewportResetTimer = 0;
 let hasRenderedRoute = false;
 let lastRenderedHash = window.location.hash || '#/';
 let sidebarLockedScrollY = 0;
+let activeInlineEpisodeRef = null;
+let inlineEpisodePopupElement = null;
 const PERSON_NAV_MIN_REFERENCES = 2;
 const HOME_EPISODE_AUTO_ADVANCE_MS = 7000;
 const HOME_EPISODE_DESKTOP_AUTO_ADVANCE_MS = 11000;
@@ -291,9 +306,25 @@ function parseHashRoute(hashValue) {
 function getRouteTransitionKind(previousHash, nextHash) {
   const previousRoute = parseHashRoute(previousHash);
   const nextRoute = parseHashRoute(nextHash);
+  const knowledgeSections = new Set(['concepts', 'models', 'themes', 'keywords']);
 
   if (previousRoute.section === 'episodes' && previousRoute.id && nextRoute.section === 'episodes' && nextRoute.id) {
     return 'content-static';
+  }
+
+  if (nextRoute.section === 'episodes' && nextRoute.id) {
+    return 'episode-detail';
+  }
+
+  if (
+    nextRoute.id &&
+    knowledgeSections.has(nextRoute.section) &&
+    (
+      !previousRoute.id ||
+      knowledgeSections.has(previousRoute.section)
+    )
+  ) {
+    return 'knowledge-detail';
   }
 
   return nextRoute.section ? 'content-forward' : 'content-home';
@@ -355,6 +386,7 @@ function syncFloatingActionLabels() {
 function setFloatingActionsExpanded(expanded) {
   floatingActionsExpanded = expanded;
   floatingActions?.classList.toggle('is-collapsed', !expanded);
+  document.body.classList.toggle('floating-actions-expanded', expanded);
   floatingActionsToggle?.setAttribute('aria-expanded', String(expanded));
   floatingActionsToggle?.setAttribute('aria-label', expanded ? '收起快捷操作' : '展开快捷操作');
 }
@@ -872,6 +904,7 @@ function teardownRevealAnimations() {
 function setupRevealAnimations() {
   teardownRevealAnimations();
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (document.body.classList.contains('page-reference-detail')) return;
 
   const revealTargets = [...document.querySelectorAll(REVEAL_SELECTOR)]
     .filter((node) => node instanceof HTMLElement)
@@ -1032,6 +1065,7 @@ function renderRouteWithTransition() {
 
 window.addEventListener('hashchange', renderRouteWithTransition);
 window.addEventListener('resize', () => {
+  closeInlineEpisodePopup();
   refreshViewportBehaviors();
   scheduleSectionSnap();
   if (isHomeRoute()) {
@@ -1043,6 +1077,7 @@ window.addEventListener('resize', () => {
   }
 });
 window.addEventListener('scroll', () => {
+  closeInlineEpisodePopup();
   const currentScrollY = window.scrollY;
   const now = performance.now();
   const elapsed = Math.max(now - lastScrollSampleAt, 16);
@@ -1097,6 +1132,34 @@ floatingActionsToggle?.addEventListener('click', () => {
   } else {
     window.clearTimeout(floatingActionsIdleTimer);
   }
+});
+document.addEventListener('pointerenter', (event) => {
+  if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const reference = event.target.closest('.inline-episode-ref');
+  if (!(reference instanceof HTMLElement)) return;
+  positionInlineEpisodePopup(reference);
+}, true);
+document.addEventListener('pointerleave', (event) => {
+  if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const reference = event.target.closest('.inline-episode-ref');
+  if (!(reference instanceof HTMLElement)) return;
+  window.requestAnimationFrame(() => {
+    if (reference.matches(':hover')) return;
+    closeInlineEpisodePopup(reference);
+  });
+}, true);
+document.addEventListener('focusin', (event) => {
+  const reference = event.target.closest('.inline-episode-ref');
+  if (!(reference instanceof HTMLElement)) return;
+  positionInlineEpisodePopup(reference);
+});
+document.addEventListener('focusout', (event) => {
+  const reference = event.target.closest('.inline-episode-ref');
+  if (!(reference instanceof HTMLElement)) return;
+  window.requestAnimationFrame(() => {
+    if (reference.contains(document.activeElement)) return;
+    closeInlineEpisodePopup(reference);
+  });
 });
 sectionProgress?.addEventListener('click', () => {
   if (sectionProgress.hidden) return;
@@ -1225,7 +1288,7 @@ function renderLinkedEpisodeText(value) {
     html += escapeHtml(raw.slice(cursor, offset));
     const episode = episodeById(match);
     html += episode
-      ? `<span class="inline-episode-ref"><a class="inline-episode-link" href="${routeTo(`episodes/${match}`)}">${escapeHtml(match)}</a><span class="inline-episode-popup"><strong>${escapeHtml(match)}｜${escapeHtml(displayEpisodeTitle(episode.title))}</strong><span>${escapeHtml(episode.summary || '')}</span></span></span>`
+      ? `<span class="inline-episode-ref" data-popup-title="${escapeHtml(`${match}｜${displayEpisodeTitle(episode.title)}`)}" data-popup-summary="${escapeHtml(episode.summary || '')}"><a class="inline-episode-link" href="${routeTo(`episodes/${match}`)}">${escapeHtml(match)}</a></span>`
       : escapeHtml(match);
     cursor = offset + match.length;
     return match;
@@ -1233,6 +1296,88 @@ function renderLinkedEpisodeText(value) {
 
   html += escapeHtml(raw.slice(cursor));
   return html;
+}
+
+function getInlineEpisodePopupElement() {
+  if (inlineEpisodePopupElement instanceof HTMLElement) return inlineEpisodePopupElement;
+  const popup = document.createElement('div');
+  popup.className = 'inline-episode-global-popup';
+  popup.setAttribute('aria-hidden', 'true');
+  popup.innerHTML = '<strong></strong><span></span>';
+  document.body.appendChild(popup);
+  inlineEpisodePopupElement = popup;
+  return popup;
+}
+
+function closeInlineEpisodePopup(reference = activeInlineEpisodeRef) {
+  if (!(reference instanceof HTMLElement)) return;
+  reference.classList.remove('is-popup-open');
+  const popup = getInlineEpisodePopupElement();
+  popup.classList.remove('is-visible');
+  popup.style.visibility = '';
+  popup.style.left = '';
+  popup.style.top = '';
+  if (activeInlineEpisodeRef === reference) {
+    activeInlineEpisodeRef = null;
+  }
+}
+
+function positionInlineEpisodePopup(reference) {
+  if (!(reference instanceof HTMLElement)) return;
+  const popup = getInlineEpisodePopupElement();
+  const title = reference.dataset.popupTitle || '';
+  const summary = reference.dataset.popupSummary || '';
+  const titleNode = popup.querySelector('strong');
+  const summaryNode = popup.querySelector('span');
+  if (!(titleNode instanceof HTMLElement) || !(summaryNode instanceof HTMLElement)) return;
+  titleNode.textContent = title;
+  summaryNode.textContent = summary;
+
+  closeInlineEpisodePopup(activeInlineEpisodeRef);
+  reference.classList.add('is-popup-open');
+
+  const margin = 12;
+  const gap = 10;
+  const referenceRect = reference.getBoundingClientRect();
+  popup.classList.add('is-visible');
+  popup.style.visibility = 'hidden';
+  popup.style.left = '0px';
+  popup.style.top = '0px';
+
+  const popupRect = popup.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const candidates = [
+    { left: referenceRect.left, top: referenceRect.bottom + gap },
+    { left: referenceRect.left, top: referenceRect.top - gap - popupRect.height },
+    { left: referenceRect.right - popupRect.width, top: referenceRect.bottom + gap },
+    { left: referenceRect.right - popupRect.width, top: referenceRect.top - gap - popupRect.height }
+  ];
+
+  const fitsViewport = (candidate) => (
+    candidate.left >= margin &&
+    candidate.top >= margin &&
+    candidate.left + popupRect.width <= viewportWidth - margin &&
+    candidate.top + popupRect.height <= viewportHeight - margin
+  );
+
+  const visibleArea = (candidate) => {
+    const left = Math.max(candidate.left, margin);
+    const top = Math.max(candidate.top, margin);
+    const right = Math.min(candidate.left + popupRect.width, viewportWidth - margin);
+    const bottom = Math.min(candidate.top + popupRect.height, viewportHeight - margin);
+    return Math.max(0, right - left) * Math.max(0, bottom - top);
+  };
+
+  const bestCandidate = candidates.find(fitsViewport) || [...candidates].sort((a, b) => visibleArea(b) - visibleArea(a))[0];
+  const resolvedLeft = Math.min(Math.max(bestCandidate.left, margin), viewportWidth - popupRect.width - margin);
+  const resolvedTop = Math.min(Math.max(bestCandidate.top, margin), viewportHeight - popupRect.height - margin);
+
+  popup.style.left = `${Math.round(resolvedLeft)}px`;
+  popup.style.top = `${Math.round(resolvedTop)}px`;
+  popup.style.visibility = '';
+
+  activeInlineEpisodeRef = reference;
 }
 
 function graphStatValue() {
@@ -2168,9 +2313,11 @@ function setupHomeSearchToolbarBehavior(toolbar) {
 
 function linkedChipList(type, items = [], collection = []) {
   if (!items.length) return '';
+  const rendered = renderLinkedChipItems(type, items, collection);
+  if (!rendered) return '';
   return `
     <div class="chip-row">
-      ${renderLinkedChipItems(type, items, collection)}
+      ${rendered}
     </div>
   `;
 }
@@ -2209,16 +2356,16 @@ function renderLinkedChipItems(type, items = [], collection = []) {
         aliases.some((alias) => normalizeValue(alias) === normalizeValue(item))
       );
     });
-    if (!found) return `<span class="chip">${escapeHtml(item)}</span>`;
+    if (!found) return '';
     const targetType = type === 'people' ? 'keywords' : type;
     const target = type === 'people'
       ? findKeywordByReference(found.id) || findKeywordByReference(found.name)
       : found;
     if (!target) {
-      return `<span class="chip">${escapeHtml(found.name || found.title || found.id)}</span>`;
+      return '';
     }
     return `<a class="chip" href="${routeTo(`${targetType}/${target.id}`)}">${escapeHtml(found.name || found.title || found.id)}</a>`;
-  }).join('');
+  }).filter(Boolean).join('');
 }
 
 function renderVideoLinkIcon(link) {
@@ -2289,9 +2436,9 @@ function renderEpisodeHeaderMeta(episode) {
   `;
 }
 
-function accordionItem(title, content, open = false) {
+function accordionItem(title, content, open = false, extraAttrs = '') {
   return `
-    <details class="accordion-item"${open ? ' open' : ''}>
+    <details class="accordion-item"${open ? ' open' : ''}${extraAttrs ? ` ${extraAttrs}` : ''}>
       <summary class="accordion-summary">${escapeHtml(title)}</summary>
       <div class="accordion-content">${content}</div>
     </details>
@@ -2306,9 +2453,11 @@ function renderKeywordList(keywords = []) {
   return `
     <div class="list">
       ${keywords.map((keyword) => `
-        <a class="list-item keyword-list-item" href="${routeTo(`keywords/${keyword.id}`)}">
+        <article class="list-item keyword-list-item" data-list-item-href="${routeTo(`keywords/${keyword.id}`)}">
           <div class="keyword-item-head">
-            <h3>${escapeHtml(keyword.name)}</h3>
+            <a class="card-primary-link" href="${routeTo(`keywords/${keyword.id}`)}">
+              <h3>${escapeHtml(keyword.name)}</h3>
+            </a>
             <span class="keyword-count-badge">${keywordCount(keyword)} 期</span>
           </div>
           <p>${renderLinkedEpisodeText(keyword.summary)}</p>
@@ -2316,7 +2465,7 @@ function renderKeywordList(keywords = []) {
             ${keywordTypeBadge(keyword)}
             ${(keyword.aliases || []).slice(0, 2).map((alias) => `<span class="chip">${escapeHtml(alias)}</span>`).join('')}
           </div>
-        </a>
+        </article>
       `).join('')}
     </div>
   `;
@@ -2330,13 +2479,15 @@ function renderNodeList(items = [], type, descriptionKey = 'summary', routeType 
   return `
     <div class="list">
       ${items.map((item) => `
-        <a class="list-item" href="${routeTo(`${routeType}/${item.id}`)}">
+        <article class="list-item" data-list-item-href="${routeTo(`${routeType}/${item.id}`)}">
           <div class="keyword-item-head">
-            <h3>${escapeHtml(item.name || item.title || item.id)}</h3>
+            <a class="card-primary-link" href="${routeTo(`${routeType}/${item.id}`)}">
+              <h3>${escapeHtml(item.name || item.title || item.id)}</h3>
+            </a>
             <span class="keyword-count-badge">${referenceCount(item)} 次引用</span>
           </div>
           <p>${renderLinkedEpisodeText(item[descriptionKey] || item.summary || item.definition || item.description || '')}</p>
-        </a>
+        </article>
       `).join('')}
     </div>
   `;
@@ -2614,7 +2765,7 @@ function renderCategorizedReferenceIndex(config) {
       if (b[1].length !== a[1].length) return b[1].length - a[1].length;
       return a[0].localeCompare(b[0], 'zh-Hans-CN');
     })
-    .map(([category, items], index) => renderCategorizedReferenceSection(category, items, type, descriptionKey, index === 0, routeType))
+    .map(([category, items]) => renderCategorizedReferenceSection(category, items, type, descriptionKey, false, routeType))
     .join('');
 
   app.innerHTML = `
@@ -2626,15 +2777,25 @@ function renderCategorizedReferenceIndex(config) {
         <p class="detail-summary">${renderLinkedEpisodeText(summary)}</p>
       </div>
       <section class="detail-section">
-        <div class="keyword-stats">
-          <span class="chip">当前显示 ${sortedItems.length}</span>
-          <span class="chip">按引用率排序</span>
-          <span class="chip">每类先显示 3 个</span>
-        </div>
         ${sections || '<div class="empty-state">当前没有满足条件的条目。</div>'}
       </section>
     </section>
   `;
+
+  app.querySelectorAll('.list-item[data-list-item-href]').forEach((item) => {
+    item.addEventListener('click', (event) => {
+      const directLink = event.target.closest('.card-primary-link');
+      if (directLink) {
+        event.preventDefault();
+        const href = directLink.getAttribute('href');
+        if (href) window.location.hash = href;
+        return;
+      }
+      if (event.target.closest('a, button, input, textarea, select, summary')) return;
+      const href = item.getAttribute('data-list-item-href');
+      if (href) window.location.hash = href;
+    });
+  });
 }
 
 function renderKeywordGroup(title, keywords, options = {}) {
@@ -4063,7 +4224,7 @@ function renderConceptIndex() {
     type: 'concepts',
     title: '概念',
     eyebrow: 'Concept Cards',
-    summary: '概念是比思想模型更小的结构单元，用来概括一个现象，并承接多个节目里的具体表现。这里只显示被引用超过 1 次的概念。',
+    summary: '按概念聚合分散在不同节目里的同类现象，适合在已知问题、但暂时想不起具体节目的情况下快速回看相关讨论。',
     collection: site.concepts
   });
 }
@@ -4197,7 +4358,7 @@ function renderModelIndex() {
     type: 'models',
     title: '思想模型',
     eyebrow: 'Mental Models',
-    summary: '思想模型是帮助我们观察现实、拆解问题和形成判断的思考框架。它们能帮助我们看清节目所讨论问题背后的结构、动力和判断线索。',
+    summary: '按思想模型整理节目中的判断框架，适合从具体议题回到更底层的结构、机制与判断逻辑。',
     collection: site.models
   });
 }
@@ -4336,7 +4497,7 @@ function renderPeopleIndex() {
     routeType: 'keywords',
     title: '人物',
     eyebrow: 'People In Keywords',
-    summary: '这里展示已经在关键词层形成稳定节目群的人物入口。当前规则是自动从关键词里识别人物，并显示被引用至少 2 次的条目。',
+    summary: '按人物聚合其在知识库中的相关节目与议题，适合快速回看某个人物是在什么语境里被反复讨论的。',
     collection: getPeopleKeywords(PERSON_NAV_MIN_REFERENCES),
     minimumReferences: PERSON_NAV_MIN_REFERENCES
   });
@@ -4347,7 +4508,7 @@ function renderThemesIndex() {
     type: 'themes',
     title: '关联主题',
     eyebrow: 'Themes',
-    summary: '主题页用于聚合同一类问题意识，方便后续把多期节目按议题组织起来。这里只显示被引用超过 1 次的主题。',
+    summary: '按主题串联多期节目，适合从一条长期问题线出发，连续查看相关节目及其延伸讨论。',
     collection: site.themes
   });
 }
@@ -4382,13 +4543,254 @@ function renderHighlightCards(items = []) {
   `;
 }
 
-function renderReferenceChipSection(title, type, items, collection) {
+function stripAnchorSentence(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text
+    .replace(/\s*当前最直接的节目锚点是[^。！？]*[。！？]?/g, '')
+    .replace(/\s*目前最直接的节目锚点是[^。！？]*[。！？]?/g, '')
+    .replace(/\s*当前最直接的锚点是[^。！？]*[。！？]?/g, '')
+    .replace(/\s*目前最直接的锚点是[^。！？]*[。！？]?/g, '')
+    .trim();
+}
+
+function stripThemeBoilerplate(value) {
+  const text = stripAnchorSentence(value);
+  if (!text) return '';
+  return text
+    .replace(/\s*这类主题页的作用[^。！？]*[。！？]?/g, '')
+    .trim();
+}
+
+function resolveConceptScenePatterns(concept) {
+  if (Array.isArray(concept.scenePatterns) && concept.scenePatterns.length) {
+    return concept.scenePatterns
+      .map((pattern) => ({
+        title: String(pattern?.title || '').trim(),
+        body: String(pattern?.body || '').trim()
+      }))
+      .filter((pattern) => pattern.title && pattern.body);
+  }
+
+  const context = stripAnchorSentence(concept.context);
+  return context
+    ? [
+      {
+        title: '在颖响力里的常见场景',
+        body: context
+      }
+    ]
+    : [];
+}
+
+function resolveKnowledgeEpisodeRelations(entry) {
+  if (Array.isArray(entry.episodeRelations) && entry.episodeRelations.length) {
+    return entry.episodeRelations;
+  }
+
+  const highlightMap = new Map((entry.episodeHighlights || []).map((item) => [item.id, item]));
+  return (entry.episodes || []).map((episode) => {
+    const highlight = highlightMap.get(episode.id) || {};
+    return {
+      id: episode.id,
+      angle: episode.angle || highlight.angle || '',
+      relevance: episode.relevance || highlight.relevance || highlight.note || episode.note || '',
+      summary: episode.summary || highlight.summary || '',
+      mechanism: episode.mechanism || highlight.mechanism || ''
+    };
+  });
+}
+
+function buildRelatedEpisodeEntries(references = [], overrides = []) {
+  const seen = new Set();
+  const overrideMap = new Map((overrides || []).map((item) => [item.id, item]));
+  return (references || [])
+    .map((entry) => {
+      if (seen.has(entry.id)) return null;
+      seen.add(entry.id);
+      const episode = site.episodes.find((item) => item.id === entry.id);
+      if (!episode) return null;
+      const override = overrideMap.get(entry.id) || {};
+      return {
+        ...episode,
+        relationNote: override.relevance || override.note || entry.relevance || entry.note || '',
+        relationSummary: override.summary || entry.summary || '',
+        relationMechanism: override.mechanism || entry.mechanism || ''
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+}
+
+function buildProgressAccordionAttrs(label) {
+  return `data-progress-section="true" data-progress-label="${escapeHtml(label)}"`;
+}
+
+function renderRelatedEpisodeCards(episodes = []) {
+  if (!episodes.length) return '<p class="subtle">待补充。</p>';
+  return `
+    <div class="list">
+      ${episodes.map((episode) => {
+        const episodeHref = routeTo(`episodes/${episode.id}`);
+        return `
+          <div
+            class="related-episode-item"
+            data-progress-section="true"
+            data-progress-label="${escapeHtml(`${episode.id} ${displayEpisodeTitle(episode.title)}`)}"
+          >
+            ${episode.relationNote ? `
+              <div class="related-episode-context">
+                <p class="episode-relation-note">
+                  <span class="episode-relation-note-label">关联切口</span>
+                  ${renderLinkedEpisodeText(episode.relationNote)}
+                </p>
+              </div>
+            ` : ''}
+            <article
+              class="list-item episode-index-card"
+              data-episode-href="${episodeHref}"
+            >
+              <div class="episode-index-card-head">
+                <p class="card-kicker episode-index-kicker">${escapeHtml(episode.id)}${renderEpisodeFreshBadge(episode, { compact: true })}</p>
+              </div>
+              <a class="card-primary-link" href="${episodeHref}">
+                <h3>${escapeHtml(displayEpisodeTitle(episode.title))}</h3>
+              </a>
+              <p class="episode-index-summary">${escapeHtml(episode.summary || '待整理')}</p>
+              ${linkedChipList('keywords', (episode.tags || []).slice(0, 6), site.keywords)}
+            </article>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function getKnowledgeEpisodeExpansionKey(type, id) {
+  return `${type}:${id}`;
+}
+
+function renderKnowledgeRelatedEpisodesSection(type, id, episodes = []) {
+  if (!episodes.length) return '';
+  const expanded = expandedKnowledgeEpisodeSections.has(getKnowledgeEpisodeExpansionKey(type, id));
+  const visibleEpisodes = expanded ? episodes : episodes.slice(0, 3);
+  const hasMore = episodes.length > 3;
+  const toggleLabel = expanded ? '收起' : '展开';
+  const toggleIcon = expanded ? '▴' : '▾';
+  const metaLabel = hasMore && !expanded
+    ? `当前显示 ${visibleEpisodes.length} / 共 ${episodes.length} 期`
+    : `共 ${episodes.length} 期`;
+
+  return `
+    <section class="detail-section detail-episode-list knowledge-evidence">
+      <div class="detail-section-title-inline">
+        <h2>相关节目</h2>
+        <span class="detail-section-meta">${metaLabel}</span>
+        ${hasMore ? `
+          <button
+            id="knowledge-related-toggle"
+            class="detail-section-action"
+            type="button"
+            aria-expanded="${String(expanded)}"
+            aria-label="${toggleLabel}相关节目"
+            data-has-more="true"
+          >
+            <span class="detail-section-action-icon" aria-hidden="true">${toggleIcon}</span>
+            <span data-role="label">${escapeHtml(toggleLabel)}</span>
+          </button>
+        ` : `
+          <button
+            class="detail-section-action is-disabled"
+            type="button"
+            aria-disabled="true"
+            tabindex="-1"
+          >
+            <span>无需展开</span>
+          </button>
+        `}
+      </div>
+      ${renderRelatedEpisodeCards(visibleEpisodes)}
+    </section>
+  `;
+}
+
+function bindKnowledgeEpisodeSection(type, id, rerender) {
+  document.getElementById('knowledge-related-toggle')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    const button = event.currentTarget;
+    if (!(button instanceof HTMLButtonElement)) return;
+    const expansionKey = getKnowledgeEpisodeExpansionKey(type, id);
+    if (expandedKnowledgeEpisodeSections.has(expansionKey)) {
+      expandedKnowledgeEpisodeSections.delete(expansionKey);
+    } else {
+      expandedKnowledgeEpisodeSections.add(expansionKey);
+    }
+    rerenderWithPreservedViewport(rerender);
+  });
+
+  const relatedEpisodesSection = document.querySelector('.detail-episode-list');
+  relatedEpisodesSection?.addEventListener('click', (event) => {
+    const directEpisodeLink = event.target.closest('.card-primary-link');
+    if (directEpisodeLink && relatedEpisodesSection.contains(directEpisodeLink)) {
+      event.preventDefault();
+      navigateToEpisodeFromElement(directEpisodeLink);
+      return;
+    }
+
+    const episodeCard = event.target.closest('.episode-index-card[data-episode-href]');
+    if (!episodeCard || !relatedEpisodesSection.contains(episodeCard)) return;
+    if (event.target.closest('.chip, button, input, textarea, select, summary, a')) return;
+    navigateToEpisodeFromElement(episodeCard);
+  });
+}
+
+function renderCompactReferenceGroup(title, type, items, collection) {
   if (!items?.length) return '';
   return `
-    <div>
-      <h3>${escapeHtml(title)}</h3>
+    <div class="detail-compact-reference-group">
+      <span class="detail-compact-reference-label">${escapeHtml(title)}</span>
       ${linkedChipList(type, items, collection)}
     </div>
+  `;
+}
+
+function renderKnowledgeReferenceHeaderSection(groups = []) {
+  const markup = groups
+    .map(({ title, type, items, collection }) => renderCompactReferenceGroup(title, type, items, collection))
+    .filter(Boolean)
+    .join('');
+
+  if (!markup) return '';
+
+  return `
+    <div class="detail-header-meta">
+      <div class="detail-compact-reference-grid">
+        ${markup}
+      </div>
+    </div>
+  `;
+}
+
+function renderKnowledgeAnalysisSection(sections = []) {
+  const markup = sections
+    .filter((section) => section && section.content)
+    .map((section) => accordionItem(section.title, section.content, false, buildProgressAccordionAttrs(section.progressLabel || section.title)))
+    .join('');
+
+  return `
+    <section class="detail-section knowledge-analysis">
+      ${markup}
+    </section>
+  `;
+}
+
+function renderKnowledgeStaticSection(title, content, progressLabel = title) {
+  if (!content) return '';
+  return `
+    <section class="detail-section knowledge-analysis" data-progress-section="true" data-progress-label="${escapeHtml(progressLabel)}">
+      <h2>${escapeHtml(title)}</h2>
+      ${content}
+    </section>
   `;
 }
 
@@ -4448,55 +4850,50 @@ function renderConceptDetail(id) {
     return;
   }
 
-  const episodes = (concept.episodes || [])
-    .map((entry) => {
-      const episode = site.episodes.find((item) => item.id === entry.id);
-      return episode ? { ...entry, title: episode.title } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+  const scenePatterns = resolveConceptScenePatterns(concept);
+  const relatedEpisodes = buildRelatedEpisodeEntries(resolveKnowledgeEpisodeRelations(concept));
+  const sceneContent = scenePatterns.length
+    ? scenePatterns.map((pattern) => `
+      <div class="concept-scene-block">
+        <h3>${escapeHtml(pattern.title)}</h3>
+        <p>${renderLinkedEpisodeText(pattern.body)}</p>
+      </div>
+    `).join('')
+    : '<p class="subtle">待补充。</p>';
 
   app.innerHTML = `
     <section class="detail">
-      <div class="detail-header">
+      <div class="detail-header knowledge-overview">
         ${renderDetailBackRow('#/concepts', '概念')}
         <p class="detail-eyebrow">Concept Card</p>
         <h1 class="detail-title">${escapeHtml(concept.name)}</h1>
         <p class="detail-summary">${renderLinkedEpisodeText(concept.summary)}</p>
+        ${renderKnowledgeReferenceHeaderSection([
+          { title: '共现模型', type: 'models', items: concept.relatedModels, collection: site.models },
+          { title: '共现主题', type: 'themes', items: concept.relatedThemes, collection: site.themes },
+          { title: '共现人物', type: 'keywords', items: concept.relatedPeople, collection: site.keywords },
+          { title: '相关概念', type: 'concepts', items: concept.relatedConcepts, collection: site.concepts }
+        ])}
       </div>
-      <section class="detail-section">
-        <h2>定义与展开</h2>
-        <p>${renderLinkedEpisodeText(concept.definition)}</p>
-        ${concept.context ? `<p>${renderLinkedEpisodeText(concept.context)}</p>` : ''}
-        <h3>为什么重要</h3>
-        <p>${renderLinkedEpisodeText(concept.importance)}</p>
-      </section>
-      <section class="detail-section split">
-        <div>
-          <h2>识别信号</h2>
-          ${renderDetailList(concept.signals)}
-        </div>
-        <div>
-          <h2>使用边界</h2>
-          ${renderDetailList(concept.boundaries)}
-        </div>
-      </section>
-      <section class="detail-section split">
-        ${renderReferenceChipSection('共现模型', 'models', concept.relatedModels, site.models)}
-        ${renderReferenceChipSection('共现主题', 'themes', concept.relatedThemes, site.themes)}
-        ${renderReferenceChipSection('共现人物', 'keywords', concept.relatedPeople, site.keywords)}
-        ${renderReferenceChipSection('相关概念', 'concepts', concept.relatedConcepts, site.concepts)}
-      </section>
-      <section class="detail-section">
-        <h2>进一步追问</h2>
-        ${renderDetailList(concept.questions)}
-      </section>
-      <section class="detail-section">
-        <h2>节目里的典型锚点</h2>
-        ${renderHighlightCards(concept.episodeHighlights?.length ? concept.episodeHighlights : episodes)}
-      </section>
+      ${renderKnowledgeAnalysisSection([
+        {
+          title: '定义',
+          content: `
+          ${renderParagraphText(concept.definition)}
+          <h3>为什么重要</h3>
+          ${renderParagraphText(concept.importance)}
+        `
+        },
+        { title: '常见场景', content: sceneContent },
+        { title: '识别信号', content: renderDetailList(concept.signals) },
+        { title: '使用边界', content: renderDetailList(concept.boundaries) },
+        { title: '进一步追问', content: renderDetailList(concept.questions) }
+      ])}
+      ${renderKnowledgeRelatedEpisodesSection('concepts', concept.id, relatedEpisodes)}
     </section>
   `;
+
+  bindKnowledgeEpisodeSection('concepts', concept.id, () => renderConceptDetail(concept.id));
 }
 
 function renderModelDetail(id) {
@@ -4506,55 +4903,41 @@ function renderModelDetail(id) {
     return;
   }
 
-  const relatedEpisodes = (model.episodes || [])
-    .map((entry) => {
-      const episode = site.episodes.find((item) => item.id === entry.id);
-      return episode ? { ...entry, title: episode.title } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+  const relatedEpisodes = buildRelatedEpisodeEntries(resolveKnowledgeEpisodeRelations(model));
+  const modelContext = stripAnchorSentence(model.context);
 
   app.innerHTML = `
     <section class="detail">
-      <div class="detail-header">
+      <div class="detail-header knowledge-overview">
         ${renderDetailBackRow('#/models', '模型')}
         <p class="detail-eyebrow">Mental Model</p>
         <h1 class="detail-title">${escapeHtml(model.name)}</h1>
         <p class="detail-summary">${renderLinkedEpisodeText(model.summary)}</p>
+        ${renderKnowledgeReferenceHeaderSection([
+          { title: '共现概念', type: 'concepts', items: model.relatedConcepts, collection: site.concepts },
+          { title: '共现主题', type: 'themes', items: model.relatedThemes, collection: site.themes },
+          { title: '共现人物', type: 'keywords', items: model.relatedPeople, collection: site.keywords },
+          { title: '邻近模型', type: 'models', items: model.relatedModels, collection: site.models }
+        ])}
       </div>
-      <section class="detail-section">
-        <h2>机制定义</h2>
-        <p>${renderLinkedEpisodeText(model.definition)}</p>
-        ${model.context ? `<p>${renderLinkedEpisodeText(model.context)}</p>` : ''}
-        <h3>放在颖响力里的用法</h3>
-        <p>${renderLinkedEpisodeText(model.application)}</p>
-      </section>
-      <section class="detail-section split">
-        <div>
-          <h2>观察信号</h2>
-          ${renderDetailList(model.signals)}
-        </div>
-        <div>
-          <h2>适用边界</h2>
-          ${renderDetailList(model.boundaries)}
-        </div>
-      </section>
-      <section class="detail-section split">
-        ${renderReferenceChipSection('共现概念', 'concepts', model.relatedConcepts, site.concepts)}
-        ${renderReferenceChipSection('共现主题', 'themes', model.relatedThemes, site.themes)}
-        ${renderReferenceChipSection('共现人物', 'keywords', model.relatedPeople, site.keywords)}
-        ${renderReferenceChipSection('邻近模型', 'models', model.relatedModels, site.models)}
-      </section>
-      <section class="detail-section">
-        <h2>自检问题</h2>
-        ${renderDetailList(model.questions)}
-      </section>
-      <section class="detail-section">
-        <h2>节目里的典型锚点</h2>
-        ${renderHighlightCards(model.episodeHighlights?.length ? model.episodeHighlights : relatedEpisodes)}
-      </section>
+      ${renderKnowledgeAnalysisSection([
+        {
+          title: '机制定义',
+          content: `
+            ${renderParagraphText(model.definition)}
+            ${modelContext ? `<h3>为什么重要</h3>${renderParagraphText(modelContext)}` : ''}
+          `
+        },
+        { title: '在颖响力里的用法', content: renderParagraphText(model.application) },
+        { title: '观察信号', content: renderDetailList(model.signals) },
+        { title: '适用边界', content: renderDetailList(model.boundaries) },
+        { title: '进一步追问', content: renderDetailList(model.questions) }
+      ])}
+      ${renderKnowledgeRelatedEpisodesSection('models', model.id, relatedEpisodes)}
     </section>
   `;
+
+  bindKnowledgeEpisodeSection('models', model.id, () => renderModelDetail(model.id));
 }
 
 function renderPersonDetail(id) {
@@ -4578,39 +4961,42 @@ function renderThemeDetail(id) {
     return;
   }
 
-  const relatedEpisodes = (theme.episodes || [])
-    .map((entry) => {
-      const episode = site.episodes.find((item) => item.id === entry.id);
-      return episode ? { ...entry, title: episode.title } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => episodeNumberFromId(b.id) - episodeNumberFromId(a.id));
+  const relatedEpisodes = buildRelatedEpisodeEntries(resolveKnowledgeEpisodeRelations(theme));
+  const themeDescription = stripThemeBoilerplate(theme.description) || stripAnchorSentence(theme.description) || String(theme.description || '').trim();
+  const observationContent = Array.isArray(theme.observationLenses)
+    ? renderDetailList(theme.observationLenses)
+    : renderParagraphText(theme.observationLenses);
+  const themeAnalysisSections = [
+    { title: '主题说明', content: renderParagraphText(themeDescription) },
+    theme.whyThisThemeMatters ? { title: '归线依据', content: renderParagraphText(theme.whyThisThemeMatters) } : null,
+    theme.observationLenses ? { title: '观察维度', content: observationContent } : null,
+    theme.boundaries ? { title: '使用边界', content: renderDetailList(theme.boundaries) } : null,
+    theme.questions ? { title: '进一步追问', content: renderDetailList(theme.questions) } : null
+  ].filter(Boolean);
+  const shouldUseStaticThemeIntro = themeAnalysisSections.length === 1 && themeAnalysisSections[0].title === '主题说明';
 
   app.innerHTML = `
     <section class="detail">
-      <div class="detail-header">
+      <div class="detail-header knowledge-overview">
         ${renderDetailBackRow('#/themes', '主题')}
         <p class="detail-eyebrow">Theme Node</p>
         <h1 class="detail-title">${escapeHtml(theme.name)}</h1>
         <p class="detail-summary">${renderLinkedEpisodeText(theme.summary)}</p>
+        ${renderKnowledgeReferenceHeaderSection([
+          { title: '相关概念', type: 'concepts', items: theme.relatedConcepts, collection: site.concepts },
+          { title: '相关模型', type: 'models', items: theme.relatedModels, collection: site.models },
+          { title: '相关人物', type: 'keywords', items: theme.relatedPeople, collection: site.keywords },
+          { title: '邻近主题', type: 'themes', items: theme.relatedThemes, collection: site.themes }
+        ])}
       </div>
-      <section class="detail-section">
-        <h2>主题说明</h2>
-        <p>${renderLinkedEpisodeText(theme.description)}</p>
-      </section>
-      <section class="detail-section">
-        <h2>相关节目</h2>
-        <div class="list">
-          ${relatedEpisodes.map((entry) => `
-            <a class="list-item" href="${routeTo(`episodes/${entry.id}`)}">
-              <h3>${escapeHtml(entry.id)}｜${escapeHtml(entry.title)}</h3>
-              <p>${renderLinkedEpisodeText(entry.note)}</p>
-            </a>
-          `).join('')}
-        </div>
-      </section>
+      ${shouldUseStaticThemeIntro
+        ? renderKnowledgeStaticSection('主题说明', themeAnalysisSections[0].content)
+        : renderKnowledgeAnalysisSection(themeAnalysisSections)}
+      ${renderKnowledgeRelatedEpisodesSection('themes', theme.id, relatedEpisodes)}
     </section>
   `;
+
+  bindKnowledgeEpisodeSection('themes', theme.id, () => renderThemeDetail(theme.id));
 }
 
 function renderKeywordDetail(id) {
@@ -4675,6 +5061,7 @@ function renderNotFound(message) {
 
 function renderRoute() {
   if (!site) return;
+  closeInlineEpisodePopup();
   const previousRoute = parseHashRoute(lastRenderedHash);
   episodeToolbarController?.abort();
   episodeToolbarController = null;
@@ -4691,9 +5078,27 @@ function renderRoute() {
   const hash = window.location.hash.replace(/^#\/?/, '');
   const parts = hash ? hash.split('/').map(decodeRoutePart) : [];
   const [section, id] = parts;
+  const currentHash = window.location.hash || '#/';
+  const transitionKind = getRouteTransitionKind(lastRenderedHash, currentHash);
+  const routeRestore = pendingRouteRestore && pendingRouteRestore.hash === currentHash
+    ? pendingRouteRestore
+    : null;
+  const usesViewTransition = (
+    hasRenderedRoute &&
+    transitionKind !== 'content-static' &&
+    typeof document.startViewTransition === 'function' &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  const preRenderTopReset = !routeRestore && Boolean(id) && !usesViewTransition;
   document.body.classList.toggle('has-assisted-snap', section !== 'graph');
   document.body.classList.toggle('page-home', !section);
   document.body.classList.toggle('page-episode-index', section === 'episodes' && !id);
+  document.body.classList.toggle('page-knowledge-detail', ['concepts', 'models', 'themes'].includes(section) && !!id);
+  document.body.classList.toggle('page-reference-detail', ['concepts', 'models', 'themes', 'keywords', 'people'].includes(section) && !!id);
+
+  if (preRenderTopReset) {
+    scrollWindowInstantly(0, 0);
+  }
 
   document.title = `${site.meta.title}`;
 
@@ -4745,15 +5150,14 @@ function renderRoute() {
   window.clearTimeout(sectionSnapTimer);
   suspendSnapUntil = Date.now() + 420;
   lastSnapTargetTop = -1;
-  scrollWindowInstantly(0, 0);
+  if (!preRenderTopReset) {
+    scrollWindowInstantly(0, 0);
+  }
   lastScrollY = 0;
   lastScrollSampleAt = performance.now();
   refreshViewportBehaviors({ resetDock: true });
-  lastRenderedHash = window.location.hash || '#/';
+  lastRenderedHash = currentHash;
   hasRenderedRoute = true;
-  const routeRestore = pendingRouteRestore && pendingRouteRestore.hash === (window.location.hash || '#/')
-    ? pendingRouteRestore
-    : null;
   if (routeRestore) {
     pendingRouteRestore = null;
   }

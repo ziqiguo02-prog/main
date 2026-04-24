@@ -203,6 +203,109 @@ async function getText(client, selector) {
   return evaluate(client, `(() => document.querySelector(${JSON.stringify(selector)})?.textContent?.trim() || '')()`);
 }
 
+async function runKnowledgeDetailChecks(client) {
+  await navigate(client, `${baseUrl}/#/concepts/credential-rent`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/concepts/credential-rent' && document.querySelector('.detail-header .detail-title')?.textContent?.trim() === '身份租值'`,
+    { timeoutMs: 4000, label: 'concept detail route settled' }
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const titles = [...document.querySelectorAll('.accordion-summary')].map((node) => node.textContent?.trim() || '');
+      return ['定义', '常见场景', '识别信号', '使用边界', '进一步追问'].every((title) => titles.includes(title));
+    })()`),
+    'Concept detail should render the SOP accordion analysis stack'
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const chips = [...document.querySelectorAll('.detail-header-meta .chip')].map((node) => node.textContent?.trim() || '');
+      return chips.includes('平台守门结构') && !chips.includes('beauty-pageant-rent-seeking');
+    })()`),
+    'Concept overview meta should keep valid reference chips and hide invalid ones'
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const label = document.querySelector('.detail-episode-list .episode-relation-note-label');
+      const button = document.querySelector('#knowledge-related-toggle, .detail-episode-list .detail-section-action.is-disabled');
+      const meta = document.querySelector('.detail-episode-list .detail-section-meta')?.textContent || '';
+      return Boolean(label && label.textContent?.includes('关联切口') && button && (meta.includes('共 3 期') || meta.includes('当前显示')));
+    })()`),
+    'Concept evidence layer should keep the relation note outside cards and always render an episodes action'
+  );
+  assert(
+    await evaluate(client, `(() => {
+      return !document.querySelector('.inline-episode-ref');
+    })()`),
+    'Concept detail sample should not rely on inline episode popup content'
+  );
+
+  await navigate(client, `${baseUrl}/#/models/platform-gatekeeping`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/models/platform-gatekeeping' && document.querySelector('.detail-header .detail-title')?.textContent?.trim() === '平台守门结构'`,
+    { timeoutMs: 4000, label: 'model detail route settled' }
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const titles = [...document.querySelectorAll('.accordion-summary')].map((node) => node.textContent?.trim() || '');
+      return ['机制定义', '在颖响力里的用法', '观察信号', '适用边界', '进一步追问'].every((title) => titles.includes(title));
+    })()`),
+    'Model detail should use the same accordion-based analysis structure as concept pages'
+  );
+  assert(
+    await evaluate(client, `Boolean(document.querySelector('.detail-episode-list .detail-section-action'))`),
+    'Model detail should expose the same always-visible related-episodes action'
+  );
+
+  await navigate(client, `${baseUrl}/#/models/chokepoint-order-model`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/models/chokepoint-order-model' && Boolean(document.querySelector('.detail-episode-list .detail-section-meta'))`,
+    { timeoutMs: 4000, label: 'chokepoint model route settled' }
+  );
+  await evaluate(client, `window.scrollTo(0, 1100); true;`);
+  await waitForCondition(
+    client,
+    `Boolean(document.querySelector('.section-progress.is-visible'))`,
+    { timeoutMs: 4000, label: 'knowledge detail progress wheel visible' }
+  );
+  await clickSelector(client, '.section-progress');
+  await waitForCondition(
+    client,
+    `document.body.classList.contains('section-progress-panel-open') && !document.querySelector('#section-progress-panel')?.hidden`,
+    { timeoutMs: 4000, label: 'knowledge detail progress panel open' }
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const texts = [...document.querySelectorAll('#section-progress-panel .section-progress-panel-text')]
+        .map((node) => node.textContent?.trim() || '');
+      return texts.some((text) => text.includes('EP122')) && texts.some((text) => text.includes('EP120'));
+    })()`),
+    'Knowledge detail progress panel should include visible related-episode entries as EP-level navigation items'
+  );
+
+  await navigate(client, `${baseUrl}/#/themes/platform-labor-and-lived-reality`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/themes/platform-labor-and-lived-reality' && document.querySelector('.detail-header .detail-title')?.textContent?.trim() === '平台劳动与真实生存'`,
+    { timeoutMs: 4000, label: 'theme detail route settled' }
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const titles = [...document.querySelectorAll('.accordion-summary')].map((node) => node.textContent?.trim() || '');
+      const heading = document.querySelector('.knowledge-analysis h2')?.textContent?.trim() || '';
+      const bodyText = document.querySelector('.knowledge-analysis')?.textContent || '';
+      return titles.length === 0 && heading === '主题说明' && !bodyText.includes('这类主题页的作用');
+    })()`),
+    'Theme detail should render a plain theme-intro section when only the theme description exists'
+  );
+  assert(
+    await evaluate(client, `Boolean(document.querySelector('.detail-episode-list .detail-section-action.is-disabled'))`),
+    'Theme detail should render the disabled "无需展开" action when there are only a few episodes'
+  );
+}
+
 async function runDesktopChecks(client) {
   await setViewport(client, { width: 1212, height: 1400, mobile: false });
   await navigate(client, `${baseUrl}/#/`, '#home-episodes .home-episode-card');
@@ -257,8 +360,14 @@ async function runDesktopChecks(client) {
 
   await navigate(client, `${baseUrl}/#/`, '#home-episodes .home-episode-card');
   await captureScreenshot(client, 'desktop-home.png');
+  await runKnowledgeDetailChecks(client);
 
   await navigate(client, `${baseUrl}/#/episodes/EP124`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/episodes/EP124' && Boolean(document.querySelector('.media-chip.member-only .media-chip-badge'))`,
+    { timeoutMs: 4000, label: 'ep124 detail route settled' }
+  );
   assert(
     await evaluate(client, `Boolean(document.querySelector('.media-chip.member-only .media-chip-badge'))`),
     'EP124 detail page should show the bilibili member badge'
@@ -337,6 +446,21 @@ async function runMobileChecks(client) {
 
   await captureScreenshot(client, 'mobile-home.png');
   await runMobileEpisodeIndexChecks(client);
+  await navigate(client, `${baseUrl}/#/concepts/credential-rent`, '.detail-header');
+  await waitForCondition(
+    client,
+    `location.hash === '#/concepts/credential-rent' && document.querySelector('.detail-header .detail-title')?.textContent?.trim() === '身份租值'`,
+    { timeoutMs: 4000, label: 'mobile concept detail route settled' }
+  );
+  assert(
+    await evaluate(client, `(() => {
+      const title = document.querySelector('.detail-header .detail-title');
+      const accordions = document.querySelectorAll('.detail-section .accordion-item');
+      const toggle = document.querySelector('#concept-related-toggle, .detail-episode-list .detail-section-action.is-disabled');
+      return Boolean(title && title.textContent?.trim() === '身份租值' && accordions.length >= 5 && toggle);
+    })()`),
+    'Mobile concept detail should load the SOP template without dropping the accordion or evidence controls'
+  );
 }
 
 async function runMobileEpisodeIndexChecks(client) {
