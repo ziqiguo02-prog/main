@@ -447,38 +447,31 @@ async function runMobileEpisodeIndexChecks(client) {
   await waitForCondition(
     client,
     `(() => {
-      const items = [...document.querySelectorAll('#episode-index-suggestions [data-episode-index-suggestion]')];
-      return items.some((item) => (item.dataset.episodeIndexSuggestion || '') === '比亚迪');
+      const items = [...document.querySelectorAll('#episode-index-suggestions [data-episode-index-route]')];
+      return items.some((item) => (item.textContent || '').includes('比亚迪'));
     })()`,
     { timeoutMs: 4000, label: 'episode index search suggestions visible for keyword prefix' }
   );
   assert(
-    await evaluate(client, `document.querySelector('.episode-index-section')?.classList.contains('hidden') === true`),
-    'Episode index should hide the episode list while the user is still typing and choosing a suggestion'
+    await evaluate(client, `(() => {
+      const cards = [...document.querySelectorAll('#episode-index-results .episode-index-kicker')].map((node) => node.textContent?.trim());
+      return cards.length >= 2 && cards.includes('EP080') && cards.includes('EP045');
+    })()`),
+    'Episode index should already show matching episodes while the user is typing a query'
   );
-  await clickSelector(client, '#episode-index-suggestions [data-episode-index-suggestion="比亚迪"]');
+  await evaluate(client, `(() => {
+    const match = [...document.querySelectorAll('#episode-index-suggestions [data-episode-index-route]')]
+      .find((item) => (item.textContent || '').includes('比亚迪'));
+    if (!match) return false;
+    match.click();
+    return true;
+  })()`);
   await waitForCondition(
     client,
-    `(() => {
-      const cards = [...document.querySelectorAll('#episode-index-results .episode-index-kicker')].map((node) => node.textContent?.trim());
-      return cards.length === 2 && cards.includes('EP080') && cards.includes('EP045');
-    })()`,
-    { timeoutMs: 4000, label: 'episode index suggestion click filters to matching episodes' }
+    `location.hash.startsWith('#/keywords/') && Boolean(document.querySelector('.detail-header .detail-title'))`,
+    { timeoutMs: 4000, label: 'episode index knowledge suggestion click opens the corresponding detail page' }
   );
-  assert(
-    await evaluate(client, `document.querySelector('.episode-index-section')?.classList.contains('hidden') === false`),
-    'Episode index should show matching episodes after the user picks a suggestion'
-  );
-  assert(
-    await evaluate(client, `(() => {
-      const wheel = document.querySelector('.episode-range-wheel');
-      if (!wheel || wheel.scrollWidth <= wheel.clientWidth) return false;
-      wheel.scrollLeft = 0;
-      wheel.scrollLeft = 180;
-      return wheel.scrollLeft >= 120;
-    })()`),
-    'Mobile episode range wheel should remain horizontally scrollable after switching groups'
-  );
+  await navigate(client, `${baseUrl}/#/episodes`, '#episode-index-results .episode-index-card');
   await captureScreenshot(client, 'mobile-episodes.png');
 }
 

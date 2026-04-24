@@ -36,6 +36,12 @@ const WEBSITE_LOG_ENTRIES = [
       '从任意页面调起节目搜索后，如果没有真正进入结果，会回到原页面和原滚动位置，不再先跳到顶部再退回。',
       '节目索引顶部补上“返回前一页”，避免只剩“返回首页”这一条出口。',
       '节目索引里的最近三天节目现在也会显示和首页一致的红色“新”标识，三天后自动消失。',
+      '右侧节目搜索空态补回“推荐关键词 + 换一换”，推荐词数量收成更短的一组，避免建议区无限下探。',
+      '右侧节目搜索输入时，下面的节目结果会直接同步更新；顶部知识建议只保留知识条目，不再重复混入节目 EP 信息。',
+      '人物搜索结果会优先落回对应的人物关键词页；如果“人物”和“关键词”最终指向同一个词条，只保留“人物”这一条。',
+      '推荐关键词点击恢复成“把词带进搜索框并展示相关节目”，不再直接跳知识页；知识建议右侧类型标签也重新固定到卡片右边。',
+      '首页移动端节目卡滑动手势继续调校，去掉达标翻页前先回弹一下再滑过去的抽搐感，让跟手感更顺。',
+      '左侧导航重新打开时会回到顶部，不再保留上一次停留在中段的滚动位置。',
       '首页与节目索引里的关键词链接重新拉开默认态颜色，让用户更容易看出这些标签可以点击。',
       '关键词在深色卡片上的 hover 状态统一改回浅底高亮，避免悬停后和背景糊在一起看不清。',
       '节目搜索取消自动收起，改成由用户主动退出；同时补齐并更新这批首页 / 节目索引交互的桌面与移动 UI 冒烟检查。'
@@ -432,7 +438,10 @@ function openEpisodeIndexSearch() {
   episodeIndexSearchMode = true;
   episodeIndexFocusSearchOnRender = true;
   if (window.location.hash === '#/episodes') {
-    renderRoute();
+    renderEpisodeIndex();
+    window.requestAnimationFrame(() => {
+      scrollWindowInstantly(0, window.scrollX);
+    });
     return;
   }
   window.location.hash = '#/episodes';
@@ -934,6 +943,7 @@ function refreshViewportBehaviors({ resetDock = false } = {}) {
 
 function openSidebar() {
   sidebarLockedScrollY = window.scrollY;
+  sidebar.scrollTop = 0;
   sidebar.classList.add('open');
   document.body.classList.add('sidebar-open');
   document.body.style.top = `-${sidebarLockedScrollY}px`;
@@ -982,6 +992,7 @@ backToTopButton?.addEventListener('click', () => {
 });
 floatingEpisodeSearchButton?.addEventListener('click', (event) => {
   event.preventDefault();
+  event.stopPropagation();
   openEpisodeIndexSearch();
 });
 function bindHomeSurfaceToTop(selector) {
@@ -1496,6 +1507,41 @@ function keywordMatchesQuery(keyword, query) {
   return haystack.includes(normalizedQuery);
 }
 
+function referenceItemSuggestionMatches(item, query) {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  if (!normalizedQuery) return false;
+
+  const nameFields = [
+    item?.id,
+    item?.name || '',
+    item?.title || '',
+    ...(item?.aliases || [])
+  ].map((value) => String(value || '').toLowerCase());
+
+  return nameFields.some((value) => value.includes(normalizedQuery));
+}
+
+function suggestionMatchScore(item, query) {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  const fields = [
+    item?.name || '',
+    item?.title || '',
+    item?.id || '',
+    ...(item?.aliases || [])
+  ].map((value) => String(value || '').toLowerCase());
+
+  const exactIndex = fields.findIndex((value) => value === normalizedQuery);
+  if (exactIndex >= 0) return 400 - exactIndex;
+
+  const prefixIndex = fields.findIndex((value) => value.startsWith(normalizedQuery));
+  if (prefixIndex >= 0) return 300 - prefixIndex;
+
+  const wordIndex = fields.findIndex((value) => value.includes(normalizedQuery));
+  if (wordIndex >= 0) return 200 - wordIndex;
+
+  return 0;
+}
+
 function referenceItemMatchesQuery(item, query) {
   const normalizedQuery = String(query || '').trim().toLowerCase();
   if (!normalizedQuery) return false;
@@ -1516,6 +1562,14 @@ function referenceItemMatchesQuery(item, query) {
 function getEpisodeIndexSuggestionMatches(query) {
   const trimmedQuery = String(query || '').trim();
   if (!trimmedQuery || !site) return [];
+  const suggestionPriority = {
+    person: 5,
+    keyword: 4,
+    concept: 3,
+    model: 3,
+    theme: 2,
+    episode: 1
+  };
 
   const buildReferenceSuggestions = (collection = [], options = {}) => {
     const {
@@ -1527,8 +1581,10 @@ function getEpisodeIndexSuggestionMatches(query) {
     } = options;
 
     return collection
-      .filter((item) => referenceItemMatchesQuery(item, trimmedQuery))
+      .filter((item) => referenceItemSuggestionMatches(item, trimmedQuery))
       .sort((a, b) => {
+        const scoreDelta = suggestionMatchScore(b, trimmedQuery) - suggestionMatchScore(a, trimmedQuery);
+        if (scoreDelta !== 0) return scoreDelta;
         const countDelta = referenceCount(b) - referenceCount(a);
         if (countDelta !== 0) return countDelta;
         return String(nameFrom(a)).localeCompare(String(nameFrom(b)), 'zh-Hans-CN');
@@ -1539,52 +1595,80 @@ function getEpisodeIndexSuggestionMatches(query) {
         id: item.id,
         name: nameFrom(item),
         value: valueFrom(item),
-        badge: referenceCount(item) > 0 ? `${badge} ${referenceCount(item)}` : badge
+        badge,
+        route: routeForSearchMatch({
+          type,
+          id: item.id
+        })
       }));
   };
 
-  const exactEpisodeId = normalizeEpisodeIdQuery(trimmedQuery);
-  const episodeSuggestions = [...(site.episodes || [])]
-    .filter((episode) => episodeMatchesQuery(episode, trimmedQuery))
-    .sort((a, b) => {
-      const aExact = a.id === exactEpisodeId;
-      const bExact = b.id === exactEpisodeId;
-      if (aExact !== bExact) return aExact ? -1 : 1;
-      return episodeNumberFromId(b.id) - episodeNumberFromId(a.id);
-    })
-    .slice(0, 4)
-    .map((episode) => ({
-      type: 'episode',
-      id: episode.id,
-      name: `${episode.id}｜${displayEpisodeTitle(episode.title)}`,
-      value: episode.id,
-      badge: '节目'
-    }));
-
   const matches = [
-    ...buildReferenceSuggestions(site.keywords, { type: 'keyword', badge: '关键词', limit: 6, valueFrom: (item) => item.name || item.id }),
-    ...buildReferenceSuggestions(site.people, { type: 'person', badge: '人物', limit: 4, valueFrom: (item) => item.name || item.id }),
-    ...buildReferenceSuggestions(site.themes, { type: 'theme', badge: '主题', limit: 3, valueFrom: (item) => item.name || item.id }),
-    ...buildReferenceSuggestions(site.concepts, { type: 'concept', badge: '概念', limit: 3, valueFrom: (item) => item.name || item.id }),
-    ...buildReferenceSuggestions(site.models, { type: 'model', badge: '模型', limit: 3, valueFrom: (item) => item.name || item.id }),
-    ...episodeSuggestions
+    ...buildReferenceSuggestions(site.keywords, { type: 'keyword', badge: '关键词', limit: 3, valueFrom: (item) => item.name || item.id }),
+    ...buildReferenceSuggestions(site.people, { type: 'person', badge: '人物', limit: 2, valueFrom: (item) => item.name || item.id }),
+    ...buildReferenceSuggestions(site.themes, { type: 'theme', badge: '主题', limit: 2, valueFrom: (item) => item.name || item.id }),
+    ...buildReferenceSuggestions(site.concepts, { type: 'concept', badge: '概念', limit: 2, valueFrom: (item) => item.name || item.id }),
+    ...buildReferenceSuggestions(site.models, { type: 'model', badge: '模型', limit: 2, valueFrom: (item) => item.name || item.id })
   ];
 
-  const seen = new Set();
-  return matches.filter((match) => {
-    const key = `${match.type}:${match.id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, 10);
+  const deduped = new Map();
+  for (const match of matches) {
+    const key = match.route || `${match.type}:${match.id}`;
+    const existing = deduped.get(key);
+    if (!existing) {
+      deduped.set(key, match);
+      continue;
+    }
+    const nextPriority = suggestionPriority[match.type] || 0;
+    const existingPriority = suggestionPriority[existing.type] || 0;
+    if (nextPriority > existingPriority) {
+      deduped.set(key, match);
+    }
+  }
+
+  return [...deduped.values()].slice(0, 5);
 }
 
 function renderEpisodeIndexSuggestions(query) {
   const container = document.getElementById('episode-index-suggestions');
   if (!(container instanceof HTMLElement)) return;
 
+  if (!String(query || '').trim()) {
+    const recommendedKeywords = getRecommendedKeywords(3);
+    if (!recommendedKeywords.length) {
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="search-subtitle-row episode-search-subtitle-row">
+        <p class="search-subtitle episode-search-subtitle">推荐关键词</p>
+        <button id="episode-index-reroll" class="search-reroll episode-search-reroll" type="button" aria-label="换一换推荐关键词">
+          <span class="search-reroll-icon" aria-hidden="true">↻</span>
+          <span>换一换</span>
+        </button>
+      </div>
+      <div class="episode-index-recommendations">
+        ${recommendedKeywords.map((keyword) => `
+          <button
+            class="sidebar-suggestion search-suggestion episode-index-suggestion"
+            type="button"
+            data-episode-index-suggestion="${escapeHtml(keyword.name || keyword.id)}"
+            data-episode-index-action="apply-query"
+          >
+            <span class="episode-index-suggestion-label">${escapeHtml(keyword.name)}</span>
+            <span class="count-badge">关键词</span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+    container.classList.remove('hidden');
+    return;
+  }
+
   const matches = getEpisodeIndexSuggestionMatches(query);
-  if (!String(query || '').trim() || !matches.length) {
+  if (!matches.length) {
     container.innerHTML = '';
     container.classList.add('hidden');
     return;
@@ -1594,7 +1678,7 @@ function renderEpisodeIndexSuggestions(query) {
     <button
       class="sidebar-suggestion search-suggestion episode-index-suggestion"
       type="button"
-      data-episode-index-suggestion="${escapeHtml(match.value)}"
+      data-episode-index-route="${escapeHtml(match.route)}"
     >
       <span class="episode-index-suggestion-label">${escapeHtml(match.name)}</span>
       <span class="count-badge">${escapeHtml(match.badge)}</span>
@@ -2659,6 +2743,10 @@ function getSidebarSearchMatches() {
 }
 
 function routeForSearchMatch(match) {
+  if (match.type === 'person') {
+    const personKeyword = findKeywordByReference(match.id) || findKeywordByReference(match.name);
+    return personKeyword ? routeTo(`keywords/${personKeyword.id}`) : routeTo(`people/${match.id}`);
+  }
   return match.type === 'episode' ? routeTo(`episodes/${match.id}`)
     : match.type === 'keyword' ? routeTo(`keywords/${match.id}`)
     : match.type === 'concept' ? routeTo(`concepts/${match.id}`)
@@ -3008,7 +3096,7 @@ function renderHomeEpisodeMobileFooterMarkup(episode, totalEpisodes) {
   return `
     <div class="home-episodes-footer-mobile">
       <span class="home-episode-mobile-index">${getHomeEpisodePositionLabel(episode, totalEpisodes)}</span>
-      <a class="home-episodes-more-link" href="#/episodes">查看更多</a>
+      <a class="home-episodes-more-link" href="#/episodes">更多节目</a>
     </div>
   `;
 }
@@ -3017,7 +3105,7 @@ function renderHomeEpisodeDesktopFooterMarkup(visibleEpisodes, totalEpisodes) {
   return `
     <div class="home-episodes-footer-desktop">
       <span class="home-episode-desktop-index">${getHomeEpisodeRangeLabel(visibleEpisodes, totalEpisodes)}</span>
-      <a class="home-episodes-more-link" href="#/episodes">查看更多</a>
+      <a class="home-episodes-more-link" href="#/episodes">更多节目</a>
     </div>
   `;
 }
@@ -3111,6 +3199,11 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
   homeEpisodeCarouselBindingsController?.abort();
   homeEpisodeCarouselBindingsController = new AbortController();
   const { signal } = homeEpisodeCarouselBindingsController;
+  const mobileSwipeAxisThreshold = 6;
+  const mobileSwipeAxisRatio = 1.04;
+  const mobileSwipeCommitThreshold = 30;
+  const mobileSwipePreviewLimit = 136;
+  const mobileSwipeCommitOffset = 152;
 
   document.getElementById('home-episodes-prev')?.addEventListener('click', () => {
     pauseHomeEpisodeAutoAdvance(6000);
@@ -3151,6 +3244,19 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
       scheduleHomeEpisodeAutoAdvance(homeEpisodeCarousel.maxIndex);
     };
 
+    const clampPreviewOffset = (deltaX) => Math.max(Math.min(deltaX * 1.08, mobileSwipePreviewLimit), -mobileSwipePreviewLimit);
+    const commitSwipeAdvance = (direction) => {
+      homeEpisodeSwipeTracking = false;
+      homeEpisodeSwipePointerId = null;
+      swipeAxis = '';
+      homeEpisodeCarouselTrack?.classList.remove('is-dragging');
+      homeEpisodeCarouselTrack?.style.setProperty('--home-episode-drag-offset', `${direction < 0 ? mobileSwipeCommitOffset : -mobileSwipeCommitOffset}px`);
+      window.setTimeout(() => {
+        pauseHomeEpisodeAutoAdvance(6500);
+        advanceHomeEpisodeCarousel(direction, homeEpisodeCarousel.maxIndex);
+      }, 92);
+    };
+
     homeEpisodeCarouselShell.addEventListener('pointerdown', (event) => {
       if (hasMobilePreview && event.pointerType === 'touch') return;
       if (event.target.closest('a, button, input, textarea, select, summary, .chip')) return;
@@ -3173,12 +3279,12 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
       if (!homeEpisodeSwipeTracking || (homeEpisodeSwipePointerId !== null && event.pointerId !== homeEpisodeSwipePointerId)) return;
       const deltaX = event.clientX - homeEpisodeSwipeStartX;
       const deltaY = event.clientY - homeEpisodeSwipeStartY;
-      if (!swipeAxis && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
-        swipeAxis = Math.abs(deltaX) > Math.abs(deltaY) * 1.12 ? 'x' : 'y';
+      if (!swipeAxis && (Math.abs(deltaX) > mobileSwipeAxisThreshold || Math.abs(deltaY) > mobileSwipeAxisThreshold)) {
+        swipeAxis = Math.abs(deltaX) > Math.abs(deltaY) * mobileSwipeAxisRatio ? 'x' : 'y';
       }
       if (!hasMobilePreview || swipeAxis !== 'x') return;
       event.preventDefault();
-      const dragOffset = Math.max(Math.min(deltaX, 88), -88);
+      const dragOffset = clampPreviewOffset(deltaX);
       homeEpisodeCarouselTrack?.style.setProperty('--home-episode-drag-offset', `${dragOffset}px`);
     }, { signal });
     homeEpisodeCarouselShell.addEventListener('pointerup', (event) => {
@@ -3186,16 +3292,11 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
       if (!homeEpisodeSwipeTracking || (homeEpisodeSwipePointerId !== null && event.pointerId !== homeEpisodeSwipePointerId)) return;
       const deltaX = event.clientX - homeEpisodeSwipeStartX;
       const deltaY = event.clientY - homeEpisodeSwipeStartY;
-      const activeAxis = swipeAxis || (Math.abs(deltaX) > Math.abs(deltaY) * 1.15 ? 'x' : 'y');
+      const activeAxis = swipeAxis || (Math.abs(deltaX) > Math.abs(deltaY) * mobileSwipeAxisRatio ? 'x' : 'y');
       if (hasMobilePreview && activeAxis === 'x') {
         const selection = window.getSelection?.()?.toString()?.trim() || '';
-        if (!selection && Math.abs(deltaX) >= 42) {
-          homeEpisodeCarouselTrack?.style.setProperty('--home-episode-drag-offset', `${deltaX > 0 ? 112 : -112}px`);
-          window.setTimeout(() => {
-            pauseHomeEpisodeAutoAdvance(6500);
-            advanceHomeEpisodeCarousel(deltaX > 0 ? -1 : 1, homeEpisodeCarousel.maxIndex);
-          }, 92);
-          resetSwipeState();
+        if (!selection && Math.abs(deltaX) >= mobileSwipeCommitThreshold) {
+          commitSwipeAdvance(deltaX > 0 ? -1 : 1);
           return;
         }
       }
@@ -3235,12 +3336,12 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
         const touch = event.touches[0];
         const deltaX = touch.clientX - homeEpisodeSwipeStartX;
         const deltaY = touch.clientY - homeEpisodeSwipeStartY;
-        if (!swipeAxis && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
-          swipeAxis = Math.abs(deltaX) > Math.abs(deltaY) * 1.12 ? 'x' : 'y';
+        if (!swipeAxis && (Math.abs(deltaX) > mobileSwipeAxisThreshold || Math.abs(deltaY) > mobileSwipeAxisThreshold)) {
+          swipeAxis = Math.abs(deltaX) > Math.abs(deltaY) * mobileSwipeAxisRatio ? 'x' : 'y';
         }
         if (swipeAxis !== 'x') return;
         event.preventDefault();
-        const dragOffset = Math.max(Math.min(deltaX, 88), -88);
+        const dragOffset = clampPreviewOffset(deltaX);
         homeEpisodeCarouselTrack?.style.setProperty('--home-episode-drag-offset', `${dragOffset}px`);
       }, { passive: false, signal });
 
@@ -3250,14 +3351,9 @@ function bindHomeEpisodeCarousel(homeEpisodeCarouselShell, homeEpisodeCarousel, 
         const deltaX = touch.clientX - homeEpisodeSwipeStartX;
         const deltaY = touch.clientY - homeEpisodeSwipeStartY;
         const tapSlop = 18;
-        const activeAxis = swipeAxis || (Math.abs(deltaX) > Math.abs(deltaY) * 1.15 ? 'x' : 'y');
-        if (activeAxis === 'x' && Math.abs(deltaX) >= 42) {
-          homeEpisodeCarouselTrack?.style.setProperty('--home-episode-drag-offset', `${deltaX > 0 ? 112 : -112}px`);
-          window.setTimeout(() => {
-            pauseHomeEpisodeAutoAdvance(6500);
-            advanceHomeEpisodeCarousel(deltaX > 0 ? -1 : 1, homeEpisodeCarousel.maxIndex);
-          }, 92);
-          resetSwipeState();
+        const activeAxis = swipeAxis || (Math.abs(deltaX) > Math.abs(deltaY) * mobileSwipeAxisRatio ? 'x' : 'y');
+        if (activeAxis === 'x' && Math.abs(deltaX) >= mobileSwipeCommitThreshold) {
+          commitSwipeAdvance(deltaX > 0 ? -1 : 1);
           return;
         }
         resetSwipeState();
@@ -3656,8 +3752,9 @@ function renderEpisodeIndex() {
   const previousRange = selectedIndex > 0 ? episodeRanges[selectedIndex - 1] : episodeRanges[episodeRanges.length - 1] || null;
   const nextRange = selectedIndex < episodeRanges.length - 1 ? episodeRanges[selectedIndex + 1] : episodeRanges[0] || null;
   const isSearchOpen = episodeIndexSearchMode;
-  const initialSearchState = getEpisodeIndexSearchState(episodesByNumber, selectedRange, episodeIndexAppliedQuery);
-  const shouldHideEpisodeResults = isSearchOpen && !String(episodeIndexAppliedQuery || '').trim();
+  const liveEpisodeQuery = String(episodeIndexAppliedQuery || '').trim() || String(episodeIndexQuery || '').trim();
+  const initialSearchState = getEpisodeIndexSearchState(episodesByNumber, selectedRange, liveEpisodeQuery);
+  const shouldHideEpisodeResults = isSearchOpen && !liveEpisodeQuery;
   const shouldShowFooterNav = !String(episodeIndexAppliedQuery || '').trim();
   const rangeControlsMarkup = `
     <div class="episode-range-wheel${isMobile ? ' mobile' : ''}" aria-label="节目分组轮盘">
@@ -3756,8 +3853,9 @@ function renderEpisodeIndex() {
 
   const updateEpisodeSearchResults = () => {
     const scrollY = window.scrollY;
-    const hasAppliedQuery = Boolean(String(episodeIndexAppliedQuery || '').trim());
-    const nextState = getEpisodeIndexSearchState(episodesByNumber, selectedRange, episodeIndexAppliedQuery);
+    const effectiveQuery = String(episodeIndexAppliedQuery || '').trim() || String(episodeIndexQuery || '').trim();
+    const hasAppliedQuery = Boolean(effectiveQuery);
+    const nextState = getEpisodeIndexSearchState(episodesByNumber, selectedRange, effectiveQuery);
     if (clearButton) {
       clearButton.classList.toggle('hidden', !String(episodeIndexQuery || '').trim());
     }
@@ -3804,18 +3902,12 @@ function renderEpisodeIndex() {
     searchInput.addEventListener('compositionend', (event) => {
       isComposing = false;
       episodeIndexQuery = event.target.value;
-      if (episodeIndexQuery.trim() !== String(episodeIndexAppliedQuery || '').trim()) {
-        episodeIndexAppliedQuery = '';
-      }
+      episodeIndexAppliedQuery = '';
       updateEpisodeSearchResults();
     });
     searchInput.addEventListener('input', (event) => {
       episodeIndexQuery = event.target.value;
-      if (!episodeIndexQuery.trim()) {
-        episodeIndexAppliedQuery = '';
-      } else if (episodeIndexQuery.trim() !== String(episodeIndexAppliedQuery || '').trim()) {
-        episodeIndexAppliedQuery = '';
-      }
+      episodeIndexAppliedQuery = '';
       if (isComposing || event.isComposing) return;
       updateEpisodeSearchResults();
     });
@@ -3834,14 +3926,8 @@ function renderEpisodeIndex() {
       const [firstSuggestion] = getEpisodeIndexSuggestionMatches(episodeIndexQuery);
       if (!firstSuggestion) return;
       event.preventDefault();
-      episodeIndexQuery = firstSuggestion.value;
-      episodeIndexAppliedQuery = firstSuggestion.value;
-      episodeIndexSearchMode = false;
       clearEpisodeIndexSearchOrigin();
-      renderEpisodeIndex();
-      window.requestAnimationFrame(() => {
-        scrollEpisodeResultsIntoView();
-      });
+      window.location.hash = firstSuggestion.route;
     });
   }
 
@@ -3856,18 +3942,38 @@ function renderEpisodeIndex() {
   });
 
   suggestionsContainer?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-episode-index-suggestion]');
+    const rerollButton = event.target.closest('#episode-index-reroll');
+    if (rerollButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      homeRecommendationSeed = Math.floor(Math.random() * 1000000);
+      renderEpisodeIndexSuggestions(episodeIndexQuery);
+      return;
+    }
+    const applyQueryButton = event.target.closest('[data-episode-index-action="apply-query"]');
+    if (applyQueryButton instanceof HTMLElement) {
+      event.preventDefault();
+      event.stopPropagation();
+      const nextQuery = applyQueryButton.dataset.episodeIndexSuggestion || '';
+      if (!nextQuery) return;
+      episodeIndexQuery = nextQuery;
+      episodeIndexAppliedQuery = nextQuery;
+      episodeIndexSearchMode = true;
+      clearEpisodeIndexSearchOrigin();
+      renderEpisodeIndex();
+      window.requestAnimationFrame(() => {
+        scrollEpisodeResultsIntoView();
+      });
+      return;
+    }
+    const button = event.target.closest('[data-episode-index-route]');
     if (!(button instanceof HTMLElement)) return;
-    const nextQuery = button.dataset.episodeIndexSuggestion || '';
-    if (!nextQuery) return;
-    episodeIndexQuery = nextQuery;
-    episodeIndexAppliedQuery = nextQuery;
-    episodeIndexSearchMode = false;
+    event.preventDefault();
+    event.stopPropagation();
+    const nextRoute = button.dataset.episodeIndexRoute || '';
+    if (!nextRoute) return;
     clearEpisodeIndexSearchOrigin();
-    renderEpisodeIndex();
-    window.requestAnimationFrame(() => {
-      scrollEpisodeResultsIntoView();
-    });
+    window.location.hash = nextRoute;
   });
 
   document.querySelectorAll('[data-episode-range]').forEach((button) => {
