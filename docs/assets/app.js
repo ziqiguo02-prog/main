@@ -4252,7 +4252,7 @@ function renderKeywordIndex() {
   });
   const keywordSections = [...groupedKeywords.entries()]
     .filter(([, items]) => items.length)
-    .map(([category, items], index) => renderCategorizedReferenceSection(category, items, 'keywords', 'summary', index === 0, 'keywords'))
+    .map(([category, items]) => renderCategorizedReferenceSection(category, items, 'keywords', 'summary', false, 'keywords'))
     .join('');
 
   app.innerHTML = `
