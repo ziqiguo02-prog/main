@@ -26,6 +26,17 @@ const HOME_PLATFORM_LINKS = [
 ];
 const WEBSITE_LOG_ENTRIES = [
   {
+    date: '2026-04-26',
+    title: 'EP126 入库、会员视频入口和节目索引吸顶修复',
+    items: [
+      '新增 EP126 节目页与“三层杠杆”概念，把恒大、许家印和房地产系统性风险接回地产去杠杆、地方财政、强人治理等知识线。',
+      'EP121 与 EP126 的 B 站入口均更新为会员节目链接，并写入人工覆盖表，避免后续自动同步把会员入口回退成灰色状态。',
+      '视频链接 SOP 修正“暂未上架”和“已下架”的区别，并把纯文字稿导入规则从旧的伪造 .srt 时间轴改为直接保存 .md。',
+      '节目索引顶部工具条恢复为页面流内 sticky：初始位置不再遮住“节目索引”标题，滚动后再吸顶；相关区间切换和搜索交互已通过 UI 冒烟检查。',
+      '左侧导航品牌标题固定单行显示，窄屏下通过字号和头像尺寸收敛，不再把“颖响力知识库”折成两行。'
+    ]
+  },
+  {
     date: '2026-04-24',
     title: '知识页模板、索引文案、头像与轻量切换继续校正',
     items: [
@@ -2186,67 +2197,11 @@ function setupStickyToolbarBehavior(toolbar, config) {
 }
 
 function setupEpisodeToolbarBehavior(toolbar) {
-  if (isMobileViewport()) {
-    episodeToolbarController?.abort();
-    const controller = new AbortController();
-    episodeToolbarController = controller;
-    const { signal } = controller;
-    const shell = toolbar.parentElement;
-    if (!(shell instanceof HTMLElement)) return;
-    const topInset = 8;
-
-    const syncFrame = () => {
-      const frameTarget = toolbar.closest('.detail') || shell;
-      const frameRect = frameTarget.getBoundingClientRect();
-      toolbar.style.setProperty('--episode-toolbar-left', `${Math.max(frameRect.left, 8)}px`);
-      toolbar.style.setProperty('--episode-toolbar-width', `${Math.max(frameRect.width, 0)}px`);
-    };
-
-    const syncFloatingState = () => {
-      syncFrame();
-      const shouldFloat = shell.getBoundingClientRect().top <= topInset && window.scrollY > 0;
-
-      if (shouldFloat) {
-        toolbar.classList.add('is-floating');
-        toolbar.style.removeProperty('position');
-        toolbar.style.removeProperty('top');
-        toolbar.style.removeProperty('left');
-        toolbar.style.removeProperty('width');
-        shell.style.height = `${toolbar.offsetHeight}px`;
-        return;
-      }
-
-      toolbar.classList.remove('is-floating', 'is-hidden-by-scroll', 'is-ghost', 'is-engaged');
-      toolbar.style.removeProperty('--episode-toolbar-opacity');
-      toolbar.style.position = 'relative';
-      toolbar.style.top = '0';
-      toolbar.style.left = 'auto';
-      toolbar.style.width = 'auto';
-      shell.style.removeProperty('height');
-    };
-
-    window.addEventListener('resize', syncFloatingState, { passive: true, signal });
-    window.addEventListener('scroll', syncFloatingState, { passive: true, signal });
-    window.requestAnimationFrame(syncFloatingState);
-    return;
-  }
-
   episodeToolbarController?.abort();
   const controller = new AbortController();
   episodeToolbarController = controller;
   const { signal } = controller;
-  const shell = toolbar.parentElement;
-  if (!(shell instanceof HTMLElement)) return;
   let lastScrollY = window.scrollY;
-
-  const syncFrame = () => {
-    const frameTarget = toolbar.closest('.detail') || shell;
-    const frameRect = frameTarget.getBoundingClientRect();
-    const horizontalInset = isMobileViewport() ? 10 : 0;
-    toolbar.style.setProperty('--episode-toolbar-left', `${Math.max(frameRect.left + horizontalInset, 8)}px`);
-    toolbar.style.setProperty('--episode-toolbar-width', `${Math.max(frameRect.width - horizontalInset * 2, 0)}px`);
-    shell.style.height = `${toolbar.offsetHeight}px`;
-  };
 
   const syncVisibility = () => {
     const currentScrollY = window.scrollY;
@@ -2275,9 +2230,14 @@ function setupEpisodeToolbarBehavior(toolbar) {
     toolbar.style.setProperty('--episode-toolbar-opacity', '1');
   };
 
-  toolbar.classList.add('is-floating');
-  toolbar.classList.remove('is-hidden-by-scroll', 'is-ghost');
+  toolbar.classList.remove('is-floating', 'is-hidden-by-scroll', 'is-ghost');
   toolbar.style.setProperty('--episode-toolbar-opacity', '1');
+  toolbar.style.removeProperty('position');
+  toolbar.style.removeProperty('top');
+  toolbar.style.removeProperty('left');
+  toolbar.style.removeProperty('width');
+  toolbar.style.removeProperty('--episode-toolbar-left');
+  toolbar.style.removeProperty('--episode-toolbar-width');
 
   toolbar.addEventListener('pointerdown', engageToolbar, { signal });
   toolbar.addEventListener('focusin', engageToolbar, { signal });
@@ -2287,12 +2247,13 @@ function setupEpisodeToolbarBehavior(toolbar) {
     releaseToolbar();
   }, { signal });
 
-  window.addEventListener('resize', syncFrame, { passive: true, signal });
   window.addEventListener('scroll', () => {
-    syncFrame();
     syncVisibility();
   }, { passive: true, signal });
-  window.requestAnimationFrame(syncFrame);
+  window.addEventListener('resize', () => {
+    toolbar.classList.remove('is-hidden-by-scroll');
+    lastScrollY = window.scrollY;
+  }, { passive: true, signal });
 }
 
 function setupHomeSearchToolbarBehavior(toolbar) {

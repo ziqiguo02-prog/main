@@ -2,14 +2,14 @@
   "meta": {
     "title": "颖响力知识图谱",
     "subtitle": "节目、概念、模型、人物、主题之间的可视化连接网络",
-    "nodeCount": 436,
-    "linkCount": 801,
+    "nodeCount": 438,
+    "linkCount": 814,
     "typeCounts": {
       "model": 53,
-      "episode": 125,
-      "concept": 111,
-      "person": 61,
-      "theme": 86
+      "episode": 126,
+      "concept": 112,
+      "theme": 86,
+      "person": 61
     }
   },
   "nodes": [
@@ -22,7 +22,7 @@
       "route": "models/risk-transfer-chain",
       "summary": "系统不会立刻吞下风险，而是先沿着银行、企业、票据、供应链和普通人之间不断转手、延后和下沉。",
       "status": null,
-      "degree": 33
+      "degree": 34
     },
     {
       "id": "episode:EP001",
@@ -44,7 +44,7 @@
       "route": "models/leverage-backfire",
       "summary": "杠杆反噬解释上行期放大利润的结构，如何在下行期放大亏损、现金流压力和清偿困难。",
       "status": null,
-      "degree": 15
+      "degree": 16
     },
     {
       "id": "model:feedback-loops",
@@ -54,6 +54,17 @@
       "type": "model",
       "route": "models/feedback-loops",
       "summary": "反馈回路模型解释老板偏好、顾问强化和组织沉默如何形成自我强化的错误循环。",
+      "status": null,
+      "degree": 14
+    },
+    {
+      "id": "concept:hidden-debt",
+      "key": "hidden-debt",
+      "label": "隐形债务",
+      "fullLabel": "隐形债务",
+      "type": "concept",
+      "route": "concepts/hidden-debt",
+      "summary": "表外、体外和合作链条里的债务不在显性报表中充分呈现，却会在危机时重新压回主体。",
       "status": null,
       "degree": 14
     },
@@ -69,17 +80,6 @@
       "degree": 13
     },
     {
-      "id": "concept:hidden-debt",
-      "key": "hidden-debt",
-      "label": "隐形债务",
-      "fullLabel": "隐形债务",
-      "type": "concept",
-      "route": "concepts/hidden-debt",
-      "summary": "表外、体外和合作链条里的债务不在显性报表中充分呈现，却会在危机时重新压回主体。",
-      "status": null,
-      "degree": 13
-    },
-    {
       "id": "model:balance-sheet-maintenance",
       "key": "balance-sheet-maintenance",
       "label": "资产负债表维持",
@@ -88,6 +88,17 @@
       "route": "models/balance-sheet-maintenance",
       "summary": "当系统进入压力期，各方优先做的不是立刻出清，而是先保住估值、抵押物和报表表面完整。",
       "status": null,
+      "degree": 13
+    },
+    {
+      "id": "episode:EP126",
+      "key": "EP126",
+      "label": "EP126",
+      "fullLabel": "EP126 · 成也强人败也一言堂，恒大许家印们的双面人生与崩塌之路！从零首付到零资金，三层杠杆如何炸穿全行业",
+      "type": "episode",
+      "route": "episodes/EP126",
+      "summary": "本期不是单独复盘恒大或许家印，而是把房地产系统性风险拆成居民、房企和地方政府三层共同加杠杆的结果。节目认为，地产崩塌的核心不是某个老板突然失误，而是零首付式投机、零资金式房企扩张、土地财政式地方融资彼此强化，再叠加强人老板的一言堂和土地制度反馈缺失，最终让整个行业失去刹车能力。",
+      "status": "curated",
       "degree": 13
     },
     {
@@ -113,6 +124,17 @@
       "degree": 11
     },
     {
+      "id": "theme:real-estate-deleveraging",
+      "key": "real-estate-deleveraging",
+      "label": "房地产去杠杆与风险出清",
+      "fullLabel": "房地产去杠杆与风险出清",
+      "type": "theme",
+      "route": "themes/real-estate-deleveraging",
+      "summary": "讨论房地产在下行周期里如何通过断供、重组、展期和资产处置逐步暴露风险。",
+      "status": null,
+      "degree": 10
+    },
+    {
       "id": "person:donald-trump",
       "key": "donald-trump",
       "label": "特朗普",
@@ -135,13 +157,13 @@
       "degree": 10
     },
     {
-      "id": "theme:real-estate-deleveraging",
-      "key": "real-estate-deleveraging",
-      "label": "房地产去杠杆与风险出清",
-      "fullLabel": "房地产去杠杆与风险出清",
+      "id": "theme:local-fiscal-stress-and-hidden-debt",
+      "key": "local-fiscal-stress-and-hidden-debt",
+      "label": "地方财政与隐性债务",
+      "fullLabel": "地方财政与隐性债务",
       "type": "theme",
-      "route": "themes/real-estate-deleveraging",
-      "summary": "讨论房地产在下行周期里如何通过断供、重组、展期和资产处置逐步暴露风险。",
+      "route": "themes/local-fiscal-stress-and-hidden-debt",
+      "summary": "地方财政吃紧后，系统会通过更复杂的融资、资产包装和风险转移来维持运转。",
       "status": null,
       "degree": 9
     },
@@ -278,17 +300,6 @@
       "degree": 9
     },
     {
-      "id": "theme:local-fiscal-stress-and-hidden-debt",
-      "key": "local-fiscal-stress-and-hidden-debt",
-      "label": "地方财政与隐性债务",
-      "fullLabel": "地方财政与隐性债务",
-      "type": "theme",
-      "route": "themes/local-fiscal-stress-and-hidden-debt",
-      "summary": "地方财政吃紧后，系统会通过更复杂的融资、资产包装和风险转移来维持运转。",
-      "status": null,
-      "degree": 8
-    },
-    {
       "id": "theme:maritime-chokepoints-and-route-order",
       "key": "maritime-chokepoints-and-route-order",
       "label": "海峡命门与航运秩序",
@@ -307,6 +318,17 @@
       "type": "model",
       "route": "models/value-capture",
       "summary": "价值捕获模型强调商业链条中关键不只是创造了价值，而是谁真正留下了价值。",
+      "status": null,
+      "degree": 8
+    },
+    {
+      "id": "model:authority-misinfluence",
+      "key": "authority-misinfluence",
+      "label": "权威影响",
+      "fullLabel": "权威影响",
+      "type": "model",
+      "route": "models/authority-misinfluence",
+      "summary": "权威影响模型解释单点权威如何压缩组织独立判断，使成员更容易服从而非纠偏。",
       "status": null,
       "degree": 8
     },
@@ -637,17 +659,6 @@
       "type": "model",
       "route": "models/chokepoint-order-model",
       "summary": "真正决定咽喉通道价值的，不只是地理位置，而是谁定义通行规则、风险定价与法律边界。",
-      "status": null,
-      "degree": 7
-    },
-    {
-      "id": "model:authority-misinfluence",
-      "key": "authority-misinfluence",
-      "label": "权威影响",
-      "fullLabel": "权威影响",
-      "type": "model",
-      "route": "models/authority-misinfluence",
-      "summary": "权威影响模型解释单点权威如何压缩组织独立判断，使成员更容易服从而非纠偏。",
       "status": null,
       "degree": 7
     },
@@ -1004,6 +1015,17 @@
       "degree": 6
     },
     {
+      "id": "person:wang-shi",
+      "key": "wang-shi",
+      "label": "王石",
+      "fullLabel": "王石",
+      "type": "person",
+      "route": "people/wang-shi",
+      "summary": "王石是中国地产与企业家叙事中的标志性人物，也是节目讨论地产人物退场、资产变化与中年权力重组时的重要案例。",
+      "status": null,
+      "degree": 6
+    },
+    {
       "id": "theme:singapore-and-small-state-survival",
       "key": "singapore-and-small-state-survival",
       "label": "新加坡与小国生存术",
@@ -1246,6 +1268,17 @@
       "degree": 6
     },
     {
+      "id": "theme:founder-power-and-feedback",
+      "key": "founder-power-and-feedback",
+      "label": "创始人权力与组织反馈",
+      "fullLabel": "创始人权力与组织反馈",
+      "type": "theme",
+      "route": "themes/founder-power-and-feedback",
+      "summary": "讨论强创始人结构如何影响组织内部的信息流动与纠偏能力。",
+      "status": null,
+      "degree": 5
+    },
+    {
       "id": "model:rule-anchored-small-state-model",
       "key": "rule-anchored-small-state-model",
       "label": "规则锚定型小国生存",
@@ -1290,17 +1323,6 @@
       "degree": 5
     },
     {
-      "id": "person:wang-shi",
-      "key": "wang-shi",
-      "label": "王石",
-      "fullLabel": "王石",
-      "type": "person",
-      "route": "people/wang-shi",
-      "summary": "王石是中国地产与企业家叙事中的标志性人物，也是节目讨论伴侣关系、资产变化与中年权力重组时的核心案例。",
-      "status": null,
-      "degree": 5
-    },
-    {
       "id": "concept:phantom-sales",
       "key": "phantom-sales",
       "label": "虚假销售",
@@ -1308,6 +1330,17 @@
       "type": "concept",
       "route": "concepts/phantom-sales",
       "summary": "企业把并不存在的真实终端需求，包装成销量、出海成绩或渠道消化能力，用来维持估值和融资信心。",
+      "status": null,
+      "degree": 5
+    },
+    {
+      "id": "model:political-embedded-enterprise",
+      "key": "political-embedded-enterprise",
+      "label": "政企嵌入企业模型",
+      "fullLabel": "政企嵌入企业模型",
+      "type": "model",
+      "route": "models/political-embedded-enterprise",
+      "summary": "企业一旦把自身命运深嵌进地方政府或国资体系，短期会更能续命，长期却更容易沦为政策工具。",
       "status": null,
       "degree": 5
     },
@@ -1341,6 +1374,17 @@
       "type": "model",
       "route": "models/institutional-formalism-spiral",
       "summary": "组织一旦开始依赖仪式、排名、头衔和场面来证明自己有效，就会不断加码这些外壳，同时越来越失去真正解决问题的能力。",
+      "status": null,
+      "degree": 5
+    },
+    {
+      "id": "concept:organizational-silence",
+      "key": "organizational-silence",
+      "label": "组织失声",
+      "fullLabel": "组织失声",
+      "type": "concept",
+      "route": "concepts/organizational-silence",
+      "summary": "组织内部真实反馈消失后，成员会等待权威表态，而不是主动修正错误。",
       "status": null,
       "degree": 5
     },
@@ -1554,17 +1598,6 @@
       "degree": 5
     },
     {
-      "id": "theme:founder-power-and-feedback",
-      "key": "founder-power-and-feedback",
-      "label": "创始人权力与组织反馈",
-      "fullLabel": "创始人权力与组织反馈",
-      "type": "theme",
-      "route": "themes/founder-power-and-feedback",
-      "summary": "讨论强创始人结构如何影响组织内部的信息流动与纠偏能力。",
-      "status": null,
-      "degree": 4
-    },
-    {
       "id": "theme:southeast-asia-fragmentation-and-bloc-competition",
       "key": "southeast-asia-fragmentation-and-bloc-competition",
       "label": "东南亚裂变与集团竞争",
@@ -1675,17 +1708,6 @@
       "degree": 4
     },
     {
-      "id": "model:political-embedded-enterprise",
-      "key": "political-embedded-enterprise",
-      "label": "政企嵌入企业模型",
-      "fullLabel": "政企嵌入企业模型",
-      "type": "model",
-      "route": "models/political-embedded-enterprise",
-      "summary": "企业一旦把自身命运深嵌进地方政府或国资体系，短期会更能续命，长期却更容易沦为政策工具。",
-      "status": null,
-      "degree": 4
-    },
-    {
       "id": "theme:state-business-entanglement",
       "key": "state-business-entanglement",
       "label": "政企嵌入与企业存续",
@@ -1704,17 +1726,6 @@
       "type": "theme",
       "route": "themes/middle-class-descent-and-stratification",
       "summary": "当中间层缺乏缓冲带时，经济下行会迅速转成身份下坠、关系断裂和社会分层加固。",
-      "status": null,
-      "degree": 4
-    },
-    {
-      "id": "concept:organizational-silence",
-      "key": "organizational-silence",
-      "label": "组织失声",
-      "fullLabel": "组织失声",
-      "type": "concept",
-      "route": "concepts/organizational-silence",
-      "summary": "组织内部真实反馈消失后，成员会等待权威表态，而不是主动修正错误。",
       "status": null,
       "degree": 4
     },
@@ -2896,6 +2907,17 @@
       "degree": 2
     },
     {
+      "id": "person:pan-shiyi",
+      "key": "pan-shiyi",
+      "label": "潘石屹",
+      "fullLabel": "潘石屹",
+      "type": "person",
+      "route": "people/pan-shiyi",
+      "summary": "潘石屹是 SOHO 中国创始人之一，也是节目讨论房地产企业家如何用时间感、前瞻性和退出纪律保全资产的核心人物。",
+      "status": null,
+      "degree": 2
+    },
+    {
       "id": "theme:brand-symbol-and-value",
       "key": "brand-symbol-and-value",
       "label": "品牌符号与价值感知",
@@ -3101,6 +3123,17 @@
       "type": "theme",
       "route": "themes/performative-governance-and-ritual-display",
       "summary": "关注治理如何通过热闹、仪式和可见动作来替代真正的问题解决。",
+      "status": null,
+      "degree": 2
+    },
+    {
+      "id": "person:xu-jiayin",
+      "key": "xu-jiayin",
+      "label": "许家印",
+      "fullLabel": "许家印",
+      "type": "person",
+      "route": "people/xu-jiayin",
+      "summary": "许家印是恒大创始人，也是节目讨论地产高杠杆、强人治理和财富保全失效时最典型的案例人物。",
       "status": null,
       "degree": 2
     },
@@ -4051,17 +4084,6 @@
       "degree": 1
     },
     {
-      "id": "person:pan-shiyi",
-      "key": "pan-shiyi",
-      "label": "潘石屹",
-      "fullLabel": "潘石屹",
-      "type": "person",
-      "route": "people/pan-shiyi",
-      "summary": "潘石屹是 SOHO 中国创始人之一，也是节目讨论房地产企业家如何用时间感、前瞻性和退出纪律保全资产的核心人物。",
-      "status": null,
-      "degree": 1
-    },
-    {
       "id": "person:pang-zenghe",
       "key": "pang-zenghe",
       "label": "庞增和",
@@ -4212,6 +4234,17 @@
       "type": "theme",
       "route": "themes/evaluation-and-moral-capital",
       "summary": "一个人是否值得被尊重，不能只看商业成绩，还要看他留下了怎样的公共价值。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "concept:three-layer-leverage",
+      "key": "three-layer-leverage",
+      "label": "三层杠杆",
+      "fullLabel": "三层杠杆",
+      "type": "concept",
+      "route": "concepts/three-layer-leverage",
+      "summary": "居民、企业和地方政府同时用未来现金流为当下扩张融资，风险会从单点违约升级成系统踩踏。",
       "status": null,
       "degree": 1
     },
@@ -4465,17 +4498,6 @@
       "type": "person",
       "route": "people/xu-huping",
       "summary": "徐湖平是南京博物院争议中被频繁提及的馆方相关人物，也是节目批评机构边界感失守时的重要指向。",
-      "status": null,
-      "degree": 1
-    },
-    {
-      "id": "person:xu-jiayin",
-      "key": "xu-jiayin",
-      "label": "许家印",
-      "fullLabel": "许家印",
-      "type": "person",
-      "route": "people/xu-jiayin",
-      "summary": "许家印是恒大创始人，也是节目讨论家族信托为何不再天然安全时最典型的案例人物。",
       "status": null,
       "degree": 1
     },
@@ -8724,6 +8746,71 @@
     {
       "source": "episode:EP125",
       "target": "theme:platform-labor-and-lived-reality",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "concept:three-layer-leverage",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "concept:hidden-debt",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "concept:organizational-silence",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "model:leverage-backfire",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "model:political-embedded-enterprise",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "model:risk-transfer-chain",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "model:authority-misinfluence",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "person:xu-jiayin",
+      "kind": "episode-person"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "person:wang-shi",
+      "kind": "episode-person"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "person:pan-shiyi",
+      "kind": "episode-person"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "theme:real-estate-deleveraging",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "theme:local-fiscal-stress-and-hidden-debt",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP126",
+      "target": "theme:founder-power-and-feedback",
       "kind": "episode-theme"
     },
     {

@@ -914,6 +914,7 @@ body.page-episode-index .section-progress-panel-text {
 }
 
 .brand-lockup {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -953,6 +954,7 @@ body.page-episode-index .section-progress-panel-text {
 
 .brand-copy {
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -971,8 +973,10 @@ body.page-episode-index .section-progress-panel-text {
   font-size: 25px;
   color: #f1ece3;
   line-height: 1.14;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   font-weight: 620;
+  white-space: nowrap;
+  text-wrap: nowrap;
 }
 
 .brand-avatar-link {
@@ -5449,12 +5453,12 @@ body.page-knowledge-detail {
   }
 
   .brand {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .brand-avatar {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
   }
 
   .hero {
