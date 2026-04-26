@@ -496,6 +496,51 @@ async function runMobileEpisodeIndexChecks(client) {
     })()`,
     { timeoutMs: 4000, label: 'mobile episode range wheel updates selected group' }
   );
+  await evaluate(client, `window.scrollTo(0, 1250); true;`);
+  await sleep(180);
+  await evaluate(client, `window.scrollTo(0, 1040); true;`);
+  await sleep(220);
+  assert(
+    await evaluate(client, `(() => {
+      const toolbar = document.querySelector('.episode-index-toolbar');
+      if (!toolbar) return false;
+      const rect = toolbar.getBoundingClientRect();
+      const style = getComputedStyle(toolbar);
+      return rect.top >= 0
+        && rect.top <= 42
+        && rect.bottom > 0
+        && Number(style.opacity) > 0.5
+        && style.pointerEvents !== 'none';
+    })()`),
+    'Mobile episode range toolbar should reappear as a sticky control when the user scrolls upward'
+  );
+  await clickSelector(client, '.episode-range-wheel [data-episode-range="81"]');
+  await waitForCondition(
+    client,
+    `(() => {
+      const active = document.querySelector('.episode-range-wheel-option.active');
+      const firstCard = document.querySelector('#episode-index-results .episode-index-kicker');
+      const firstCardRect = firstCard?.closest('.episode-index-card')?.getBoundingClientRect();
+      const toolbarRect = document.querySelector('.episode-index-toolbar')?.getBoundingClientRect();
+      return active?.textContent?.trim() === '81-90集'
+        && firstCard?.textContent?.trim() === 'EP090'
+        && firstCardRect
+        && toolbarRect
+        && firstCardRect.top >= toolbarRect.bottom
+        && firstCardRect.top <= toolbarRect.bottom + 36;
+    })()`,
+    { timeoutMs: 4000, label: 'mobile sticky range click switches group and moves to the selected range top' }
+  );
+  await clickSelector(client, '.episode-range-wheel [data-episode-range="91"]');
+  await waitForCondition(
+    client,
+    `(() => {
+      const active = document.querySelector('.episode-range-wheel-option.active');
+      const firstCard = document.querySelector('#episode-index-results .episode-index-kicker');
+      return active?.textContent?.trim() === '91-100集' && firstCard?.textContent?.trim() === 'EP100';
+    })()`,
+    { timeoutMs: 4000, label: 'mobile episode range returns to 91-100 before progress panel checks' }
+  );
   await evaluate(client, `window.scrollTo(0, 900); true;`);
   await waitForCondition(
     client,
