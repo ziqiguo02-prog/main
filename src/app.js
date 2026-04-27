@@ -3112,6 +3112,7 @@ function renderSidebar() {
     <div class="sidebar-section">
       <a class="sidebar-link" href="#/graph">知识图谱 <span class="count-badge">${graphStatValue()}</span></a>
       <a class="sidebar-link sidebar-link-log" href="#/updates">网页日志 <span class="count-badge">${WEBSITE_LOG_ENTRIES.length}</span></a>
+      <a class="sidebar-link sidebar-link-simulator" href="./simulators/real-estate-tycoon/">模拟器测试 <span class="count-badge">Beta</span></a>
     </div>
   `;
 

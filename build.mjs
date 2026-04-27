@@ -12,6 +12,10 @@ const docsAssetsDir = path.join(docsDir, 'assets');
 const docsDataDir = path.join(docsDir, 'data');
 const srcDir = path.join(__dirname, 'src');
 const rawDir = path.resolve(__dirname, '../bilibili/raw');
+const simulatorSourceDir = path.join(srcDir, 'simulators', 'real-estate-tycoon');
+const simulatorDistDir = path.join(distDir, 'simulators', 'real-estate-tycoon');
+const simulatorDocsDir = path.join(docsDir, 'simulators', 'real-estate-tycoon');
+const simulatorPublicFiles = ['index.html', 'style.css', 'app.js', 'data.js'];
 const keywordDefinitionsPath = path.join(__dirname, 'scripts/keyword-definitions.json');
 const keywordDefinitionsDir = path.join(__dirname, 'scripts/keyword-definitions.d');
 
@@ -733,6 +737,13 @@ async function copyFileIfPresent(from, to) {
   }
 }
 
+async function copySimulatorAssets(targetDir) {
+  await ensureDir(targetDir);
+  await Promise.all(
+    simulatorPublicFiles.map((file) => copyFile(path.join(simulatorSourceDir, file), path.join(targetDir, file)))
+  );
+}
+
 async function buildIndexHtml(versionTag) {
   const template = await fs.readFile(path.join(srcDir, 'index.html'), 'utf8');
   return template
@@ -808,7 +819,9 @@ async function build() {
     ensureDir(assetsDir),
     ensureDir(dataDir),
     ensureDir(docsAssetsDir),
-    ensureDir(docsDataDir)
+    ensureDir(docsDataDir),
+    ensureDir(simulatorDistDir),
+    ensureDir(simulatorDocsDir)
   ]);
   const assetVersion = Date.now();
   const indexHtml = await buildIndexHtml(assetVersion);
@@ -829,7 +842,9 @@ async function build() {
     copyFile(path.join(srcDir, 'style.css'), path.join(docsAssetsDir, 'style.css')),
     copyFileIfPresent(path.join(srcDir, 'assets', 'yinfluence-avatar.png'), path.join(docsAssetsDir, 'yinfluence-avatar.png')),
     fs.writeFile(path.join(docsDataDir, 'site.json'), siteJson, 'utf8'),
-    fs.writeFile(path.join(docsDataDir, 'graph.json'), graphJson, 'utf8')
+    fs.writeFile(path.join(docsDataDir, 'graph.json'), graphJson, 'utf8'),
+    copySimulatorAssets(simulatorDistDir),
+    copySimulatorAssets(simulatorDocsDir)
   ]);
 
   console.log(`Built ${site.meta.title}`);
