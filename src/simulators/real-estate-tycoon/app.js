@@ -9,7 +9,8 @@ const SEVERITY_RISK = {
 };
 
 const MAX_TURNS = 90;
-const MIN_TURNS_FOR_SCALE = [1, 7, 15, 22, 33, 55, 999];
+const OFFICE_EVENT_ID = "__office_turn__";
+const MIN_TURNS_FOR_SCALE = [1, 4, 10, 24, 42, 68, 999];
 const DEFAULT_PHASE_TURNS = [1, 13, 26, 39, 52, 65, 78];
 const DEFAULT_PHASE_DURATION_RANGES = [[11, 15], [11, 15], [11, 15], [11, 15], [11, 14], [10, 14]];
 const PROJECT_CRISIS_EVENT_IDS = new Set([
@@ -28,7 +29,12 @@ const PROJECT_CRISIS_EVENT_IDS = new Set([
   "wage-account-deadline",
   "contractor-evidence-package",
   "planning-stop-work-order",
-  "homebuyer-open-day"
+  "homebuyer-open-day",
+  "rainstorm-basement-flood",
+  "owner-livestream-site-check",
+  "tower-crane-near-miss",
+  "delivered-wall-crack-repair",
+  "escrow-bank-weekend-freeze"
 ]);
 const PROJECT_CASH_STAGES = new Set(["presale", "delivery", "delivered"]);
 const PROJECT_WORKOUT_EVENT_IDS = new Set([
@@ -40,6 +46,13 @@ const PROJECT_WORKOUT_EVENT_IDS = new Set([
   "local-task-force-night",
   "presale-supervision-account",
   "liquidation-petition"
+]);
+const PROJECT_REQUIRED_EVENT_IDS = new Set([
+  "rainstorm-basement-flood",
+  "owner-livestream-site-check",
+  "steel-cement-price-jump",
+  "tower-crane-near-miss",
+  "escrow-bank-weekend-freeze"
 ]);
 const SCALE_GRACE_ENDINGS = new Set(["cash_break", "debt_default", "takeover_failed", "delivery_failure", "buyer_blowup"]);
 const CYCLE_SCENARIOS = [
@@ -990,6 +1003,9 @@ const elements = {
   careerNotice: document.querySelector("#careerNotice"),
   statusSummary: document.querySelector("#statusSummary"),
   projectBrief: document.querySelector("#projectBrief"),
+  mobileProjectBrief: document.querySelector("#mobileProjectBrief"),
+  assetBoard: document.querySelector("#assetBoard"),
+  actionDock: document.querySelector("#actionDock"),
   visibleStats: document.querySelector("#visibleStats"),
   hiddenStatsMini: document.querySelector("#hiddenStatsMini"),
   finalVisibleStats: document.querySelector("#finalVisibleStats"),
@@ -1200,7 +1216,7 @@ function createOpeningProject(state) {
     sourceEventId: "opening-balance",
     acquiredTurn: 1,
     saleableTurn: randomInRange([3, 5]),
-    deliveryTurn: randomInRange([16, 22]),
+    deliveryTurn: randomInRange([18, 24]),
     stage: "land",
     bookValue,
     saleableInventory: Math.round(bookValue * 1.45),
@@ -1266,6 +1282,7 @@ function createFundingLedger() {
     mortgageFlow: 0,
     stateBridge: 0,
     assetSaleCash: 0,
+    tailSaleCash: 0,
     interestDue: 0,
     interestPaid: 0,
     lastInterestPaid: 0,
@@ -1273,6 +1290,7 @@ function createFundingLedger() {
     rolloverNeed: 0,
     collateralBorrowingRoom: 0,
     fundingStress: 0,
+    freshPrincipalThisTurn: 0,
     lastSource: "暂无融资动作",
     lastWarning: "还没有形成融资账本。"
   };
@@ -1322,7 +1340,8 @@ function createGame() {
     project: origin.project,
     capitalProfile,
     cycleScenario,
-    currentEvent: openingEventId,
+    currentEvent: OFFICE_EVENT_ID,
+    lastIncidentEvent: openingEventId,
     mainStep: mainLineIndex >= 0 ? mainLineIndex + 1 : 1,
     eventQueue: [],
     phaseIndex: 0,
@@ -1352,6 +1371,10 @@ function createGame() {
     goodwillEvents: [],
     projectLedger: seedProjectLedger(createProjectLedger(), state),
     fundingLedger: seedFundingLedger(createFundingLedger(), state),
+    auctionDesk: null,
+    selectedAuctionLotId: null,
+    selectedProjectId: null,
+    auctionBidState: null,
     scaleHistory: [
       {
         turn: 1,
@@ -1360,7 +1383,7 @@ function createGame() {
       }
     ],
     modelCounts: {},
-    flags: { phaseStartTurn: 1 },
+    flags: { phaseStartTurn: 1, officeTurns: 0 },
     notice: "",
     scaleTransition: null,
     pendingAdvance: null,
@@ -1413,16 +1436,22 @@ function normalizeGame(saved) {
   if (!normalized.projectLedger.projects.length) seedProjectLedger(normalized.projectLedger, normalized.state);
   normalized.fundingLedger = { ...createFundingLedger(), ...(normalized.fundingLedger || {}) };
   if (!normalized.fundingLedger.seeded) seedFundingLedger(normalized.fundingLedger, normalized.state);
+  normalized.auctionDesk = normalized.auctionDesk || null;
+  normalized.selectedAuctionLotId = normalized.selectedAuctionLotId || null;
+  normalized.selectedProjectId = normalized.selectedProjectId || null;
+  normalized.auctionBidState = normalized.auctionBidState || null;
   normalized.scaleHistory = normalized.scaleHistory || [];
   normalized.modelCounts = normalized.modelCounts || {};
   normalized.flags = normalized.flags || {};
   normalized.flags.phaseStartTurn = normalized.flags.phaseStartTurn || 1;
+  normalized.flags.officeTurns = normalized.flags.officeTurns || 0;
   normalized.notice = normalized.notice || "";
   normalized.scaleTransition = normalized.scaleTransition || null;
   normalized.pendingAdvance = normalized.pendingAdvance || null;
   normalized.ended = Boolean(normalized.ended);
   normalized.ending = normalized.ending || null;
-  if (!normalized.currentEvent) normalized.currentEvent = normalized.origin.startEvent || DATA.events[0].id;
+  if (!normalized.currentEvent) normalized.currentEvent = OFFICE_EVENT_ID;
+  normalized.lastIncidentEvent = normalized.lastIncidentEvent || normalized.origin.startEvent || DATA.events[0].id;
   return normalized;
 }
 
@@ -2101,6 +2130,9 @@ function renderShell() {
     elements.visibleStats.innerHTML = "";
     elements.hiddenStatsMini.innerHTML = "";
     elements.projectBrief.innerHTML = "";
+    elements.mobileProjectBrief.innerHTML = "";
+    elements.assetBoard.innerHTML = "";
+    elements.actionDock.innerHTML = "";
     elements.careerNotice.classList.add("hidden");
     return;
   }
@@ -2117,6 +2149,7 @@ function renderShell() {
   renderStats(elements.visibleStats, game.state.visible);
   renderStats(elements.hiddenStatsMini, compactHiddenStats());
   elements.projectBrief.innerHTML = projectLedgerBrief();
+  elements.mobileProjectBrief.innerHTML = mobileProjectLedgerBrief();
 
   elements.careerNotice.classList.add("hidden");
 
@@ -2165,11 +2198,16 @@ function renderEvent() {
     renderDebrief();
     return;
   }
+  if (game.currentEvent === OFFICE_EVENT_ID) {
+    renderOfficeTurn();
+    return;
+  }
 
   syncPhaseForEvent(game.currentEvent);
   const event = eventById(game.currentEvent);
   const phase = currentPhase();
   show(elements.eventScreen);
+  elements.eventScreen.classList.remove("office-mode");
   renderShell();
   elements.eventPhase.textContent = phase.title;
   elements.eventSource.textContent = severityLabel(event.severity);
@@ -2184,16 +2222,25 @@ function renderEvent() {
     : "";
   elements.feedbackList.classList.toggle("hidden", !feedbackItems.length);
   elements.eventTitle.textContent = event.title;
-  elements.eventBriefing.textContent = event.stakes ? `${event.briefing}\n\n压力：${event.stakes}` : event.briefing;
+  elements.eventBriefing.textContent = event.briefing;
+  const dockCatalog = buildOfficeActionCatalog();
+  const dockLocked = event.severity === "crisis";
+  elements.assetBoard.innerHTML = officeAssetBoard(dockCatalog.context);
+  elements.assetBoard.classList.remove("hidden");
+  elements.actionDock.innerHTML = renderActionDock(dockCatalog.groups, null, { locked: dockLocked });
+  elements.actionDock.classList.remove("hidden");
+  elements.actionDock.querySelectorAll("button[data-category]").forEach((button) => {
+    button.addEventListener("click", () => selectOfficeCategory(button.dataset.category));
+  });
   elements.actorList.innerHTML = "";
   elements.actorList.classList.add("hidden");
+  elements.choiceList.classList.remove("office-action-panel");
   elements.choiceList.innerHTML = event.choices
     .map((choice, index) => `
       <button class="choice" type="button" data-choice="${escapeHtml(choice.id)}" data-index="${index}">${escapeHtml(choice.label)}</button>
     `)
     .join("");
   const choiceHints = event.choices.map((_, index) => choiceHint(event, index));
-  let armedChoice = null;
   const showChoiceHint = (index) => {
     const hint = choiceHints[index];
     if (!hint) return;
@@ -2201,7 +2248,6 @@ function renderEvent() {
     elements.actorList.classList.remove("hidden");
   };
   const markArmedChoice = (button) => {
-    armedChoice = button.dataset.choice;
     elements.choiceList.querySelectorAll("button").forEach((item) => {
       item.classList.toggle("selected", item === button);
     });
@@ -2209,7 +2255,6 @@ function renderEvent() {
   const hideChoiceHint = () => {
     elements.actorList.innerHTML = "";
     elements.actorList.classList.add("hidden");
-    armedChoice = null;
     elements.choiceList.querySelectorAll("button").forEach((item) => item.classList.remove("selected"));
   };
   elements.choiceList.querySelectorAll("button").forEach((button) => {
@@ -2225,11 +2270,6 @@ function renderEvent() {
     button.addEventListener("mouseleave", hideChoiceHint);
     button.addEventListener("blur", hideChoiceHint);
     button.addEventListener("click", () => {
-      if (choiceHints[index] && armedChoice !== button.dataset.choice) {
-        markArmedChoice(button);
-        showChoiceHint(index);
-        return;
-      }
       choose(button.dataset.choice);
     });
   });
@@ -2247,10 +2287,1626 @@ function renderEvent() {
     <p>${escapeHtml(contactDeskSummary())}</p>
     <small>${escapeHtml(competitionTacticLine())}</small>
   `;
+  elements.mobileProjectBrief.classList.remove("hidden");
+  elements.mobileProjectBrief.innerHTML = mobileProjectLedgerBrief();
 }
 
 function modelName(tag) {
   return DATA.models[tag]?.name || tag;
+}
+
+function activeProjectList(ledger = refreshProjectLedger()) {
+  return ledger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired");
+}
+
+function saleableProjectList(ledger = refreshProjectLedger()) {
+  return ledger.projects.filter((project) => ["presale", "delivery", "delivered"].includes(project.stage));
+}
+
+function officeActionContext() {
+  const ledger = refreshProjectLedger();
+  const funding = refreshFundingLedger();
+  const visible = game.state.visible;
+  const hidden = game.state.hidden;
+  const activeProjects = activeProjectList(ledger);
+  const saleableProjects = saleableProjectList(ledger);
+  const weakestProject = [...activeProjects]
+    .sort((a, b) => projectRiskProfile(b, ledger).severity - projectRiskProfile(a, ledger).severity || (a.constructionProgress || 0) - (b.constructionProgress || 0))[0] || null;
+  const bestAsset = [...ledger.projects]
+    .sort((a, b) => marketValueForProject(b, ledger) - marketValueForProject(a, ledger))[0] || null;
+  const cashPressure = visible.cash <= 24 || (funding.interestDue || 0) + (funding.rolloverNeed || 0) >= 12;
+  const projectPressure = weakestProject && projectRiskProfile(weakestProject, ledger).severity >= 3;
+  const relationPressure = visible.government <= 30 || visible.bank <= 28 || (hidden.local_isolation || 0) >= 42;
+  const safetyPressure = (hidden.boss_safety || 0) <= 34 || (hidden.legal_exposure || 0) >= 44 || (hidden.gray_risk || 0) >= 46;
+  return {
+    ledger,
+    funding,
+    visible,
+    hidden,
+    relations: game.relations || {},
+    riskLedger: game.riskLedger || createRiskLedger(),
+    activeProjects,
+    saleableProjects,
+    weakestProject,
+    bestAsset,
+    cashPressure,
+    projectPressure,
+    relationPressure,
+    safetyPressure,
+    boom: isBoomPhase(),
+    downturn: isDownturnPhase(),
+    scaleReviewIndex: currentScaleReviewIndex()
+  };
+}
+
+function contextualProjectName(project, fallback = "东郊项目") {
+  return project?.title || fallback;
+}
+
+function contextualBankContact() {
+  return contactForGroup("bank").speaker || "支行林经理";
+}
+
+function contextualGovernmentContact() {
+  return contactForGroup("government").speaker || "县里项目口";
+}
+
+function contextualContractorContact() {
+  return contactForGroup("contractor").speaker || "总包老板";
+}
+
+const OFFICE_ACTION_DEFS = [
+  {
+    id: "collateral-bank-credit",
+    slot: "opportunity",
+    condition: (ctx) => ctx.ledger.collateralValue >= Math.max(14, ctx.visible.debt * 0.34) && ctx.visible.bank >= 22,
+    weight: (ctx) => 42 + Math.max(0, ctx.ledger.collateralValue - ctx.visible.debt * 0.3) + (ctx.boom ? 18 : 0),
+    label: (ctx) => `拿${contextualProjectName(ctx.bestAsset, "东郊地块")}抵押，找${contextualBankContact()}加授信`,
+    hint: "能拿到真现金，但会增加利息、抵押约束和银行穿透。",
+    visibleEffects: { cash: 9, debt: 7, bank: 3 },
+    hiddenEffects: { financing_cost: 5, off_balance_debt: 2 },
+    relationEffects: { bank_manager: 4 },
+    models: ["leverage-backfire", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 4,
+    consequence: "抵押物变成现金，银行也拿到了重新审视你项目和监管户的入口。",
+    lesson: "融资不是凭空来的钱，而是把未来资产、销售和交付责任提前抵押出去。"
+  },
+  {
+    id: "presale-open-early",
+    slot: "opportunity",
+    condition: (ctx) => ctx.saleableProjects.length > 0 || ctx.activeProjects.some((project) => (project.constructionProgress || 0) >= 42),
+    weight: (ctx) => 40 + Math.max(0, ctx.visible.sales - 28) + Math.max(0, ctx.ledger.marketPriceIndex - 100) * 0.6,
+    label: (ctx) => `趁房价热，让${contextualProjectName(ctx.weakestProject || ctx.bestAsset)}提前开盘回款`,
+    hint: "能快回款，也会把购房款责任和交付压力提前拉上桌。",
+    visibleEffects: { cash: 8, sales: 7, delivery: -2, public_trust: -1 },
+    hiddenEffects: { buyer_liability: 7, delivery_pressure: 6, presale_misuse: 2, price_bubble: 3 },
+    relationEffects: { channel: 4, buyers: -2 },
+    models: ["presale-cashflow-trap", "phantom-demand"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 5,
+    consequence: "售楼处热起来了，但钱进来的一刻，楼栋、监管户和业主合同也跟着进来了。",
+    lesson: "预售是房地产高周转的发动机，也是后面保交楼责任的来源。"
+  },
+  {
+    id: "next-parcel-deposit",
+    slot: "opportunity",
+    condition: (ctx) => ctx.boom && ctx.visible.cash >= 18 && ctx.activeProjects.length <= 2 + game.scaleIndex && ctx.visible.government >= 24,
+    weight: (ctx) => 46 + Math.max(0, ctx.ledger.marketPriceIndex - 104) * 1.1 + Math.max(0, ctx.visible.government - 28),
+    label: "先垫保证金，把下一块地占住",
+    hint: "机会被你卡住了，但保证金、工程款和银行口子会同时吃现金。",
+    visibleEffects: { cash: -7, debt: 5, land_bank: 11, government: 2, sales: 2 },
+    hiddenEffects: { financing_cost: 4, delivery_pressure: 3, buyer_liability: 3, price_bubble: 3 },
+    relationEffects: { local_official: 3, bank_manager: 1 },
+    models: ["land-finance-loop", "land-fiscal-pressure", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 7,
+    consequence: "你把上一个盘的信用押到下一块地上，牌桌变大，闭环也更难；同行也会开始打听你钱从哪来。",
+    lesson: "房地产扩张不是等项目全部交付，而是用回款、抵押和地方窗口滚下一块地。"
+  },
+  {
+    id: "auction-hall-hard-bid",
+    slot: "opportunity",
+    condition: (ctx) => ctx.visible.cash >= 16 && ctx.visible.bank >= 20 && ctx.activeProjects.length <= 3 + game.scaleIndex,
+    weight: (ctx) => 37 + Math.max(0, ctx.ledger.marketPriceIndex - 102) * 0.8 + Math.max(0, ctx.visible.government - 30) * 0.35,
+    label: "去土拍大厅举牌，硬抢一块新区地",
+    hint: "能拿到资产和故事，但保证金、溢价和对手举报会一起进来。",
+    visibleEffects: { cash: -8, debt: 6, land_bank: 13, sales: 3, government: 1 },
+    hiddenEffects: { financing_cost: 5, price_bubble: 5, delivery_pressure: 3, legal_exposure: 1 },
+    relationEffects: { local_official: 1, competitors: -6, bank_manager: 1 },
+    models: ["land-finance-loop", "bid-rigging-chain", "competitor-pressure"],
+    sourceEpisodes: ["EP101", "EP124", "EP126"],
+    scaleScore: 7,
+    consequence: "你坐上了土拍桌，但竞争对手会开始盯你的保证金来源、举牌节奏和背后关系。",
+    lesson: "土拍不是单纯买地，土地财政、银行授信、竞争对手和地方窗口会同时定价这块地。"
+  },
+  {
+    id: "auction-teahouse-tip",
+    slot: "opportunity",
+    condition: (ctx) => ctx.visible.cash >= 8 && ctx.visible.government >= 20,
+    weight: (ctx) => 30 + Math.max(0, ctx.visible.government - 26) + Math.max(0, ctx.ledger.marketPriceIndex - 102) * 0.45,
+    label: "去茶楼听底价，先不举牌",
+    hint: "信息会多一点，也会欠人情；消息可能是局，也可能是真窗口。",
+    visibleEffects: { cash: -2, government: 2, bank: 1, sales: -1 },
+    hiddenEffects: { political_dependency: 4, local_isolation: -1, legal_exposure: 2, price_bubble: 1 },
+    relationEffects: { local_official: 3, competitors: -2, underground: 1 },
+    models: ["land-fiscal-pressure", "political-embedded-enterprise", "protective-umbrella-risk"],
+    sourceEpisodes: ["EP004", "EP101", "EP126"],
+    scaleScore: 2,
+    consequence: "你没有花大钱，但饭局和消息源会把你带进更深的旧关系。",
+    lesson: "关系型信息不是免费情报，它会变成人情债、误导信号或后续倒查线索。"
+  },
+  {
+    id: "channel-cash-push",
+    slot: "opportunity",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && ctx.visible.sales <= 72,
+    weight: (ctx) => 31 + Math.max(0, ctx.ledger.marketPriceIndex - 98) * 0.55 + Math.max(0, ctx.visible.cash < 32 ? 10 : 0),
+    label: "给渠道加返佣，先把一批按揭打回来",
+    hint: "回款会变快，渠道依赖、价格预期和老业主压力会上升。",
+    visibleEffects: { cash: 6, sales: 8, public_trust: -3 },
+    hiddenEffects: { price_bubble: 5, buyer_liability: 4, data_inflation: 2 },
+    relationEffects: { channel: 6, buyers: -3 },
+    models: ["phantom-demand", "risk-transfer-chain"],
+    sourceEpisodes: ["EP114", "EP126"],
+    scaleScore: 3,
+    consequence: "渠道会帮你把成交做热，也会把折扣口径、返佣和客户预期带到后面。",
+    lesson: "销售热度不等于真实利润，渠道越强，价格和回款叙事越容易被反过来使用。"
+  },
+  {
+    id: "pay-contractor-node",
+    slot: "pressure",
+    condition: (ctx) => ctx.activeProjects.length > 0 && (ctx.projectPressure || (game.stakeholderStress?.contractor || 0) >= 28),
+    weight: (ctx) => 54 + (game.stakeholderStress?.contractor || 0) + (ctx.projectPressure ? 20 : 0),
+    label: (ctx) => `给${contextualContractorContact()}一笔节点款，别让工地停`,
+    hint: "项目能动，现金更紧，总包以后也知道你怕停工。",
+    visibleEffects: { cash: -7, delivery: 8, public_trust: 2 },
+    hiddenEffects: { delivery_pressure: -6, buyer_liability: -3, off_balance_debt: 2 },
+    relationEffects: { contractor: 8, suppliers: 3 },
+    models: ["delivery-first", "counterparty-retaliation"],
+    sourceEpisodes: ["EP126", "EP037"],
+    scaleScore: 1,
+    consequence: "工地继续动，但总包和材料商会记住这条付款红线。",
+    lesson: "工程款不是单纯成本，它决定项目能不能从纸面资产变成可交付资产。"
+  },
+  {
+    id: "fill-escrow-account",
+    slot: "pressure",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && ((ctx.hidden.presale_misuse || 0) >= 18 || (ctx.hidden.buyer_liability || 0) >= 26 || ctx.ledger.escrowCash < Math.max(8, ctx.funding.presaleCash * 0.18)),
+    weight: (ctx) => 58 + (ctx.hidden.presale_misuse || 0) + (ctx.hidden.buyer_liability || 0) * 0.5,
+    label: "补监管户，先让住建和业主看见钱",
+    hint: "现金会痛，但能把预售款责任从刑事/维权边缘往经营问题拉回。",
+    visibleEffects: { cash: -9, delivery: 7, public_trust: 6, bank: 2 },
+    hiddenEffects: { presale_misuse: -8, buyer_liability: -5, legal_exposure: -3, delivery_pressure: -4 },
+    relationEffects: { buyers: 6, bank_manager: 2 },
+    models: ["escrow-control", "delivery-first", "presale-cashflow-trap"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: -1,
+    consequence: "自由现金少了，项目账户的性质清楚了一点。",
+    lesson: "预售监管户不是形式，它决定购房人的钱是项目钱，还是集团挪腾的钱。"
+  },
+  {
+    id: "bank-rollover-talk",
+    slot: "pressure",
+    condition: (ctx) => ctx.cashPressure || (ctx.funding.rolloverNeed || 0) >= 8 || ctx.visible.bank <= 32,
+    weight: (ctx) => 48 + (ctx.funding.rolloverNeed || 0) * 1.5 + Math.max(0, 32 - ctx.visible.cash),
+    label: (ctx) => `约${contextualBankContact()}谈展期，先保本月现金`,
+    hint: "能争取时间，但银行会要求更多材料、抵押和账户解释。",
+    visibleEffects: { cash: 5, debt: 3, bank: 4 },
+    hiddenEffects: { financing_cost: 5, data_inflation: 1, boss_safety: -1 },
+    relationEffects: { bank_manager: 4 },
+    models: ["balance-sheet-maintenance", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 2,
+    consequence: "到期压力被挪到后面，银行也把你列进了更细的台账。",
+    lesson: "展期不是解决债务，而是用信用和抵押物买时间。"
+  },
+  {
+    id: "discount-cash-collection",
+    slot: "pressure",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && (ctx.cashPressure || ctx.downturn || ctx.visible.sales <= 42),
+    weight: (ctx) => 44 + Math.max(0, 36 - ctx.visible.cash) + (ctx.downturn ? 18 : 0),
+    label: "降价清一批房源，先把现金打回来",
+    hint: "现金会回来，品牌、老业主和价格预期会受伤。",
+    visibleEffects: { cash: 10, sales: 5, public_trust: -5, government: -1 },
+    hiddenEffects: { price_bubble: 2, buyer_liability: 3, local_isolation: 2 },
+    relationEffects: { buyers: -5, channel: 3 },
+    models: ["inventory-overhang", "cycle-asset-trader"],
+    sourceEpisodes: ["EP114", "EP126"],
+    scaleScore: 1,
+    consequence: "现金回来了，但老业主、竞品和渠道都会重新定义你的价格底线。",
+    lesson: "降价是流动性工具，不是单纯促销；它会改变所有人对资产价值的判断。"
+  },
+  {
+    id: "distress-sell-edge-asset",
+    slot: "pressure",
+    condition: (ctx) => ctx.bestAsset && (ctx.cashPressure || ctx.downturn || ctx.visible.debt >= 58),
+    weight: (ctx) => 40 + Math.max(0, 30 - ctx.visible.cash) * 1.5 + Math.max(0, ctx.visible.debt - 50),
+    label: (ctx) => `卖掉${contextualProjectName(ctx.bestAsset)}一部分，先过现金关`,
+    hint: "能续命，但好资产变少，买方和债权人会压价。",
+    visibleEffects: { cash: 12, debt: -5, land_bank: -8, sales: -2 },
+    hiddenEffects: { exit_preparation: 5, local_isolation: 3, asset_freeze_risk: 2 },
+    relationEffects: { bank_manager: 2, competitors: 3 },
+    models: ["cycle-asset-trader", "commercial-asset-exit"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: -3,
+    consequence: "你把资产换成现金，但市场会知道你开始卖东西续命。",
+    lesson: "有资产不等于有现金，资产变现要看折扣、抵押、债权顺位和地方态度。"
+  },
+  {
+    id: "state-capital-minority",
+    slot: "layout",
+    condition: (ctx) => ctx.visible.government >= 28 && (ctx.cashPressure || ctx.projectPressure || ctx.visible.bank <= 38),
+    weight: (ctx) => 38 + Math.max(0, 36 - ctx.visible.cash) + Math.max(0, ctx.visible.government - 28),
+    label: "让城投熟人小股进来，先借他的牌子",
+    hint: "牌子能救现金和审批，但付款顺位、用章和项目口径会被别人插手。",
+    visibleEffects: { cash: 8, government: 6, bank: 3, delivery: 2 },
+    hiddenEffects: { political_dependency: 8, control_loss: 8, local_isolation: -2 },
+    relationEffects: { state_capital: 8, local_official: 4 },
+    models: ["political-embedded-enterprise", "control-right-risk", "whitelist-financing"],
+    sourceEpisodes: ["EP101", "EP126"],
+    scaleScore: 3,
+    consequence: "城投信用帮你进门，但协议、用章、账户和谁先拿钱都不再完全归你说了算。",
+    lesson: "国资/城投不是免费救命钱，它会改变控制权、资金用途和责任边界。"
+  },
+  {
+    id: "minority-share-old-town",
+    slot: "layout",
+    condition: (ctx) => ctx.visible.cash >= 10 && ctx.visible.government >= 22,
+    weight: (ctx) => 41 + Math.max(0, ctx.visible.government - 25) + Math.max(0, 36 - ctx.visible.cash),
+    label: "做老城旧改的小股东，跟大哥进场",
+    hint: "少花钱能上桌，但账本、拆迁旧账和收益顺位都不在你手里。",
+    visibleEffects: { cash: -5, land_bank: 7, government: 4, sales: 2, bank: 1 },
+    hiddenEffects: { political_dependency: 7, control_loss: 10, gray_risk: 4, legal_exposure: 3, off_balance_debt: 2 },
+    relationEffects: { state_capital: 3, local_official: 4, competitors: -3, underground: 2 },
+    models: ["political-embedded-enterprise", "control-right-risk", "gray-governance", "counterparty-retaliation"],
+    sourceEpisodes: ["EP004", "EP101", "EP126"],
+    scaleScore: 5,
+    consequence: "你用小钱买到入场券，也把自己绑进别人写好的协议和旧账里。",
+    lesson: "小股东不是风险更小，而是控制力更弱；真正危险的是你不知道谁能改账、谁能改章、谁能先拿钱。"
+  },
+  {
+    id: "nominee-partner-sidecar",
+    slot: "layout",
+    condition: (ctx) => ctx.visible.cash >= 12 && (ctx.visible.government >= 26 || ctx.visible.bank >= 28),
+    weight: (ctx) => 29 + Math.max(0, 44 - ctx.visible.cash) + Math.max(0, ctx.relations.local_official || 0) * 0.25,
+    label: "让朋友公司代持一角，挤进联合体",
+    hint: "表面轻，实际会留下代持、分账和反咬风险。",
+    visibleEffects: { cash: -3, land_bank: 6, government: 2, bank: 1 },
+    hiddenEffects: { legal_exposure: 6, data_inflation: 3, political_dependency: 4, boss_safety: -2, control_loss: 5 },
+    relationEffects: { local_official: 2, competitors: -4, state_capital: 1 },
+    models: ["bid-rigging-chain", "related-party-financing", "counterparty-retaliation", "legal-exposure"],
+    sourceEpisodes: ["EP004", "EP101", "EP124"],
+    scaleScore: 4,
+    consequence: "你看起来没有站到最前面，但代持人、协议和分账口径都会变成未来证据。",
+    lesson: "很多地产局不是正式合同输赢，而是谁替谁站台、谁替谁代持、谁在爆雷后先供出谁。"
+  },
+  {
+    id: "clean-invoice-chain",
+    slot: "layout",
+    condition: (ctx) => (ctx.hidden.legal_exposure || 0) >= 22 || (ctx.hidden.data_inflation || 0) >= 18 || (ctx.riskLedger?.audit || 0) >= 22,
+    weight: (ctx) => 34 + (ctx.hidden.legal_exposure || 0) + (ctx.hidden.data_inflation || 0),
+    label: "让财务把发票、商票和流水重新对一遍",
+    hint: "短期现金和面子会难看，长期法律暴露下降。",
+    visibleEffects: { cash: -4, bank: 2, sales: -1 },
+    hiddenEffects: { legal_exposure: -7, data_inflation: -5, boss_safety: 4, financing_cost: -1 },
+    relationEffects: { bank_manager: 2, suppliers: -1 },
+    models: ["audit-revenue-recognition", "legal-exposure"],
+    sourceEpisodes: ["EP004", "EP124"],
+    scaleScore: -1,
+    consequence: "账面不好看了，但未来能被穿透的东西少了一些。",
+    lesson: "地产公司的财务不是记账问题，而是融资、工程、税务和个人安全的共同证据。"
+  },
+  {
+    id: "cut-gray-line",
+    slot: "layout",
+    condition: (ctx) => (ctx.hidden.gray_risk || 0) >= 18 || (ctx.relations?.underground || 0) >= 12 || (game.stakeholderStress?.underground || 0) >= 24,
+    weight: (ctx) => 36 + (ctx.hidden.gray_risk || 0) + (game.stakeholderStress?.underground || 0) * 0.5,
+    label: "切掉土方旧关系，但准备他反咬",
+    hint: "安全线会变干净，旧人被抛弃后可能拿材料换自保。",
+    visibleEffects: { cash: -3, government: -2, delivery: -1 },
+    hiddenEffects: { gray_risk: -8, boss_safety: 4, local_isolation: 3, legal_exposure: 2 },
+    relationEffects: { underground: -10, contractor: -2 },
+    models: ["gray-governance", "counterparty-retaliation", "protective-umbrella-risk"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: -2,
+    consequence: "灰线变浅了，但被切掉的人不会自动沉默。",
+    lesson: "切割不是删除历史，而是把过去的效率工具变成潜在证人。"
+  },
+  {
+    id: "open-site-to-buyers",
+    slot: "layout",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && (ctx.visible.public_trust <= 48 || (ctx.hidden.buyer_liability || 0) >= 24),
+    weight: (ctx) => 34 + Math.max(0, 52 - ctx.visible.public_trust) + (ctx.hidden.buyer_liability || 0) * 0.35,
+    label: "开放工地给业主代表看真实进度",
+    hint: "能稳业主，但真实进度、质量和监管户会被看见。",
+    visibleEffects: { cash: -3, public_trust: 8, delivery: 3, sales: -1 },
+    hiddenEffects: { buyer_liability: -5, delivery_pressure: -3, data_inflation: -2 },
+    relationEffects: { buyers: 8, contractor: -1 },
+    models: ["delivery-first", "feedback-loop"],
+    sourceEpisodes: ["EP114", "EP126"],
+    scaleScore: -1,
+    consequence: "业主看到工地在动，也会更具体地盯住交付承诺。",
+    lesson: "信任不是口径，而是可验证进度；但可验证也意味着不能再随便讲故事。"
+  },
+  {
+    id: "pause-new-land",
+    slot: "layout",
+    condition: (ctx) => ctx.activeProjects.length > 0 && (ctx.projectPressure || ctx.cashPressure || ctx.visible.debt >= 48),
+    weight: (ctx) => 30 + Math.max(0, ctx.visible.debt - 42) + (ctx.projectPressure ? 16 : 0),
+    label: "拒绝新地，先把手里的楼交出去",
+    hint: "规模叙事会变弱，但现金、项目和老板安全更稳。",
+    visibleEffects: { cash: 2, delivery: 4, sales: -2, government: -2 },
+    hiddenEffects: { price_bubble: -3, delivery_pressure: -4, boss_safety: 3, local_isolation: 2 },
+    relationEffects: { buyers: 3, local_official: -2 },
+    models: ["exit-discipline", "delivery-first"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: -4,
+    consequence: "你放慢了故事，也减少了后面同时爆雷的楼栋数量。",
+    lesson: "不上新桌也是决策；有时候活下来比继续讲增长故事重要。"
+  },
+  {
+    id: "weekly-cash-table",
+    slot: "pressure",
+    condition: () => true,
+    weight: () => 12,
+    label: "重排本周付款表，先看谁不能再拖",
+    hint: "不解决根本问题，但能让现金、工程和银行口径更清楚。",
+    visibleEffects: { cash: 1, bank: 1, sales: -1 },
+    hiddenEffects: { financing_cost: -1, data_inflation: -1 },
+    relationEffects: { bank_manager: 1, contractor: -1 },
+    models: ["feedback-loop", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP124"],
+    scaleScore: 0,
+    consequence: "你没有讲大故事，而是把付款、回款和到期日重新排了一遍。",
+    lesson: "现金流管理的第一步不是融资，而是知道哪一笔钱今天必须出去。"
+  },
+  {
+    id: "scout-land-no-deposit",
+    slot: "opportunity",
+    condition: () => true,
+    weight: (ctx) => 13 + (ctx.boom ? 5 : 0),
+    label: "在土拍边上看风向，先不交保证金",
+    hint: "能听到风声、摸清对手，也可能被假消息带偏。",
+    visibleEffects: { government: 1, bank: 1, sales: -1 },
+    hiddenEffects: { price_bubble: -1, local_isolation: 1 },
+    relationEffects: { local_official: 1 },
+    models: ["land-fiscal-pressure", "exit-discipline"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 1,
+    consequence: "你没有马上上杠杆，但把地块、对手、饭局口径和银行态度摸了一遍。",
+    lesson: "不拿地也可以是经营动作；信息和节奏本身就是房地产商的资产。"
+  },
+  {
+    id: "project-priority-meeting",
+    slot: "layout",
+    condition: () => true,
+    weight: () => 12,
+    label: "开项目会，只保最关键楼栋节点",
+    hint: "少做面子工程，把工程、监管户和业主预期对齐。",
+    visibleEffects: { delivery: 2, public_trust: 1, cash: -1 },
+    hiddenEffects: { delivery_pressure: -2, buyer_liability: -1 },
+    relationEffects: { contractor: 1, buyers: 1 },
+    models: ["delivery-first", "feedback-loop"],
+    sourceEpisodes: ["EP126"],
+    scaleScore: 0,
+    consequence: "项目节奏变慢一点，但最危险的楼栋被拉回了桌面。",
+    lesson: "交付不是总进度条，而是每一栋楼、每一笔监管资金和每一批业主的闭环。"
+  },
+  {
+    id: "high-point-exit-office",
+    slot: "special",
+    condition: () => isVoluntaryExitWindowOpen() || isExitWindowOpen(),
+    weight: () => 120,
+    label: "趁还能谈，把资产包卖掉离场",
+    hint: "可能保住现金和人身安全，也可能被解读成转移资产。",
+    visibleEffects: { cash: 12, debt: -8, land_bank: -12, government: -4, sales: -4 },
+    hiddenEffects: { exit_preparation: 12, asset_freeze_risk: 4, boss_safety: 6, local_isolation: 5 },
+    relationEffects: { bank_manager: 2, local_official: -4, state_capital: 2 },
+    models: ["exit-discipline", "cycle-asset-trader", "commercial-asset-exit"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: -8,
+    endingCandidate: "high_point_exit",
+    consequence: "你不再追求最大规模，而是试图在债权人和地方还愿意谈时离开牌桌。",
+    lesson: "高点离场不是逃跑按钮，它要求资产、债务、交付和个人安全都还没有同时破线。"
+  }
+];
+
+function currentScaleReviewIndex() {
+  if ((game.flags.scaleReviewCooldownUntil || 0) >= game.turn) return null;
+  if (game.flags.pendingScaleReviewIndex && game.flags.pendingScaleReviewIndex > game.scaleIndex) {
+    return game.flags.pendingScaleReviewIndex;
+  }
+  return null;
+}
+
+function canOfferScaleReview() {
+  if ((game.flags.scaleReviewCooldownUntil || 0) >= game.turn) return null;
+  const visible = game.state.visible;
+  const hidden = game.state.hidden;
+  const scenario = currentCycleScenario();
+  const minTurnAdjust = { "long-boom": -2, "normal-cycle": -1, "early-tighten": 1, "sudden-freeze": 2, "policy-rescue": 0 }[scenario.id] || 0;
+  const effectiveScaleScore = game.scaleScore + (scenario.scaleBonus || 0) + scaleProgressBonus();
+  const nextIndex = game.scaleIndex + 1;
+  const next = DATA.scales[nextIndex];
+  const minTurn = Math.max(1, (MIN_TURNS_FOR_SCALE[nextIndex] || 999) + minTurnAdjust);
+  if (!next || game.turn < minTurn || effectiveScaleScore < next.minScore) return null;
+  if (!scalePromotionRequirement(nextIndex)) return null;
+  if (
+    visible.cash <= 18 + game.scaleIndex * 2 ||
+    visible.debt >= 82 ||
+    visible.delivery <= 32 ||
+    visible.bank <= 24 ||
+    visible.public_trust <= 26 ||
+    hidden.boss_safety <= 28 ||
+    (hidden.local_isolation || 0) >= 78
+  ) {
+    return null;
+  }
+  return nextIndex;
+}
+
+function scaleReviewActions(nextIndex) {
+  const from = currentScale();
+  const to = DATA.scales[nextIndex];
+  return [
+    {
+      id: "scale-review-accept",
+      slot: "special",
+      label: `接受升桌，坐到「${to.title}」`,
+      hint: "信用和资源会变大，债务、项目责任和被盯上的概率也会变大。",
+      sourceEpisodes: ["EP101", "EP124", "EP126"],
+      modelTags: ["leverage-backfire", "political-embedded-enterprise", "delivery-first"],
+      special: "promote",
+      nextScaleIndex: nextIndex,
+      consequence: `你从「${from.title}」坐到「${to.title}」这张桌。`,
+      lesson: "升桌不是奖励，而是拿更大资源承担更大责任。"
+    },
+    {
+      id: "scale-review-wait",
+      slot: "special",
+      label: "暂缓升桌，先闭合手里的项目",
+      hint: "少拿一些机会，换现金、交付和安全缓冲。",
+      visibleEffects: { cash: 3, delivery: 4, sales: -2, government: -2 },
+      hiddenEffects: { delivery_pressure: -4, boss_safety: 3, price_bubble: -2, local_isolation: 2 },
+      relationEffects: { buyers: 3, local_official: -2 },
+      models: ["exit-discipline", "delivery-first"],
+      sourceEpisodes: ["EP124", "EP126"],
+      scaleScore: -5,
+      consequence: "你没有马上换桌，而是用增长叙事换项目闭环。",
+      lesson: "会拒绝扩张，才说明玩家不是被系统牵着升。"
+    },
+    {
+      id: "scale-review-shrink",
+      slot: "special",
+      label: "主动收缩，卖边缘项目保现金",
+      hint: "牺牲规模和地方期待，换更清楚的现金和安全边界。",
+      visibleEffects: { cash: 10, debt: -7, land_bank: -10, sales: -4, government: -4 },
+      hiddenEffects: { exit_preparation: 8, delivery_pressure: -5, boss_safety: 5, local_isolation: 5 },
+      relationEffects: { bank_manager: 2, local_official: -5 },
+      models: ["exit-discipline", "cycle-asset-trader"],
+      sourceEpisodes: ["EP101", "EP124"],
+      scaleScore: -10,
+      consequence: "你把上升机会换成了资产处置和现金缓冲。",
+      lesson: "主动收缩不是失败，而是承认房地产的现金比规模排名更硬。"
+    }
+  ];
+}
+
+const OFFICE_ACTION_CATEGORIES = [
+  { id: "land", label: "土地", empty: "现在没有合适的地块窗口。" },
+  { id: "finance", label: "资金", empty: "现在没有合适的融资动作。" },
+  { id: "project", label: "项目", empty: "现在没有必须你亲自处理的项目/销售动作。" },
+  { id: "relation", label: "关系", empty: "现在没有合适的关系/安全动作。" },
+  { id: "scale", label: "升桌", empty: "现在还没有升桌评审。" }
+];
+
+const OFFICE_ACTION_CATEGORY_BY_ID = {
+  "next-parcel-deposit": "land",
+  "auction-hall-hard-bid": "land",
+  "auction-teahouse-tip": "land",
+  "scout-land-no-deposit": "land",
+  "collateral-bank-credit": "finance",
+  "bank-rollover-talk": "finance",
+  "weekly-cash-table": "finance",
+  "pay-contractor-node": "project",
+  "fill-escrow-account": "project",
+  "project-priority-meeting": "project",
+  "open-site-to-buyers": "project",
+  "presale-open-early": "project",
+  "channel-cash-push": "project",
+  "discount-cash-collection": "project",
+  "state-capital-minority": "relation",
+  "minority-share-old-town": "relation",
+  "nominee-partner-sidecar": "relation",
+  "clean-invoice-chain": "relation",
+  "cut-gray-line": "relation",
+  "pause-new-land": "relation",
+  "distress-sell-edge-asset": "relation",
+  "high-point-exit-office": "relation",
+  "scale-review-accept": "scale",
+  "scale-review-wait": "scale",
+  "scale-review-shrink": "scale"
+};
+
+function officeActionCategoryFor(def) {
+  return def.category || OFFICE_ACTION_CATEGORY_BY_ID[def.id] || "project";
+}
+
+const AUCTION_DISTRICT_COORDS = {
+  东郊: { x: 78, y: 36 },
+  河湾: { x: 42, y: 58 },
+  新区: { x: 24, y: 24 },
+  老城: { x: 52, y: 42 },
+  南站: { x: 32, y: 78 },
+  北湖: { x: 71, y: 72 },
+  临港: { x: 86, y: 58 },
+  核心区: { x: 52, y: 42 }
+};
+
+const AUCTION_DISTRICT_PREMIUM = {
+  核心区: 1.62,
+  老城: 1.28,
+  南站: 1.12,
+  临港: 1.04,
+  北湖: 0.98,
+  新区: 0.88,
+  东郊: 0.82,
+  河湾: 0.76
+};
+
+const AUCTION_SCALE_PROFILES = [
+  { districts: ["老城", "东郊", "河湾", "新区"], size: [8, 20], price: [8, 18], competition: [16, 38], lots: 4, label: "县城边缘盘", center: "县城中心" },
+  { districts: ["老城", "南站", "东郊", "新区", "河湾"], size: [14, 34], price: [16, 38], competition: [28, 54], lots: 5, label: "县城地块", center: "县城中心" },
+  { districts: ["核心区", "南站", "新区", "北湖", "老城"], size: [26, 58], price: [36, 82], competition: [42, 70], lots: 5, label: "城市扩张盘", center: "市中心" },
+  { districts: ["核心区", "北湖", "临港", "南站", "新区", "老城"], size: [48, 98], price: [76, 158], competition: [58, 84], lots: 6, label: "区域大盘", center: "省域核心" },
+  { districts: ["核心区", "临港", "北湖", "南站", "新区", "老城"], size: [82, 168], price: [138, 292], competition: [68, 94], lots: 6, label: "百强牌桌", center: "都市核心" },
+  { districts: ["核心区", "临港", "北湖", "南站", "新区", "老城", "东郊"], size: [130, 280], price: [260, 560], competition: [78, 99], lots: 7, label: "帝国级资产包", center: "超级核心" }
+];
+
+function auctionProfile() {
+  return AUCTION_SCALE_PROFILES[clamp(game?.scaleIndex || 0, 0, AUCTION_SCALE_PROFILES.length - 1)];
+}
+
+const AUCTION_COMPETITOR_ARCHETYPES = [
+  { id: "local-snake", name: "本地熟人盘", style: "卡保证金，爱找关系压价", bidStyle: "压价", cash: [24, 58], aggression: 0.46, patience: 0.72, relation: 0.76 },
+  { id: "fast-turnover", name: "高周转同行", style: "先抢地，再用预售滚现金", bidStyle: "快抢", cash: [42, 96], aggression: 0.78, patience: 0.45, relation: 0.38 },
+  { id: "state-platform", name: "城投平台", style: "不急，但能等政策和白名单", bidStyle: "慢等", cash: [58, 138], aggression: 0.42, patience: 0.88, relation: 0.86 },
+  { id: "outside-brand", name: "外来大牌", style: "预算厚，喜欢核心地段", bidStyle: "核心", cash: [76, 190], aggression: 0.64, patience: 0.66, relation: 0.44 },
+  { id: "shadow-money", name: "信托资金盘", style: "报价狠，后面资金成本也狠", bidStyle: "硬顶", cash: [54, 158], aggression: 0.86, patience: 0.38, relation: 0.32 },
+  { id: "builder-boss", name: "工程老板", style: "懂施工，怕高地价压利润", bidStyle: "算账", cash: [28, 74], aggression: 0.34, patience: 0.62, relation: 0.52 },
+  { id: "state-builder", name: "国企施工局", style: "成本低，喜欢和地方绑定", bidStyle: "稳拿", cash: [68, 176], aggression: 0.52, patience: 0.82, relation: 0.8 },
+  { id: "channel-speculator", name: "渠道热钱盘", style: "看热度，不看交付", bidStyle: "追涨", cash: [38, 116], aggression: 0.82, patience: 0.32, relation: 0.28 }
+];
+
+function generateAuctionCompetitors() {
+  const count = clamp(2 + Math.floor((game.scaleIndex || 0) / 2) + (Math.random() < 0.45 ? 1 : 0), 2, 6);
+  const pool = [...AUCTION_COMPETITOR_ARCHETYPES]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, count);
+  return pool.map((item, index) => {
+    const cash = randomInRange(item.cash) + game.scaleIndex * randomInRange([10, 22]);
+    return {
+      ...item,
+      id: `${item.id}-${game.turn}-${index}`,
+      cash,
+      budgetBias: clampNumber(0.88 + item.aggression * 0.28 + Math.random() * 0.22, 0.82, 1.35),
+      active: true,
+      lastBid: 0,
+      mood: "观望"
+    };
+  });
+}
+
+function auctionDeskKey(context = officeActionContext()) {
+  return `${game.turn}-${game.scaleIndex}-${game.phaseIndex}-${context.ledger.marketPriceIndex}`;
+}
+
+function generateAuctionLots(context = officeActionContext()) {
+  const profile = auctionProfile();
+  const market = context.ledger.marketPriceIndex || 100;
+  const phaseHeat = isBoomPhase() ? 1.08 : isDownturnPhase() ? 0.88 : 1;
+  const count = Math.max(3, profile.lots + (game.scaleIndex >= 2 && Math.random() < 0.35 ? 1 : 0));
+  return Array.from({ length: count }, (_, index) => {
+    const district = profile.districts[index % profile.districts.length];
+    const coord = AUCTION_DISTRICT_COORDS[district] || { x: 50, y: 50 };
+    const size = randomInRange(profile.size);
+    const basePrice = randomInRange(profile.price);
+    const premium = AUCTION_DISTRICT_PREMIUM[district] || 1;
+    const centerScarcity = ["核心区", "老城"].includes(district) ? 1 + game.scaleIndex * 0.025 : 1;
+    const startPrice = Math.max(5, Math.round((basePrice + size * (0.35 + game.scaleIndex * 0.08)) * premium * centerScarcity * (market / 100) * phaseHeat));
+    const deposit = Math.max(2, Math.round(startPrice * (0.18 + game.scaleIndex * 0.018)));
+    const competition = clamp(randomInRange(profile.competition) + (isBoomPhase() ? 8 : 0) + Math.max(0, 38 - game.state.visible.government) * 0.18 + Math.max(0, premium - 1) * 18, 8, 98);
+    const quality = clamp(randomInRange([38, 74]) + game.scaleIndex * 4 + (district === "核心区" ? 12 : district === "老城" ? 7 : 0), 25, 96);
+    const policyRisk = clamp(randomInRange([12, 42]) + (district === "老城" ? 12 : 0) + (district === "核心区" ? 10 : 0) + game.phaseIndex * 4, 8, 96);
+    const expectedValue = Math.max(startPrice + 6, Math.round(startPrice * (1.18 + quality / 230 + Math.max(0, market - 100) / 420)));
+    const landBankGain = Math.max(6, Math.round(size * 0.42 + quality * 0.08));
+    const spreadX = ((index % 3) - 1) * 4;
+    const spreadY = (Math.floor(index / 3) - 0.5) * 5;
+    const x = clampNumber(coord.x + spreadX + randomInRange([-4, 4]), 9, 91);
+    const y = clampNumber(coord.y + spreadY + randomInRange([-4, 4]), 12, 86);
+    return {
+      id: `L${game.turn}-${game.scaleIndex}-${index + 1}`,
+      title: `${district}${index + 1}号地`,
+      district,
+      tier: profile.label,
+      premium,
+      size,
+      startPrice,
+      deposit,
+      expectedValue,
+      competition,
+      quality,
+      policyRisk,
+      landBankGain,
+      x,
+      y
+    };
+  });
+}
+
+function ensureAuctionDesk(context = officeActionContext()) {
+  const key = auctionDeskKey(context);
+  if (!game.auctionDesk || game.auctionDesk.key !== key || !Array.isArray(game.auctionDesk.lots)) {
+    game.auctionDesk = {
+      key,
+      generatedTurn: game.turn,
+      scaleIndex: game.scaleIndex,
+      phaseIndex: game.phaseIndex,
+      lots: generateAuctionLots(context),
+      competitors: generateAuctionCompetitors()
+    };
+    game.selectedAuctionLotId = null;
+    game.auctionBidState = null;
+  }
+  if (game.selectedAuctionLotId && !game.auctionDesk.lots.some((lot) => lot.id === game.selectedAuctionLotId)) {
+    game.selectedAuctionLotId = null;
+  }
+  return game.auctionDesk;
+}
+
+function selectedAuctionLot(context = officeActionContext()) {
+  const desk = ensureAuctionDesk(context);
+  return desk.lots.find((lot) => lot.id === game.selectedAuctionLotId) || null;
+}
+
+function auctionBidChance(lot, strategy, context = officeActionContext()) {
+  const visible = context.visible;
+  const strategyBase = {
+    disciplined: 0.42,
+    aggressive: 0.62,
+    relationship: 0.56
+  }[strategy] || 0.5;
+  const cashFit = clampNumber((visible.cash - lot.deposit) / Math.max(18, lot.startPrice), -0.24, 0.18);
+  const bankFit = clampNumber((visible.bank - 28) / 170, -0.12, 0.14);
+  const governmentFit = clampNumber((visible.government - 30) / 145, -0.14, 0.18);
+  const competitionDrag = lot.competition / 190;
+  const riskDrag = lot.policyRisk / 280;
+  const relationBonus = strategy === "relationship" ? governmentFit + 0.08 : 0;
+  const aggressiveBonus = strategy === "aggressive" ? 0.08 + bankFit : 0;
+  const disciplinedDrag = strategy === "disciplined" ? 0.08 : 0;
+  return clampNumber(strategyBase + cashFit + bankFit * 0.6 + relationBonus + aggressiveBonus - competitionDrag - riskDrag - disciplinedDrag, 0.08, 0.86);
+}
+
+function auctionBidActionDefs(lot, context = officeActionContext()) {
+  const chanceText = (strategy) => `${Math.round(auctionBidChance(lot, strategy, context) * 100)}%`;
+  return [
+    {
+      id: `land-bid-disciplined-${lot.id}`,
+      category: "land",
+      slot: "opportunity",
+      label: `压线举牌，超过 ${lot.startPrice + Math.round(lot.startPrice * 0.12)} 就撤`,
+      hint: `不硬追，成功率约 ${chanceText("disciplined")}；拿不到地也少留旧账。`,
+      auctionBid: { lotId: lot.id, strategy: "disciplined" },
+      models: ["land-finance-loop", "exit-discipline"],
+      sourceEpisodes: ["EP101", "EP124"],
+      scaleScore: 1
+    },
+    {
+      id: `land-bid-aggressive-${lot.id}`,
+      category: "land",
+      slot: "opportunity",
+      label: "跟到上限，先把地摘下来",
+      hint: `成功率约 ${chanceText("aggressive")}；现金、债务和对手压力会一起上来。`,
+      auctionBid: { lotId: lot.id, strategy: "aggressive" },
+      models: ["land-finance-loop", "leverage-backfire", "competitor-pressure"],
+      sourceEpisodes: ["EP101", "EP124", "EP126"],
+      scaleScore: 3
+    },
+    {
+      id: `land-bid-relationship-${lot.id}`,
+      category: "land",
+      slot: "opportunity",
+      label: "找饭局口探底，联合体低调进场",
+      hint: `成功率约 ${chanceText("relationship")}；关系能帮忙，也会留下人情和倒查线。`,
+      auctionBid: { lotId: lot.id, strategy: "relationship" },
+      models: ["land-fiscal-pressure", "political-embedded-enterprise", "bid-rigging-chain"],
+      sourceEpisodes: ["EP004", "EP101", "EP126"],
+      scaleScore: 2
+    }
+  ];
+}
+
+function auctionRaiseStep(lot, mode = "follow") {
+  const base = Math.max(1, Math.round(lot.startPrice * (mode === "hard" ? 0.09 : mode === "joint" ? 0.06 : 0.045)));
+  return base + randomInRange([0, Math.max(1, Math.round(base * 0.45))]);
+}
+
+function ensureAuctionBidState(lot, context = officeActionContext()) {
+  if (!lot) return null;
+  const desk = ensureAuctionDesk(context);
+  if (!game.auctionBidState || game.auctionBidState.lotId !== lot.id) {
+    const activeRivals = [...(desk.competitors || generateAuctionCompetitors())]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, clamp(2 + Math.floor(game.scaleIndex / 2), 2, 5))
+      .map((rival) => ({ ...rival, active: true, lastBid: 0 }));
+    game.auctionBidState = {
+      lotId: lot.id,
+      round: 1,
+      currentPrice: lot.startPrice,
+      leader: "挂牌价",
+      ourBid: 0,
+      jointPartner: null,
+      message: "第一轮，先看谁愿意把价格抬起来。",
+      rivals: activeRivals
+    };
+  }
+  return game.auctionBidState;
+}
+
+function competitorWantsToRaise(rival, lot, state, nextPrice) {
+  if (!rival.active) return false;
+  const centerLove = ["核心区", "老城"].includes(lot.district) ? 0.12 : 0;
+  const budgetLimit = rival.cash * rival.budgetBias;
+  const pricePain = nextPrice / Math.max(1, lot.startPrice);
+  const willingness =
+    rival.aggression * 0.42 +
+    rival.patience * 0.24 +
+    centerLove +
+    Math.max(0, lot.quality - 50) / 260 -
+    Math.max(0, pricePain - 1.08) * 0.42 -
+    state.round * 0.055;
+  return nextPrice <= budgetLimit && Math.random() < clampNumber(willingness, 0.08, 0.86);
+}
+
+function buildAuctionResultAction(lot, state, won, mode) {
+  const finalPrice = Math.max(lot.startPrice, Math.round(state.currentPrice || lot.startPrice));
+  const overpayRatio = Math.max(0, finalPrice / Math.max(1, lot.startPrice) - 1);
+  const joint = Boolean(state.jointPartner || mode === "joint");
+  const cashShare = joint ? 0.58 : 1;
+  const cashCost = Math.max(1, Math.round((lot.deposit + finalPrice * 0.08 + overpayRatio * lot.startPrice * 0.28) * cashShare));
+  const debtGain = Math.max(0, Math.round(finalPrice * (joint ? 0.27 : 0.38)));
+  const landGain = Math.max(4, Math.round(lot.landBankGain * (joint ? 0.72 : 1)));
+  if (!won) {
+    return {
+      id: `auction-exit-${lot.id}-${Date.now()}`,
+      category: "land",
+      label: `退出${lot.title}竞拍`,
+      hint: "没拿地，但土拍消耗了保证金、注意力和对手判断。",
+      visibleEffects: { cash: -Math.max(1, Math.round(lot.deposit * 0.28)), sales: -1 },
+      hiddenEffects: { local_isolation: mode === "quit" ? 0 : 1, legal_exposure: joint ? 2 : 0 },
+      relationEffects: { competitors: 1, local_official: joint ? 1 : 0 },
+      models: ["land-fiscal-pressure", "exit-discipline"],
+      sourceEpisodes: ["EP101", "EP124"],
+      scaleScore: -1,
+      consequence: `你没有拿下「${lot.title}」。这不是坏事，但市场知道你预算有限，下一次对手会按这个价位试探你。`,
+      lesson: "退出竞拍也是经营动作：不拿地可以保现金，但也会暴露你的预算边界。"
+    };
+  }
+  return {
+    id: `auction-win-${lot.id}-${Date.now()}`,
+    category: "land",
+    label: `摘下${lot.title}`,
+    hint: `成交 ${finalPrice}，溢价 ${Math.round(overpayRatio * 100)}%。`,
+    visibleEffects: {
+      cash: -cashCost,
+      debt: debtGain,
+      land_bank: landGain,
+      government: joint ? 2 : 1,
+      sales: isBoomPhase() ? 2 : 1
+    },
+    hiddenEffects: {
+      financing_cost: Math.max(2, Math.round(finalPrice * 0.07 + overpayRatio * 12)),
+      price_bubble: Math.max(1, Math.round(lot.competition / 22 + overpayRatio * 8)),
+      delivery_pressure: Math.max(2, Math.round(lot.size / 10 + overpayRatio * 10)),
+      buyer_liability: Math.max(1, Math.round(overpayRatio * 7)),
+      political_dependency: joint ? 6 : 1,
+      control_loss: joint ? 8 : 0,
+      legal_exposure: joint ? 4 : 1
+    },
+    relationEffects: {
+      competitors: -Math.max(2, Math.round(lot.competition / 14)),
+      bank_manager: debtGain >= 8 ? 2 : 1,
+      local_official: joint ? 4 : 1,
+      state_capital: joint ? 2 : 0
+    },
+    projectTitle: lot.title,
+    projectBookValue: Math.max(lot.expectedValue, finalPrice + Math.round(lot.size * 0.75)),
+    projectSaleableInventory: Math.max(lot.expectedValue + 8, Math.round(lot.expectedValue * (1.2 + lot.quality / 280))),
+    projectQuality: clamp(lot.quality - Math.round(overpayRatio * 10), 20, 96),
+    projectSaleableTurn: game.turn + Math.max(2, Math.round(2 + lot.size / 40 + game.scaleIndex * 0.4 + overpayRatio * 2)),
+    projectDeliveryTurn: game.turn + Math.max(12, Math.round(13 + lot.size / 7 + game.scaleIndex * 2 + lot.policyRisk / 18 + overpayRatio * 5)),
+    models: ["land-finance-loop", "leverage-backfire", joint ? "political-embedded-enterprise" : "competitor-pressure", joint ? "control-right-risk" : "land-fiscal-pressure"],
+    sourceEpisodes: ["EP101", "EP124", "EP126"],
+    scaleScore: Math.max(1, Math.round(2 + lot.size / 35 - overpayRatio * 2)),
+    consequence: `你以 ${finalPrice} 摘下「${lot.title}」。地进了账本，但溢价会变成后面的利息、售价压力和交付难度。${joint ? `联合体让你少出现金，也让${state.jointPartner?.name || "伙伴"}进入收益和控制权顺位。` : ""}`,
+    lesson: "土拍成交价不是结束，而是项目难度的起点：地价越高，后面越需要房价、融资和预售速度一起配合。"
+  };
+}
+
+function commitAuctionAction(action) {
+  game.availableActions = [...(game.availableActions || []), action];
+  chooseOfficeAction(action.id);
+}
+
+function handleAuctionControl(control) {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  if (control === "quit") {
+    commitAuctionAction(buildAuctionResultAction(lot, state, false, "quit"));
+    return;
+  }
+  if (control === "joint" && !state.jointPartner) {
+    const partner = state.rivals.find((rival) => rival.active && rival.relation >= 0.5) || state.rivals[0];
+    state.jointPartner = partner ? { name: partner.name, id: partner.id } : { name: "临时联合体", id: "joint" };
+    if (partner) {
+      partner.active = false;
+      partner.mood = "合伙";
+    }
+    state.message = `${state.jointPartner.name}愿意一起进场，但要收益顺位和项目口径。`;
+  }
+  const raise = auctionRaiseStep(lot, control);
+  let current = Math.max(state.currentPrice, lot.startPrice);
+  const ourBid = current + raise;
+  state.ourBid = ourBid;
+  current = ourBid;
+  state.leader = "你";
+  const rivalLines = [];
+  state.rivals.forEach((rival) => {
+    const nextPrice = current + auctionRaiseStep(lot, rival.aggression >= 0.72 ? "hard" : "follow");
+    if (competitorWantsToRaise(rival, lot, state, nextPrice)) {
+      rival.lastBid = nextPrice;
+      rival.mood = rival.aggression >= 0.72 ? "抬价" : "跟价";
+      current = nextPrice;
+      state.leader = rival.name;
+      rivalLines.push(`${rival.name}跟到 ${nextPrice}`);
+    } else {
+      rival.active = false;
+      rival.mood = "停手";
+      rivalLines.push(`${rival.name}停手`);
+    }
+  });
+  state.currentPrice = current;
+  state.round += 1;
+  const activeRivals = state.rivals.filter((rival) => rival.active);
+  state.message = rivalLines.join("，") || "这一轮没人继续抬价。";
+  const overpayRatio = current / Math.max(1, lot.startPrice) - 1;
+  if (state.leader === "你" && (!activeRivals.length || state.round >= 4)) {
+    commitAuctionAction(buildAuctionResultAction(lot, state, true, control));
+    return;
+  }
+  if (overpayRatio >= 0.55 || state.round >= 6) {
+    if (state.leader === "你") {
+      commitAuctionAction(buildAuctionResultAction(lot, state, true, control));
+    } else {
+      commitAuctionAction(buildAuctionResultAction(lot, state, false, control));
+    }
+    return;
+  }
+  saveGame();
+  renderOfficeTurn();
+}
+
+function resolveAuctionBidAction(action) {
+  if (!action?.auctionBid) return action;
+  const context = officeActionContext();
+  const desk = ensureAuctionDesk(context);
+  const lot = desk.lots.find((item) => item.id === action.auctionBid.lotId);
+  if (!lot) return action;
+  const strategy = action.auctionBid.strategy;
+  const chance = auctionBidChance(lot, strategy, context);
+  const success = Math.random() < chance;
+  const bidMultiplier = {
+    disciplined: 1.08 + Math.random() * 0.08,
+    aggressive: 1.22 + Math.random() * 0.18,
+    relationship: 1.1 + Math.random() * 0.12
+  }[strategy] || 1.12;
+  const finalPrice = Math.max(lot.startPrice, Math.round(lot.startPrice * bidMultiplier));
+  const cashCost = Math.max(2, Math.round(lot.deposit * (strategy === "aggressive" ? 1.35 : strategy === "relationship" ? 1.08 : 0.92)));
+  const debtGain = Math.max(0, Math.round(finalPrice * (strategy === "disciplined" ? 0.24 : strategy === "relationship" ? 0.32 : 0.42)));
+  const legalRisk = strategy === "relationship" ? 5 : strategy === "aggressive" ? 2 : 1;
+  const competitorHit = strategy === "aggressive" ? -7 : strategy === "relationship" ? -4 : -2;
+  desk.lots = desk.lots.filter((item) => item.id !== lot.id);
+  game.selectedAuctionLotId = null;
+  if (!success) {
+    return {
+      ...action,
+      visibleEffects: { cash: -Math.max(1, Math.round(lot.deposit * 0.45)), government: strategy === "relationship" ? 1 : -1, sales: -1 },
+      hiddenEffects: { legal_exposure: legalRisk, local_isolation: strategy === "disciplined" ? 0 : 2, political_dependency: strategy === "relationship" ? 3 : 0 },
+      relationEffects: { competitors: competitorHit, local_official: strategy === "relationship" ? 2 : -1 },
+      consequence: `你没摘到「${lot.title}」。保证金和饭局成本花出去了，对手也知道你在看这块地。`,
+      lesson: "土拍不是点击购买。没拿到地也会损耗现金、关系和市场位置。"
+    };
+  }
+  return {
+    ...action,
+    visibleEffects: {
+      cash: -cashCost,
+      debt: debtGain,
+      land_bank: lot.landBankGain,
+      government: strategy === "relationship" ? 3 : 1,
+      sales: isBoomPhase() ? 3 : 1
+    },
+    hiddenEffects: {
+      financing_cost: Math.max(2, Math.round(finalPrice * 0.09)),
+      price_bubble: Math.max(1, Math.round(lot.competition / 18)),
+      delivery_pressure: Math.max(2, Math.round(lot.size / 10)),
+      political_dependency: strategy === "relationship" ? 6 : 1,
+      legal_exposure: legalRisk,
+      control_loss: strategy === "relationship" ? 2 : 0
+    },
+    relationEffects: {
+      competitors: competitorHit,
+      bank_manager: strategy === "aggressive" ? 2 : 1,
+      local_official: strategy === "relationship" ? 4 : 1
+    },
+    projectTitle: lot.title,
+    projectBookValue: Math.max(lot.expectedValue, finalPrice + Math.round(lot.size * 0.5)),
+    projectSaleableInventory: Math.max(lot.expectedValue + 8, Math.round(lot.expectedValue * (1.28 + lot.quality / 260))),
+    projectQuality: lot.quality,
+    projectSaleableTurn: game.turn + Math.max(2, Math.round(2 + lot.size / 42 + game.scaleIndex * 0.4)),
+    projectDeliveryTurn: game.turn + Math.max(12, Math.round(13 + lot.size / 7 + game.scaleIndex * 2 + lot.policyRisk / 18)),
+    consequence: `你以约 ${finalPrice} 的口径摘下「${lot.title}」。它现在是资产，也是保证金、融资、施工和对手盯梢的开始。`,
+    lesson: "土地价格越高、地块越大，资产和融资空间会变大，但交付责任、利息和竞争对手压力也会同步变大。"
+  };
+}
+
+function projectMapPosition(project, index = 0) {
+  const title = project?.title || "";
+  const district = Object.keys(AUCTION_DISTRICT_COORDS).find((name) => title.includes(name)) || "东郊";
+  const coord = AUCTION_DISTRICT_COORDS[district] || AUCTION_DISTRICT_COORDS.东郊;
+  const seed = [...String(project?.id || title || index)].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const jitterX = (seed % 13) - 6;
+  const jitterY = (Math.floor(seed / 7) % 11) - 5;
+  return {
+    x: clampNumber(coord.x + jitterX, 9, 91),
+    y: clampNumber(coord.y + jitterY, 12, 86)
+  };
+}
+
+function renderMapBase(content, className = "") {
+  const profile = auctionProfile();
+  const center = AUCTION_DISTRICT_COORDS.核心区;
+  return `
+    <div class="office-map ${className}" aria-label="云江地图">
+      <div class="map-layer map-river"></div>
+      <div class="map-layer map-road map-road-main"></div>
+      <div class="map-layer map-road map-road-cross"></div>
+      <span class="map-golden-core" style="--x:${center.x}%;--y:${center.y}%;">${escapeHtml(profile.center || "中心")}</span>
+      <span class="map-zone map-zone-old">老城</span>
+      <span class="map-zone map-zone-new">新区</span>
+      <span class="map-zone map-zone-east">东郊</span>
+      <span class="map-zone map-zone-south">南站</span>
+      ${content}
+    </div>
+  `;
+}
+
+function materializeOfficeAction(def, context) {
+  const value = (field, fallback) => {
+    const source = def[field];
+    if (typeof source === "function") return source(context);
+    return source === undefined ? fallback : source;
+  };
+  return {
+    id: def.id,
+    slot: def.slot,
+    category: value("category", officeActionCategoryFor(def)),
+    label: value("label", def.id),
+    hint: value("hint", ""),
+    visibleEffects: { ...(value("visibleEffects", {}) || {}) },
+    hiddenEffects: { ...(value("hiddenEffects", {}) || {}) },
+    relationEffects: { ...(value("relationEffects", {}) || {}) },
+    models: [...(value("models", def.modelTags || []) || [])],
+    sourceEpisodes: [...(value("sourceEpisodes", ["EP124"]) || ["EP124"])],
+    scaleScore: value("scaleScore", 0),
+    consequence: value("consequence", ""),
+    lesson: value("lesson", ""),
+    endingCandidate: value("endingCandidate", null),
+    special: value("special", null),
+    nextScaleIndex: value("nextScaleIndex", null),
+    auctionBid: value("auctionBid", null),
+    projectTitle: value("projectTitle", null),
+    projectBookValue: value("projectBookValue", null),
+    projectSaleableInventory: value("projectSaleableInventory", null),
+    projectQuality: value("projectQuality", null),
+    projectSaleableTurn: value("projectSaleableTurn", null),
+    projectDeliveryTurn: value("projectDeliveryTurn", null)
+  };
+}
+
+function buildOfficeActionCatalog() {
+  const context = officeActionContext();
+  if (context.scaleReviewIndex) {
+    const scaleActions = scaleReviewActions(context.scaleReviewIndex).map((action) => materializeOfficeAction({ ...action, category: "scale" }, context));
+    return {
+      context,
+      actions: scaleActions,
+      groups: { scale: scaleActions },
+      selectedCategory: "scale"
+    };
+  }
+
+  const candidates = OFFICE_ACTION_DEFS
+    .filter((def) => !def.condition || def.condition(context))
+    .map((def) => ({ def, weight: Math.max(1, typeof def.weight === "function" ? def.weight(context) : def.weight || 10) }))
+    .sort((a, b) => b.weight - a.weight);
+  const groups = {};
+  candidates.forEach((entry) => {
+    const action = materializeOfficeAction(entry.def, context);
+    action.weight = entry.weight;
+    groups[action.category] = groups[action.category] || [];
+    groups[action.category].push(action);
+  });
+  Object.keys(groups).forEach((category) => {
+    groups[category] = groups[category]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3);
+  });
+  if (game.selectedActionCategory === "land") {
+    const lot = selectedAuctionLot(context);
+    if (lot) {
+      groups.land = auctionBidActionDefs(lot, context).map((action) => materializeOfficeAction(action, context));
+    }
+  }
+  const actions = Object.values(groups).flat();
+  const selected = game.selectedActionCategory === "land"
+    ? "land"
+    : groups[game.selectedActionCategory]?.length
+    ? game.selectedActionCategory
+    : null;
+  return {
+    context,
+    actions,
+    groups,
+    selectedCategory: selected
+  };
+}
+
+function officePressureLine(context = officeActionContext()) {
+  const issues = [];
+  if (context.cashPressure) issues.push("现金");
+  if (context.projectPressure) issues.push(`项目：${projectRiskProfile(context.weakestProject, context.ledger).label}`);
+  if (context.relationPressure) issues.push("关系");
+  if (context.safetyPressure) issues.push("安全");
+  if (context.scaleReviewIndex) issues.push(`升桌机会：${DATA.scales[context.scaleReviewIndex].title}`);
+  if (!issues.length) {
+    if (context.boom) return "市场还在上行，最危险的是把顺风当成本事。";
+    if (context.downturn) return "市场转冷，现金、库存和银行信任开始互相咬合。";
+    return "桌面暂时没有单点爆雷，但资金、项目和关系仍在滚动。";
+  }
+  return `当前最该盯住：${issues.join(" / ")}。`;
+}
+
+function officeActionEvent(action) {
+  return {
+    id: `office-${action.id}`,
+    title: action.label,
+    briefing: action.hint || "",
+    severity: "routine",
+    sourceEpisodes: action.sourceEpisodes || ["EP124"],
+    modelTags: action.models || [],
+    choices: [action]
+  };
+}
+
+function officeAssetBoard(context = officeActionContext()) {
+  const ledger = context.ledger;
+  const funding = context.funding;
+  const projects = [...ledger.projects]
+    .sort((a, b) => {
+      const aActive = a.stage === "delivered" || a.stage === "impaired" ? 0 : 1;
+      const bActive = b.stage === "delivered" || b.stage === "impaired" ? 0 : 1;
+      return bActive - aActive || projectRiskProfile(b, ledger).severity - projectRiskProfile(a, ledger).severity || marketValueForProject(b, ledger) - marketValueForProject(a, ledger);
+    })
+    .slice(0, 5);
+  const cards = projects.map((project) => {
+    const risk = projectRiskProfile(project, ledger);
+    const value = marketValueForProject(project, ledger);
+    const progress = Math.round(project.constructionProgress || 0);
+    const sold = Math.round(project.soldValue || 0);
+    const saleable = Math.round(project.saleableInventory || 0);
+    const freeCash = Math.round(project.freeCashCollected || 0);
+    const escrow = Math.round(project.escrowCash || 0);
+    return `
+      <article class="parcel-card stage-${escapeHtml(project.stage)} risk-${risk.severity}">
+        <div class="parcel-head">
+          <strong>${escapeHtml(project.title)}</strong>
+          <span>${escapeHtml(projectStageName(project.stage))}</span>
+        </div>
+        <div class="parcel-progress" aria-label="工程进度 ${progress}%"><span style="width:${progress}%"></span></div>
+        <div class="parcel-tags">
+          <span>估 ${value}</span>
+          <span>售 ${sold}/${saleable}</span>
+          <span>回 ${freeCash}</span>
+          <span>管 ${escrow}</span>
+        </div>
+        <p>${escapeHtml(risk.label)}｜${escapeHtml(projectCashFlowLine(project, ledger))}</p>
+      </article>
+    `;
+  }).join("");
+  const empty = `
+    <article class="parcel-card empty">
+      <div class="parcel-head">
+        <strong>还没坐上土地桌</strong>
+        <span>空</span>
+      </div>
+      <p>先去土拍大厅看一眼，别急着把保证金扔出去。</p>
+    </article>
+  `;
+  return `
+    <section class="office-board">
+      <div class="office-board-head">
+        <div>
+          <span>手里项目</span>
+          <strong>房价 ${ledger.marketPriceIndex}｜项目 ${ledger.projects.length}｜抵押 ${ledger.collateralValue}</strong>
+        </div>
+        <small>回款 +${Math.round(ledger.lastFreeCash || 0)}｜付息 -${Math.round(funding.lastInterestPaid || 0)}｜展期 ${Math.round(funding.rolloverNeed || 0)}</small>
+      </div>
+      <div class="parcel-grid">${cards || empty}</div>
+    </section>
+  `;
+}
+
+function actionCategoryMeta(categoryId) {
+  return OFFICE_ACTION_CATEGORIES.find((category) => category.id === categoryId) || OFFICE_ACTION_CATEGORIES[0];
+}
+
+function categoryIconSvg(categoryId) {
+  const common = `viewBox="0 0 24 24" aria-hidden="true" focusable="false"`;
+  const icons = {
+    land: `<svg ${common}><path d="M4 17.5 9 5.8l5 4.2 6-2.4-4.8 10.6-5.1-3.9-6.1 3.2Z"/><path d="M9 5.8v8.5M14 10v8.2"/></svg>`,
+    finance: `<svg ${common}><path d="M5 8.2c0-1.4 3.1-2.6 7-2.6s7 1.2 7 2.6-3.1 2.6-7 2.6-7-1.2-7-2.6Z"/><path d="M5 8.2v7.6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V8.2"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>`,
+    project: `<svg ${common}><path d="M5 20V7.5l7-3.5 7 3.5V20"/><path d="M8.2 20v-7h7.6v7"/><path d="M9 8.4h.1M12 8.4h.1M15 8.4h.1"/></svg>`,
+    sales: `<svg ${common}><path d="M5 5.5h14v9H5z"/><path d="M7 18.5h10"/><path d="M9 14.5v4M15 14.5v4"/><path d="M8 9.2h8M8 11.4h5"/></svg>`,
+    relation: `<svg ${common}><path d="M8.3 11.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M15.7 11.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M3.8 19c.5-3 2.1-4.6 4.5-4.6s4 1.6 4.5 4.6"/><path d="M11.2 19c.5-3 2.1-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg>`,
+    safety: `<svg ${common}><path d="M12 4.2 18.5 7v4.8c0 4-2.5 6.8-6.5 8-4-1.2-6.5-4-6.5-8V7L12 4.2Z"/><path d="M12 8.3v5.2M12 16.5h.1"/></svg>`,
+    scale: `<svg ${common}><path d="M5 17.8h14"/><path d="m8 14 4-4 4 4"/><path d="M12 10v8"/><path d="M7 6h10"/></svg>`
+  };
+  return icons[categoryId] || icons.project;
+}
+
+function renderActionDock(groups, selectedCategory, options = {}) {
+  const locked = Boolean(options.locked);
+  return OFFICE_ACTION_CATEGORIES
+    .filter((category) => category.id !== "scale" || groups.scale?.length)
+    .map((category) => {
+      const count = groups[category.id]?.length || 0;
+      const disabled = locked || count <= 0;
+      return `
+        <button
+          class="dock-button ${selectedCategory === category.id ? "active" : ""} ${locked ? "locked" : ""}"
+          type="button"
+          data-category="${escapeHtml(category.id)}"
+          ${disabled ? "disabled" : ""}
+          aria-label="${escapeHtml(category.label)}"
+        >
+          <span class="dock-icon">${categoryIconSvg(category.id)}</span>
+          <small>${escapeHtml(category.label)}</small>
+          ${count ? `<em>${count}</em>` : ""}
+        </button>
+      `;
+    })
+    .join("");
+}
+
+const OFFICE_MAP_NODES = [
+  {
+    category: "land",
+    title: "土拍",
+    district: "新区",
+    x: 22,
+    y: 26
+  },
+  {
+    category: "finance",
+    title: "支行",
+    district: "老城",
+    x: 53,
+    y: 22
+  },
+  {
+    category: "project",
+    title: "项目",
+    district: "东郊",
+    x: 76,
+    y: 40
+  },
+  {
+    category: "relation",
+    title: "关系",
+    district: "老城",
+    x: 58,
+    y: 58
+  }
+];
+
+function renderOfficeMap(groups, selectedCategory) {
+  const nodes = OFFICE_MAP_NODES.map((node) => {
+    const count = node.category === "land" ? ensureAuctionDesk().lots.length : groups[node.category]?.length || 0;
+    const disabled = node.category !== "land" && count <= 0;
+    return `
+      <button
+        class="map-node ${selectedCategory === node.category ? "active" : ""} ${disabled ? "is-closed" : ""}"
+        type="button"
+        data-category="${escapeHtml(node.category)}"
+        style="--x:${node.x}%;--y:${node.y}%;"
+        ${disabled ? "disabled" : ""}
+      >
+        <span class="map-icon">${categoryIconSvg(node.category)}</span>
+        <strong>${escapeHtml(node.title)}</strong>
+        <small>${escapeHtml(node.district)}</small>
+        ${count ? `<em>${count}</em>` : ""}
+      </button>
+    `;
+  }).join("");
+  return renderMapBase(nodes);
+}
+
+function renderLandDesk(context, actions) {
+  const ledger = context.ledger;
+  const desk = ensureAuctionDesk(context);
+  const selectedLot = selectedAuctionLot(context);
+  const bidState = selectedLot ? ensureAuctionBidState(selectedLot, context) : null;
+  const selectedProject = ledger.projects.find((project) => project.id === game.selectedProjectId) || null;
+  const owned = [...ledger.projects].slice(0, 8).map((project, index) => {
+    const pos = projectMapPosition(project, index);
+    const value = marketValueForProject(project, ledger);
+    const active = game.selectedProjectId === project.id;
+    return `
+      <button
+        class="lot-node owned ${active ? "active" : ""}"
+        type="button"
+        data-project-id="${escapeHtml(project.id)}"
+        style="--x:${pos.x}%;--y:${pos.y}%;"
+      >
+        <strong>${escapeHtml(project.title.replace(/第一块地/, "1号地"))}</strong>
+        <small>${escapeHtml(projectStageName(project.stage))}｜估${value}</small>
+      </button>
+    `;
+  }).join("");
+  const auctionLots = desk.lots.map((lot) => {
+    const selected = selectedLot?.id === lot.id;
+    const expensive = lot.deposit > context.visible.cash;
+    return `
+      <button
+        class="lot-node auction ${selected ? "active" : ""} ${expensive ? "expensive" : ""}"
+        type="button"
+        data-lot-id="${escapeHtml(lot.id)}"
+        style="--x:${lot.x}%;--y:${lot.y}%;"
+      >
+        <strong>${escapeHtml(lot.title)}</strong>
+        <small>${lot.size}亩｜起${lot.startPrice}｜竞${lot.competition}</small>
+      </button>
+    `;
+  }).join("");
+  const map = renderMapBase(`
+    <span class="map-legend owned">自有</span>
+    <span class="map-legend auction">土拍</span>
+    ${owned}
+    ${auctionLots}
+  `, "land-market-map");
+  const selectedDetail = selectedProject
+    ? `
+      <div class="auction-detail owned">
+        <strong>${escapeHtml(selectedProject.title)}</strong>
+        <span>${escapeHtml(projectStageName(selectedProject.stage))}｜估 ${marketValueForProject(selectedProject, ledger)}｜${escapeHtml(projectCashFlowLine(selectedProject, ledger))}</span>
+      </div>
+    `
+    : selectedLot
+    ? `
+      <div class="auction-detail">
+        <strong>${escapeHtml(selectedLot.title)}</strong>
+        <span>${selectedLot.size}亩｜起拍 ${selectedLot.startPrice}｜保证金 ${selectedLot.deposit}｜竞争 ${selectedLot.competition}｜${escapeHtml(selectedLot.district)}${selectedLot.premium >= 1.15 ? "黄金带" : "外围价"}</span>
+      </div>
+    `
+    : `
+      <div class="auction-detail muted">
+        <strong>先点一块土拍地</strong>
+        <span>${auctionProfile().label}｜你的现金 ${context.visible.cash}｜房价 ${ledger.marketPriceIndex}</span>
+      </div>
+    `;
+  const bidPanel = selectedLot && bidState
+    ? `
+      <div class="auction-bid-panel">
+        <div class="auction-bid-row">
+          <span>第 ${bidState.round} 轮</span>
+          <strong>现价 ${Math.round(bidState.currentPrice)}</strong>
+          <em>现金 ${context.visible.cash}</em>
+          <em>领跑 ${escapeHtml(bidState.leader)}</em>
+        </div>
+        <div class="auction-rivals">
+          ${(bidState.rivals || []).map((rival) => `
+            <span class="${rival.active ? "" : "out"} ${bidState.jointPartner?.id === rival.id ? "partner" : ""}">
+              <strong>${escapeHtml(rival.name)}</strong>
+              <em>${escapeHtml(rival.bidStyle || rival.mood || "竞价")}</em>
+              <small>${bidState.jointPartner?.id === rival.id ? "联合" : rival.active ? `余${Math.round(rival.cash)}｜报${Math.round(rival.lastBid || 0) || "-"}` : escapeHtml(rival.mood || "停手")}</small>
+            </span>
+          `).join("")}
+        </div>
+        <p>${escapeHtml(bidState.message || "竞拍刚开始。")}</p>
+        <div class="auction-controls">
+          <button type="button" data-auction-control="follow">跟一手</button>
+          <button type="button" data-auction-control="hard">硬顶</button>
+          <button type="button" data-auction-control="joint">${bidState.jointPartner ? "联合体已进" : "找联合体"}</button>
+          <button type="button" data-auction-control="quit">退出</button>
+        </div>
+      </div>
+    `
+    : "";
+  return `${map}${selectedDetail}${bidPanel}`;
+}
+
+function renderCategoryActions(groups, selectedCategory) {
+  const map = renderOfficeMap(groups, selectedCategory);
+  if (!selectedCategory) {
+    return `
+      ${map}
+    `;
+  }
+  const meta = actionCategoryMeta(selectedCategory);
+  const actions = groups[selectedCategory] || [];
+  if (selectedCategory === "land") {
+    return renderLandDesk(officeActionContext(), actions);
+  }
+  if (!actions.length) {
+    return `
+      ${map}
+      <div class="office-empty-panel">
+        <strong>${escapeHtml(meta.empty)}</strong>
+      </div>
+    `;
+  }
+  return `
+    ${map}
+    <div class="office-actions">
+      <div class="office-actions-head">
+        <strong>${escapeHtml(meta.label)}</strong>
+        <span>${actions.length} 个窗口</span>
+      </div>
+      ${actions
+        .map((action, index) => `
+          <button class="choice office-action" type="button" data-action="${escapeHtml(action.id)}" data-index="${index}">
+            <span>${escapeHtml(action.label)}</span>
+            <small>${escapeHtml(action.hint || "")}</small>
+          </button>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
+function selectOfficeCategory(categoryId) {
+  if (!game || game.ended) return;
+  if (game.currentEvent && game.currentEvent !== OFFICE_EVENT_ID) {
+    const event = eventById(game.currentEvent);
+    if (event?.severity === "crisis") return;
+    enqueueEvent(event.id, 1, "你先处理老板桌面的事，这个突发事件被压到下一轮，相关人会更不耐烦。");
+    const severityCost = { routine: 1, pressure: 2, high: 3 }[event?.severity] || 1;
+    bumpRisk("liquidity", severityCost);
+    bumpRisk("official", event?.modelTags?.includes("government-permit-power") ? severityCost + 1 : severityCost * 0.5);
+    game.currentEvent = OFFICE_EVENT_ID;
+  }
+  game.selectedActionCategory = categoryId;
+  if (categoryId !== "land") {
+    game.selectedAuctionLotId = null;
+    game.auctionBidState = null;
+  }
+  if (categoryId === "land") ensureAuctionDesk();
+  saveGame();
+  renderOfficeTurn();
+}
+
+function renderOfficeTurn() {
+  const context = officeActionContext();
+  const catalog = buildOfficeActionCatalog();
+  const actions = catalog.actions;
+  const groups = catalog.groups;
+  const selectedCategory = catalog.selectedCategory;
+  game.availableActions = actions;
+  game.currentEvent = OFFICE_EVENT_ID;
+  show(elements.eventScreen);
+  elements.eventScreen.classList.add("office-mode");
+  renderShell();
+  elements.eventPhase.textContent = currentPhase().title;
+  elements.eventSource.textContent = context.scaleReviewIndex ? "规模评审" : "经营回合";
+  const feedbackItems = game.activeFeedback || [];
+  elements.feedbackList.innerHTML = feedbackItems.length
+    ? feedbackItems.map((feedback) => `
+        <div class="feedback-item ${escapeHtml(feedback.tone)}">
+          <strong>${escapeHtml(feedback.speaker)}</strong>
+          <p>${escapeHtml(feedback.text)}</p>
+        </div>
+      `).join("")
+    : "";
+  elements.feedbackList.classList.toggle("hidden", !feedbackItems.length);
+  elements.eventTitle.textContent = context.scaleReviewIndex
+    ? `有人请你坐到「${DATA.scales[context.scaleReviewIndex].title}」这张桌`
+    : "老板桌面";
+  elements.eventBriefing.textContent = officePressureLine(context);
+  elements.assetBoard.innerHTML = "";
+  elements.assetBoard.classList.add("hidden");
+  elements.actionDock.innerHTML = "";
+  elements.actionDock.classList.add("hidden");
+  elements.actorList.innerHTML = "";
+  elements.actorList.classList.add("hidden");
+  elements.choiceList.classList.add("office-action-panel");
+  elements.choiceList.innerHTML = renderCategoryActions(groups, selectedCategory);
+  elements.choiceList.querySelectorAll(".map-node[data-category]").forEach((button) => {
+    button.addEventListener("click", () => selectOfficeCategory(button.dataset.category));
+  });
+  elements.choiceList.querySelectorAll(".lot-node[data-lot-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (game.selectedAuctionLotId !== button.dataset.lotId) {
+        game.auctionBidState = null;
+      }
+      game.selectedAuctionLotId = button.dataset.lotId;
+      game.selectedProjectId = null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll(".lot-node[data-project-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      game.selectedProjectId = button.dataset.projectId;
+      game.selectedAuctionLotId = null;
+      game.auctionBidState = null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-auction-control]").forEach((button) => {
+    button.addEventListener("click", () => handleAuctionControl(button.dataset.auctionControl));
+  });
+  const hideActionHint = () => {
+    elements.actorList.innerHTML = "";
+    elements.actorList.classList.add("hidden");
+    elements.choiceList.querySelectorAll("button").forEach((item) => item.classList.remove("selected"));
+  };
+  elements.choiceList.querySelectorAll("button.office-action").forEach((button) => {
+    button.addEventListener("mouseenter", () => {
+      button.classList.add("selected");
+    });
+    button.addEventListener("focus", () => {
+      button.classList.add("selected");
+    });
+    button.addEventListener("mouseleave", hideActionHint);
+    button.addEventListener("blur", hideActionHint);
+    button.addEventListener("click", () => chooseOfficeAction(button.dataset.action));
+  });
+  elements.mobileProjectBrief.innerHTML = "";
+  elements.mobileProjectBrief.classList.add("hidden");
+  elements.episodeCard.innerHTML = `
+    <strong>节目线索</strong>
+    <p>${actions.flatMap((action) => action.sourceEpisodes || []).filter((value, index, list) => list.indexOf(value) === index).map(escapeHtml).join(" / ") || "随经营动作更新"}</p>
+  `;
+  elements.modelCard.innerHTML = `
+    <strong>机制标签</strong>
+    <p>${actions.flatMap((action) => action.models || []).filter((value, index, list) => list.indexOf(value) === index).map((tag) => escapeHtml(modelName(tag))).join(" / ") || "经营动作池"}</p>
+  `;
+  elements.learningCard.innerHTML = `
+    <strong>桌面关系</strong>
+    <p>${escapeHtml(contactDeskSummary())}</p>
+    <small>${escapeHtml(competitionTacticLine())}</small>
+  `;
+}
+
+function applyScalePromotionAction(action) {
+  const oldScale = game.scaleIndex;
+  const nextIndex = action.nextScaleIndex || currentScaleReviewIndex();
+  if (!nextIndex || !DATA.scales[nextIndex]) return false;
+  game.scaleIndex = nextIndex;
+  game.flags.pendingScaleReviewIndex = null;
+  applyScaleCreditBuffer(oldScale, game.scaleIndex);
+  game.state.visible.debt = clamp(game.state.visible.debt + 3 + game.scaleIndex * 2);
+  game.state.hidden.delivery_pressure = clamp(game.state.hidden.delivery_pressure + 4 + game.scaleIndex);
+  game.state.hidden.political_dependency = clamp(game.state.hidden.political_dependency + 2);
+  game.notice = "";
+  game.scaleTransition = buildScaleTransition("up", DATA.scales[oldScale], currentScale());
+  game.scaleHistory.push({
+    turn: game.turn,
+    title: `主动升桌：${DATA.scales[oldScale].title} -> ${currentScale().title}`,
+    text: `${currentScale().standard} 新桌面：${contactDeskSummary()}。`
+  });
+  return true;
+}
+
+function chooseOfficeAction(actionId) {
+  if (!game || game.ended) return;
+  const selectedAction = (game.availableActions || []).find((item) => item.id === actionId);
+  if (!selectedAction) return;
+  const action = resolveAuctionBidAction(selectedAction);
+  const event = officeActionEvent(action);
+  const beforeCash = game.state.visible.cash;
+  game.notice = "";
+  game.selectedActionCategory = null;
+
+  if (action.special === "promote") {
+    applyScalePromotionAction(action);
+    game.history.push({
+      turn: game.turn,
+      phase: currentPhase().title,
+      scale: currentScale().title,
+      eventId: event.id,
+      eventTitle: "规模评审",
+      choiceId: action.id,
+      choiceLabel: action.label,
+      consequence: action.consequence,
+      missed: "",
+      lesson: action.lesson,
+      sourceEpisodes: action.sourceEpisodes,
+      models: action.models,
+      risk: 0,
+      ledger: { ...game.riskLedger }
+    });
+    saveGame();
+    renderScaleTransition();
+    return;
+  }
+  if (action.id === "scale-review-wait") {
+    game.flags.scaleReviewCooldownUntil = game.turn + 6;
+    game.flags.pendingScaleReviewIndex = null;
+  }
+  if (action.id === "scale-review-shrink") {
+    game.flags.scaleReviewCooldownUntil = game.turn + 10;
+    game.flags.pendingScaleReviewIndex = null;
+  }
+
+  applyChoice(event, action);
+  scheduleChoiceFeedback(event, action);
+  scheduleConsequences(event, action);
+  rollWorldPressure(event, action);
+  advanceProjectLedger(event, action);
+  advanceFundingLedger(event, action);
+  scheduleProjectLedgerActions(event, action);
+  updateCriticalCounters();
+  tryDistressAssetSale(event, action);
+  preserveFreshFinancingCash(event, action, beforeCash);
+  updateCriticalCounters();
+
+  const hardFailure = classifyHardFailure(action);
+  if (hardFailure) {
+    if (deferBoomEnding(hardFailure, event, action) || deferScaleGraceEnding(hardFailure, event, action) || deferProjectEndingToActionWindow(hardFailure, event, action)) {
+      advanceToNextEvent(event.id, event, action);
+      return;
+    }
+    endGame(hardFailure, event, action);
+    return;
+  }
+
+  const risk = computeBlowupRisk(event, action);
+  if (Math.random() < risk) {
+    const ending = classifyProbableFailure(event, action);
+    if (ending) {
+      if (deferBoomEnding(ending, event, action) || deferScaleGraceEnding(ending, event, action) || deferProjectEndingToActionWindow(ending, event, action)) {
+        advanceToNextEvent(event.id, event, action);
+        return;
+      }
+      endGame(ending, event, action);
+      return;
+    }
+    recordIncident(event, action, "risk", "这一步没有立刻炸，但它把一条暗线推到了后面。");
+  }
+
+  if (action.endingCandidate && canTakeEnding(action.endingCandidate)) {
+    endGame(action.endingCandidate, event, action);
+    return;
+  }
+
+  updateScale();
+  updatePhase();
+  advanceToNextEvent(event.id, event, action);
 }
 
 function choose(choiceId) {
@@ -2259,6 +3915,7 @@ function choose(choiceId) {
   const choice = event.choices.find((item) => item.id === choiceId);
   if (!choice) return;
 
+  const beforeCash = game.state.visible.cash;
   game.notice = "";
   applyChoice(event, choice);
   scheduleChoiceFeedback(event, choice);
@@ -2269,6 +3926,8 @@ function choose(choiceId) {
   scheduleProjectLedgerActions(event, choice);
   updateCriticalCounters();
   tryDistressAssetSale(event, choice);
+  preserveFreshFinancingCash(event, choice, beforeCash);
+  updateCriticalCounters();
 
   const hardFailure = classifyHardFailure(choice);
   if (hardFailure) {
@@ -2334,11 +3993,14 @@ function advanceToNextEvent(previousEventId, event = null, choice = null) {
     return;
   }
   game.turn += 1;
-  game.currentEvent = selectNextEvent(previousEventId);
-  if (!game.currentEvent) {
-    endGame(classifyLongRunEnding(), event, choice);
-    return;
-  }
+  const previousWasIncident = event && !String(event.id || "").startsWith("office-") && event.id !== OFFICE_EVENT_ID;
+  const mustContinueCrisis = previousWasIncident && (
+    computeSystemPressure() >= 0.78 ||
+    projectDeliveryFailureReady() ||
+    game.state.visible.cash <= 6 ||
+    (game.state.hidden.boss_safety || 0) <= 18
+  );
+  game.currentEvent = previousWasIncident && !mustContinueCrisis ? OFFICE_EVENT_ID : rollTurnIncident(previousEventId) || OFFICE_EVENT_ID;
   activateFeedbackForTurn();
   saveGame();
   renderEvent();
@@ -2382,6 +4044,9 @@ function applyChoice(event, choice) {
     risk,
     ledger: { ...game.riskLedger }
   });
+  if (event.repeatable) {
+    game.flags[`repeat_${event.id}_turn`] = game.turn;
+  }
 }
 
 function choiceBalance(choice) {
@@ -2406,6 +4071,8 @@ function applyChoiceTradeoff(event, choice) {
   const relation = {};
   const models = new Set([...(event.modelTags || []), ...(choice.models || [])]);
   const notes = [];
+  const choiceText = `${event.title || ""} ${choice.id || ""} ${choice.label || ""} ${choice.consequence || ""}`;
+  const explicitCashCost = /付|补|赔|罚|买|结清|和解|保证金|整改|审价|调解|补税|补偿|降价|换总包|换队伍|重开|检测|公开台账/.test(choiceText);
 
   if (balance.bad === 0) {
     if (models.has("delivery-first")) {
@@ -2424,10 +4091,15 @@ function applyChoiceTradeoff(event, choice) {
       hidden.local_isolation = 1;
       notes.push("它不是完美答案：你让事实更清楚，也让短期数据和内部面子更难看。");
     } else {
-      visible.cash = -1;
       visible.government = -1;
       hidden.local_isolation = 1;
-      notes.push("它不是完美答案：你换来干净边界，也少了一点现金、关系和腾挪空间。");
+      if (explicitCashCost) {
+        visible.cash = -1;
+        notes.push("它不是完美答案：这一步有具体现金成本，也会消耗关系和腾挪空间。");
+      } else {
+        visible.bank = -1;
+        notes.push("它不是完美答案：你换来干净边界，但融资口径、审批关系和后续解释会变冷。");
+      }
     }
   }
 
@@ -2573,6 +4245,7 @@ function recordFundingFromChoice(event, choice, models, visibleEffects, hiddenEf
   const borrowedAmount = Math.max(0, metrics.cashIn + metrics.debtGain * 0.85);
 
   if (metrics.loanLike && borrowedAmount > 0) {
+    ledger.freshPrincipalThisTurn = Math.round((ledger.freshPrincipalThisTurn || 0) + borrowedAmount);
     if (channel === "commercialPaper") {
       const paper = addFunding("commercialPaper", borrowedAmount * 0.7);
       const supplier = addFunding("supplierCredit", borrowedAmount * 0.35);
@@ -2632,6 +4305,41 @@ function recordFundingFromChoice(event, choice, models, visibleEffects, hiddenEf
     ledger.lastWarning = notes.at(-1) || ledger.lastWarning;
   }
   return notes.join(" ");
+}
+
+function isCashFinancingChoice(event, choice) {
+  const cashIn = Math.max(0, choice?.visibleEffects?.cash || 0);
+  if (cashIn <= 0) return false;
+  const models = new Set([...(event?.modelTags || []), ...(choice?.models || [])]);
+  const debtGain = Math.max(0, choice?.visibleEffects?.debt || 0);
+  const text = `${event?.id || ""} ${event?.title || ""} ${choice?.id || ""} ${choice?.label || ""}`;
+  return (
+    debtGain > 0 ||
+    models.has("leverage-backfire") ||
+    models.has("balance-sheet-maintenance") ||
+    models.has("whitelist-financing") ||
+    models.has("shadow-banking-loop") ||
+    /贷款|授信|融资|续贷|展期|银行|抵押|信托|非标|专项借款/.test(text)
+  );
+}
+
+function preserveFreshFinancingCash(event, choice, beforeCash) {
+  if (!isCashFinancingChoice(event, choice)) return;
+  const cashIn = Math.max(0, choice.visibleEffects?.cash || 0);
+  const minCash = clamp(beforeCash + Math.max(1, Math.round(cashIn * 0.6)));
+  if (game.state.visible.cash >= minCash) return;
+  const restored = minCash - game.state.visible.cash;
+  game.state.visible.cash = minCash;
+  const ledger = ensureFundingLedger();
+  ledger.lastWarning = `融资先到账 ${restored}，利息和展期压力留到后续回合消化。`;
+  game.incidentLog.push({
+    turn: game.turn,
+    type: "funding-arrival",
+    eventId: event.id,
+    eventTitle: "融资到账修正",
+    choiceLabel: choice.label,
+    text: `这类动作应该先让现金回来，再让利息、抵押和展期在后面反噬。本轮保留融资到账效果 +${restored}。`
+  });
 }
 
 function applyFundingCycle(event, choice, tradeoff) {
@@ -2788,7 +4496,7 @@ function projectLiquidityProfile(project, ledger = refreshProjectLedger()) {
   const hidden = game.state.hidden;
   const relation = game.relations || {};
   const priceFomo = clampNumber(((ledger.marketPriceIndex || 100) - 104) / 55, 0, 0.34);
-  const boomFomo = ["early-expansion", "shelter-reform-boom", "high-turnover"].includes(currentPhase().id) ? 0.08 : 0;
+  const boomFomo = ["early-expansion", "shelter-reform-boom", "high-turnover"].includes(currentPhase().id) ? 0.12 : 0;
   const marketingPush = clampNumber((visible.sales - 32) / 145 + Math.max(0, (relation.channel || 0) - 18) / 280, -0.08, 0.22);
   const brandTrust = clampNumber((visible.delivery - 38) / 220 + (visible.public_trust - 38) / 240, -0.16, 0.18);
   const mortgageSupport = clampNumber((visible.bank - 30) / 260, -0.08, 0.18);
@@ -2815,7 +4523,16 @@ function projectLiquidityProfile(project, ledger = refreshProjectLedger()) {
     0,
     0.72
   );
-  const expectedCollection = Math.min(remaining, Math.max(0, Math.round(remaining * marketHeat * (0.2 + priceFomo * 0.22))));
+  const boomTurnover = isBoomPhase() ? 0.46 : 0;
+  const normalTurnover = currentPhase().id === "three-red-lines" ? 0.28 : 0.22;
+  const downturnDrag = isDownturnPhase() ? 0.08 + game.phaseIndex * 0.012 : 0;
+  const priceMomentum = clampNumber(((ledger.marketPriceIndex || 100) - 100) / 170, -0.08, 0.18);
+  const collectionRate = clampNumber(
+    0.03 + marketHeat * (boomTurnover || normalTurnover) + priceFomo * 0.16 + priceMomentum - downturnDrag,
+    isBoomPhase() ? 0.06 : 0.015,
+    isBoomPhase() ? 0.28 : 0.18
+  );
+  const expectedCollection = Math.min(remaining, Math.max(0, Math.round(remaining * collectionRate)));
   const escrowRatio = clampNumber(0.24 + game.phaseIndex * 0.035 + Math.max(0, hidden.presale_misuse - 28) / 260, 0.22, 0.58);
   const freeRatio = clampNumber(0.5 - game.phaseIndex * 0.03 + Math.max(0, visible.bank - 45) / 420 - Math.max(0, hidden.presale_misuse - 34) / 360, 0.24, 0.52);
   const expectedEscrow = expectedCollection ? Math.max(1, Math.round(expectedCollection * escrowRatio)) : 0;
@@ -2878,7 +4595,11 @@ function projectShortStatus(project, ledger = refreshProjectLedger()) {
 function projectCanCashLabel(project, ledger = refreshProjectLedger()) {
   const risk = projectRiskProfile(project, ledger);
   const lifecycle = projectLifecycleLabel(project, ledger);
-  if (project.stage === "delivered") return risk.severity >= 3 ? "维修尾巴" : "归档";
+  if (project.stage === "delivered") {
+    if ((project.lastCashTurn || 0) >= game.turn - 1 && (project.lastFreeCash || 0) > 0) return "尾款到账";
+    if (projectLiquidityProfile(project, ledger).expectedFreeCash > 0) return "尾盘回款";
+    return risk.severity >= 3 ? "维修尾巴" : "归档";
+  }
   if (lifecycle === "逾期未交" || lifecycle === "逾期待交付") return lifecycle;
   if (risk.severity >= 4) return "拖后腿";
   if ((project.lastCashTurn || 0) >= game.turn - 1 && (project.lastFreeCash || 0) > 0) return "刚到账";
@@ -2912,6 +4633,7 @@ function advanceProjectConstruction(project, notes) {
   );
   const stagePush = project.stage === "delivery" ? 1.4 : 0.6;
   const overduePush = game.turn >= (project.deliveryTurn || 999) - 2 ? 1.2 : 0;
+  const cyclePush = isBoomPhase() ? 0.9 : isDownturnPhase() ? -0.55 : 0;
   const localPush = clampNumber((visible.government - 34) / 30 - Math.max(0, hidden.local_isolation - 28) / 24, -1.4, 1.8);
   const gracePush = (game.flags.scaleGraceUntilTurn || 0) >= game.turn ? 0.8 : 0;
   const pressureDrag =
@@ -2925,6 +4647,7 @@ function advanceProjectConstruction(project, notes) {
       visible.delivery / 42 +
       escrowDraw * 0.72 +
       cashSupport * 0.72 +
+      cyclePush +
       localPush +
       gracePush +
       Math.random() * 2.2 -
@@ -2974,9 +4697,13 @@ function maybeDeliverProject(project, notes) {
     const marginRelease = Math.max(1, Math.round(sold * 0.08 + Math.max(0, (project.quality || 50) - 42) * sold * 0.002));
     const grossSettlement = escrowRelease + marginRelease;
     const fundingLedger = refreshFundingLedger();
-    const debtPayRatio = clampNumber(0.24 + visible.debt / 260 + (fundingLedger.fundingStress || 0) / 520, 0.24, 0.68);
-    const debtPay = Math.min(grossSettlement, Math.max(0, Math.round(grossSettlement * debtPayRatio)));
-    const settlementCash = Math.max(0, grossSettlement - debtPay);
+    const debtPayRatio = clampNumber(0.18 + visible.debt / 330 + (fundingLedger.fundingStress || 0) / 650 - soldRatio * 0.04, 0.15, 0.58);
+    let debtPay = Math.min(grossSettlement, Math.max(0, Math.round(grossSettlement * debtPayRatio)));
+    let settlementCash = Math.max(0, grossSettlement - debtPay);
+    if (grossSettlement >= 2 && settlementCash === 0 && (fundingLedger.fundingStress || 0) < 110) {
+      settlementCash = 1;
+      debtPay = Math.max(0, debtPay - 1);
+    }
     project.escrowCash = Math.max(0, Math.round((project.escrowCash || 0) - escrowRelease));
     project.deliverySettlementCash = Math.round((project.deliverySettlementCash || 0) + settlementCash);
     project.deliveryDebtPaid = Math.round((project.deliveryDebtPaid || 0) + debtPay);
@@ -3089,14 +4816,24 @@ function projectFailureContribution(project, ledger = refreshProjectLedger()) {
   return `${project.title}：${projectStageName(project.stage)}，估值${value}，已售${sold}，总回款${collected}，进自由现金${freeCash}，监管${escrow}，进度${progress}%。${lastCash} 最大问题是${risk.label}：${risk.detail}`;
 }
 
+function projectActiveProjects(ledger = refreshProjectLedger()) {
+  return ledger.projects.filter((project) => {
+    if (project.stage !== "delivered") return true;
+    const remaining = Math.max(0, (project.saleableInventory || 0) - (project.soldValue || 0));
+    if (remaining > 0 && (projectLiquidityProfile(project, ledger).expectedFreeCash > 0 || (project.lastCashTurn || 0) >= game.turn - 1)) return true;
+    return projectRiskProfile(project, ledger).severity >= 3;
+  });
+}
+
+function hasProjectPipelineGap(ledger = refreshProjectLedger()) {
+  const deliveredCount = ledger.projects.filter((project) => project.stage === "delivered").length;
+  return deliveredCount > 0 && projectActiveProjects(ledger).length === 0;
+}
+
 function projectLedgerBrief() {
   if (!game) return "";
   const ledger = refreshProjectLedger();
-  const activeProjects = ledger.projects.filter((project) => {
-    if (project.stage !== "delivered") return true;
-    const risk = projectRiskProfile(project, ledger);
-    return risk.severity >= 3;
-  });
+  const activeProjects = projectActiveProjects(ledger);
   const deliveredCount = ledger.projects.filter((project) => project.stage === "delivered").length;
   const projects = [...activeProjects]
     .sort((a, b) => marketValueForProject(b, ledger) - marketValueForProject(a, ledger))
@@ -3111,15 +4848,48 @@ function projectLedgerBrief() {
       </li>
     `;
   }).join("");
-  const fundingLedger = refreshFundingLedger();
   const empty = deliveredCount
-    ? `<li><span>暂无待处理项目</span><strong>已交付 ${deliveredCount}</strong><small>已交付项目先归档；没有新地时，现金变化主要看付息 ${Math.round(fundingLedger.lastInterestPaid || 0)}、展期缺口 ${Math.round(fundingLedger.lastUnpaidDue || 0)} 和尾盘回款。</small></li>`
+    ? `<li><span>项目已闭合</span><strong>已交付 ${deliveredCount}</strong><small>下一桌：拿地、还债、代建或退出。现金不会停在空账本里。</small></li>`
     : `<li><span>还没形成项目</span><strong>空</strong><small>先拿地，才有资产账本。</small></li>`;
   return `
     <div class="asset-brief">
       <div class="asset-brief-head">
         <span>项目账本</span>
         <strong>房价 ${ledger.marketPriceIndex}</strong>
+      </div>
+      <ol>${rows || empty}</ol>
+    </div>
+  `;
+}
+
+function mobileProjectLedgerBrief() {
+  if (!game) return "";
+  const ledger = refreshProjectLedger();
+  const fundingLedger = refreshFundingLedger();
+  const activeProjects = projectActiveProjects(ledger);
+  const deliveredCount = ledger.projects.filter((project) => project.stage === "delivered").length;
+  const projects = [...activeProjects]
+    .sort((a, b) => projectRiskProfile(b, ledger).severity - projectRiskProfile(a, ledger).severity || marketValueForProject(b, ledger) - marketValueForProject(a, ledger))
+    .slice(0, 3);
+  const rows = projects.map((project) => {
+    const progress = Math.round(project.constructionProgress || 0);
+    const value = marketValueForProject(project, ledger);
+    return `
+      <li>
+        <span>${escapeHtml(project.title)}</span>
+        <strong class="project-pill risk-${projectRiskProfile(project, ledger).severity}">${escapeHtml(projectCanCashLabel(project, ledger))}</strong>
+        <small>${escapeHtml(projectCashFlowLine(project, ledger))}｜${escapeHtml(projectStageName(project.stage))}${progress ? ` ${progress}%` : ""}｜估值 ${value}</small>
+      </li>
+    `;
+  }).join("");
+  const empty = deliveredCount
+    ? `<li><span>项目闭合</span><strong>已交付 ${deliveredCount}</strong><small>下一桌在路上｜付息-${Math.round(fundingLedger.lastInterestPaid || 0)}</small></li>`
+    : `<li><span>等第一块地</span><strong>空</strong><small>先坐上土地和融资桌。</small></li>`;
+  return `
+    <div class="asset-brief mobile-asset-brief">
+      <div class="asset-brief-head">
+        <span>楼盘</span>
+        <strong>房价 ${ledger.marketPriceIndex}｜回款+${Math.round(ledger.lastFreeCash || 0)}｜付息-${Math.round(fundingLedger.lastInterestPaid || 0)}</strong>
       </div>
       <ol>${rows || empty}</ol>
     </div>
@@ -3140,15 +4910,15 @@ function applyProjectLedgerFromChoice(event, choice) {
   const deliveryGain = Math.max(0, visibleEffects.delivery || 0);
 
   if (landGain >= 4 && (cashOut > 0 || debtGain > 0 || models.has("land-finance-loop"))) {
-    const bookValue = Math.max(8, Math.round(landGain * 1.8 + cashOut * 0.9 + debtGain * 0.65 + game.scaleIndex * 5));
-    const saleableInventory = Math.max(bookValue + 6, Math.round(bookValue * (1.32 + Math.random() * 0.34)));
+    const bookValue = Math.max(8, Math.round(choice.projectBookValue || (landGain * 1.8 + cashOut * 0.9 + debtGain * 0.65 + game.scaleIndex * 5)));
+    const saleableInventory = Math.max(bookValue + 6, Math.round(choice.projectSaleableInventory || (bookValue * (1.32 + Math.random() * 0.34))));
     const project = normalizeProjectRecord({
       id: `P${game.turn}-${ledger.projects.length + 1}`,
-      title: projectTitleFromEvent(event, ledger),
+      title: choice.projectTitle || projectTitleFromEvent(event, ledger),
       sourceEventId: event.id,
       acquiredTurn: game.turn,
-      saleableTurn: game.turn + 2 + Math.floor(Math.random() * 3),
-      deliveryTurn: game.turn + 12 + Math.floor(Math.random() * 7),
+      saleableTurn: choice.projectSaleableTurn || (game.turn + 2 + Math.floor(Math.random() * 3)),
+      deliveryTurn: choice.projectDeliveryTurn || (game.turn + 14 + Math.floor(Math.random() * 8)),
       stage: "land",
       bookValue,
       saleableInventory,
@@ -3156,7 +4926,7 @@ function applyProjectLedgerFromChoice(event, choice) {
       cashCollected: 0,
       escrowCash: 0,
       constructionProgress: clamp(12 + deliveryGain * 3 + game.scaleIndex * 2, 8, 48),
-      quality: clamp(game.state.visible.delivery + Math.max(0, hiddenEffects.delivery_pressure || 0) * -0.2, 20, 82)
+      quality: clamp(choice.projectQuality || (game.state.visible.delivery + Math.max(0, hiddenEffects.delivery_pressure || 0) * -0.2), 20, 96)
     });
     ledger.projects.push(project);
     bumpRisk("inventory", Math.max(2, landGain * 0.55));
@@ -3521,15 +5291,20 @@ function advanceProjectLedger(event, choice) {
       }
     }
 
-    if (project.stage === "presale" || project.stage === "delivery") {
+    if (project.stage === "presale" || project.stage === "delivery" || project.stage === "delivered") {
       const liquidity = projectLiquidityProfile(project, ledger);
       const collection = Math.min(liquidity.remaining, Math.max(0, Math.round(liquidity.expectedCollection * (0.72 + Math.random() * 0.58))));
       if (collection > 0) {
-        const escrowRatio = clampNumber(0.24 + game.phaseIndex * 0.035 + Math.max(0, hidden.presale_misuse - 28) / 260, 0.22, 0.58);
-        const freeRatio = clampNumber(0.46 - game.phaseIndex * 0.025 + Math.max(0, visible.bank - 45) / 420, 0.24, 0.48);
+        const postDeliverySale = project.stage === "delivered";
+        const escrowRatio = postDeliverySale
+          ? clampNumber(0.04 + game.phaseIndex * 0.01, 0.04, 0.18)
+          : clampNumber(0.24 + game.phaseIndex * 0.035 + Math.max(0, hidden.presale_misuse - 28) / 260, 0.22, 0.58);
+        const freeRatio = postDeliverySale
+          ? clampNumber(0.62 - game.phaseIndex * 0.025 + Math.max(0, visible.bank - 45) / 500, 0.42, 0.72)
+          : clampNumber(0.46 - game.phaseIndex * 0.025 + Math.max(0, visible.bank - 45) / 420, 0.24, 0.48);
         const escrow = Math.min(collection, Math.max(1, Math.round(collection * escrowRatio)));
         const freeCash = Math.max(0, Math.min(collection - escrow, Math.round(collection * freeRatio)));
-        const liability = Math.max(1, collection - freeCash - Math.round(escrow * 0.45));
+        const liability = postDeliverySale ? 0 : Math.max(1, collection - freeCash - Math.round(escrow * 0.45));
         project.soldValue += collection;
         project.cashCollected = (project.cashCollected || 0) + collection;
         project.freeCashCollected = (project.freeCashCollected || 0) + freeCash;
@@ -3542,14 +5317,19 @@ function advanceProjectLedger(event, choice) {
         ledger.lastCollection += collection;
         ledger.lastFreeCash += freeCash;
         ledger.lastEscrowAdded += escrow;
-        addFunding("presaleCash", collection);
+        addFunding(postDeliverySale ? "tailSaleCash" : "presaleCash", collection);
         addFunding("mortgageFlow", freeCash);
         visible.cash = clamp(visible.cash + freeCash);
-        hidden.buyer_liability = clamp((hidden.buyer_liability || 0) + Math.max(1, Math.round(liability * 0.08)));
-        hidden.delivery_pressure = clamp(hidden.delivery_pressure + Math.max(0, Math.round(collection * 0.035) - Math.round((project.constructionProgress || 0) / 60)));
-        bumpRisk("presale", Math.max(1, liability * 0.12));
-        bumpRisk("delivery", Math.max(1, Math.max(0, 58 - (project.constructionProgress || 0)) * 0.05));
-        notes.push(`「${project.title}」回款 ${collection}，其中 ${freeCash} 变成可用现金，其余变成交付和监管责任。`);
+        if (postDeliverySale) {
+          hidden.buyer_liability = clamp((hidden.buyer_liability || 0) - Math.max(0, Math.round(collection * 0.02)));
+          notes.push(`「${project.title}」交付后尾盘回款 ${collection}，其中 ${freeCash} 进入现金池，${escrow} 留作维修/结算保证。`);
+        } else {
+          hidden.buyer_liability = clamp((hidden.buyer_liability || 0) + Math.max(1, Math.round(liability * 0.08)));
+          hidden.delivery_pressure = clamp(hidden.delivery_pressure + Math.max(0, Math.round(collection * 0.035) - Math.round((project.constructionProgress || 0) / 60)));
+          bumpRisk("presale", Math.max(1, liability * 0.12));
+          bumpRisk("delivery", Math.max(1, Math.max(0, 58 - (project.constructionProgress || 0)) * 0.05));
+          notes.push(`「${project.title}」回款 ${collection}，其中 ${freeCash} 变成可用现金，其余变成交付和监管责任。`);
+        }
       }
       advanceProjectConstruction(project, notes);
       maybeDeliverProject(project, notes);
@@ -3602,7 +5382,8 @@ function advanceFundingLedger(event, choice) {
   const visible = game.state.visible;
   const hidden = game.state.hidden;
   const notes = [];
-  const rawCarry = fundingCarryRaw(ledger);
+  const freshPrincipal = Math.max(0, ledger.freshPrincipalThisTurn || 0);
+  const rawCarry = Math.max(0, fundingCarryRaw(ledger) - freshPrincipal * 0.018);
   let maturityPressure = 0;
   ledger.lastInterestPaid = 0;
   ledger.lastUnpaidDue = 0;
@@ -3647,7 +5428,10 @@ function advanceFundingLedger(event, choice) {
   ledger.interestDue = due;
 
   if (due > 0) {
-    const cashBuffer = game.phaseIndex >= 4 ? 8 : 6;
+    const freshCashIn = Math.max(0, choice?.visibleEffects?.cash || 0);
+    const cashBuffer = isCashFinancingChoice(event, choice)
+      ? Math.max(game.phaseIndex >= 4 ? 8 : 6, 6 + Math.round(freshCashIn * 0.85))
+      : game.phaseIndex >= 4 ? 8 : 6;
     const payable = Math.max(0, visible.cash - cashBuffer);
     const paid = Math.min(due, payable);
     if (paid > 0) {
@@ -3672,6 +5456,8 @@ function advanceFundingLedger(event, choice) {
       notes.push(`本轮付息/到期缺口 ${unpaid} 被滚成展期压力。`);
     }
   }
+
+  ledger.freshPrincipalThisTurn = 0;
 
   refreshFundingLedger();
   if (ledger.collateralBorrowingRoom < -8 && visible.debt >= 38) {
@@ -4224,7 +6010,7 @@ function enqueueDarkLineWindow(key, threshold, ids, reason, feedback = null, del
   if (game.flags[flag]) return;
   const candidates = ids
     .map((id) => eventById(id))
-    .filter((event) => event && !game.seenEvents[event.id] && !game.eventQueue.some((entry) => entry.id === event.id) && canFireEvent(event));
+    .filter((event) => event && !eventAlreadyConsumed(event) && !game.eventQueue.some((entry) => entry.id === event.id) && canFireEvent(event));
   if (!candidates.length) return;
   const picked = pickWeighted(candidates, eventBankWeight);
   enqueueEvent(picked.id, delay, reason);
@@ -4407,7 +6193,7 @@ function enqueueProjectAction(ids, delay, reason) {
   }
   const candidates = ids
     .map((id) => eventById(id))
-    .filter((event) => event && ids.includes(event.id) && !game.seenEvents[event.id] && canFireEvent(event));
+    .filter((event) => event && ids.includes(event.id) && !eventAlreadyConsumed(event) && canFireEvent(event));
   if (!candidates.length) return "";
   const picked = pickWeighted(candidates, eventBankWeight);
   enqueueEvent(picked.id, delay, reason);
@@ -4419,6 +6205,8 @@ function enqueueProjectAction(ids, delay, reason) {
 function scheduleProjectLedgerActions(event, choice) {
   const ledger = refreshProjectLedger();
   if (!ledger.projects.length) return;
+  scheduleRollingExpansionDesk(event, choice, ledger);
+  schedulePostDeliveryDesk(event, choice, ledger);
   const severeProjects = ledger.projects
     .map((project) => ({ project, risk: projectRiskProfile(project, ledger) }))
     .filter(({ risk }) => risk.severity >= 4)
@@ -4439,6 +6227,75 @@ function scheduleProjectLedgerActions(event, choice) {
     recordIncident(event, choice, "project-action", reason);
     scheduled += 1;
   });
+}
+
+function scheduleRollingExpansionDesk(event, choice, ledger = refreshProjectLedger()) {
+  if (!isBoomPhase() && currentPhase().id !== "three-red-lines") return;
+  if ((game.flags.lastRollingExpansionTurn || 0) >= game.turn - 3) return;
+  const visible = game.state.visible;
+  const hidden = game.state.hidden;
+  const activeProjects = ledger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired");
+  if (!activeProjects.length) return;
+  const saleableProjects = activeProjects.filter((project) => ["presale", "delivery"].includes(project.stage));
+  const projectCapacity = Math.max(1, 2 + game.scaleIndex);
+  if (activeProjects.length >= projectCapacity + 2 && computeSystemPressure() >= 0.48) return;
+  const hasMomentum =
+    saleableProjects.length > 0 ||
+    (ledger.lastFreeCash || 0) >= 2 ||
+    (ledger.marketPriceIndex || 100) >= 108 ||
+    visible.sales >= 42 ||
+    (ledger.collateralValue || 0) >= Math.max(18, visible.debt * 0.42);
+  const hasDesk = visible.cash >= 20 && visible.bank >= 26 && visible.government >= 24 && hidden.boss_safety >= 34;
+  if (!hasMomentum || !hasDesk) return;
+  const chance = clampNumber(
+    0.22 +
+      (isBoomPhase() ? 0.2 : 0) +
+      Math.max(0, (ledger.marketPriceIndex || 100) - 104) / 140 +
+      Math.min(0.18, (ledger.lastFreeCash || 0) / 35) +
+      Math.max(0, visible.bank - 34) / 220 +
+      Math.max(0, visible.government - 32) / 230 -
+      Math.max(0, activeProjects.length - projectCapacity) * 0.08 -
+      computeSystemPressure() * 0.16,
+    0.08,
+    0.72
+  );
+  if (Math.random() > chance) return;
+  const ids = [
+    "presale-cash-next-parcel",
+    "bank-credit-after-presale",
+    "split-team-next-site",
+    "land-parcel-bundle",
+    "second-city-temptation",
+    visible.cash <= 34 ? "land-auction-bond-borrowed" : "land-auction-enclosure",
+    visible.bank >= 36 ? "trust-money-arrives" : "branch-president-rotation",
+    currentPhase().id === "high-turnover" ? "high-turnover-meeting" : "county-finance-road-advance"
+  ];
+  const candidates = ids
+    .map((id) => eventById(id))
+    .filter((item) => item && !eventAlreadyConsumed(item) && !game.eventQueue.some((entry) => entry.id === item.id) && canFireEvent(item));
+  if (!candidates.length) return;
+  const picked = pickWeighted(candidates, (item) => eventBankWeight(item) + 24);
+  enqueueEvent(picked.id, Math.floor(Math.random() * 2), "项目还没交付，但预售回款、抵押空间和地方入口已经把你推到下一块地。");
+  const queued = game.eventQueue.find((entry) => entry.id === picked.id);
+  if (queued) queued.priority = "growth";
+  game.flags.lastRollingExpansionTurn = game.turn;
+  recordIncident(event, choice, "rolling-expansion", "现有项目还在开发，但现金、回款、银行和政府关系已经开始制造下一轮拿地机会。");
+}
+
+function schedulePostDeliveryDesk(event, choice, ledger = refreshProjectLedger()) {
+  if (!hasProjectPipelineGap(ledger)) return;
+  if (event?.id === "post-delivery-capital-desk") return;
+  if ((game.flags.lastPostDeliveryDeskTurn || 0) >= game.turn - 4) return;
+  const ids = isVoluntaryExitWindowOpen()
+    ? ["post-delivery-capital-desk", "voluntary-exit-window", "land-auction-bond-borrowed", "distressed-project-bargain"]
+    : ["post-delivery-capital-desk", "land-auction-bond-borrowed", "land-auction-enclosure", "distressed-project-bargain"];
+  const before = game.eventQueue.length;
+  enqueueOneOf(ids, 0, "已交付项目归档后，现金不能停在空账本里：银行、地方和你自己都会要求决定下一桌。");
+  if (game.eventQueue.length > before) {
+    game.flags.lastPostDeliveryDeskTurn = game.turn;
+    enqueueFeedback("bank", "wary", 4, 1, "项目交了是好事，但授信要看下一年的货值、现金用途和还债计划。");
+    recordIncident(event, choice, "project-gap", "项目已交付归档，下一步必须在拿地、还债、代建和退出之间重新配置资本。");
+  }
 }
 
 function scheduleLedgerConsequences() {
@@ -4514,7 +6371,7 @@ function rollWorldPressure(event, choice) {
       visible: { cash: -2, bank: -3, debt: 1 },
       hidden: { financing_cost: 4 },
       ledger: { interest: 8, debt: 4, liquidity: 3, audit: 2 },
-      events: ["interest-rollover-friday", "bank-branch-risk-meeting", "bank-loan-withdrawal", "trust-covenant-review", "redline-reporting-night"],
+      events: ["interest-rollover-friday", "bank-branch-risk-meeting", "bank-loan-withdrawal", "trust-covenant-review", "redline-reporting-night", "branch-president-rotation"],
       weight: 12 + ledger.interest + Math.max(0, 60 - visible.bank) + visible.debt * 0.35
     },
     {
@@ -4524,7 +6381,7 @@ function rollWorldPressure(event, choice) {
       visible: { public_trust: -4, sales: -2 },
       hidden: { buyer_liability: 5, delivery_pressure: 4 },
       ledger: { presale: 9, delivery: 5, buyers: 4, legal: 2 },
-      events: ["escrow-gap-screenshot", "homebuyer-lawyer-letter", "homebuyers-mortgage-letter", "mortgage-boycott-letter", "stoppage-video", "escrow-ledger-audit"],
+      events: ["escrow-gap-screenshot", "homebuyer-lawyer-letter", "homebuyers-mortgage-letter", "mortgage-boycott-letter", "stoppage-video", "escrow-ledger-audit", "owner-livestream-site-check", "delivered-wall-crack-repair"],
       weight: 10 + ledger.presale + hidden.buyer_liability + Math.max(0, 48 - visible.delivery)
     },
     {
@@ -4534,7 +6391,7 @@ function rollWorldPressure(event, choice) {
       visible: { cash: -4, delivery: -2 },
       hidden: { delivery_pressure: 3, legal_exposure: 1 },
       ledger: { liquidity: 8, delivery: 4, debt: 2 },
-      events: ["wage-account-deadline", "supplier-blockade", "supplier-bill-discount", "cashflow-week", "commercial-paper-maturity"],
+      events: ["wage-account-deadline", "supplier-blockade", "supplier-bill-discount", "cashflow-week", "commercial-paper-maturity", "steel-cement-price-jump"],
       weight: 12 + ledger.liquidity + Math.max(0, 45 - visible.cash)
     },
     {
@@ -4544,7 +6401,7 @@ function rollWorldPressure(event, choice) {
       visible: { delivery: -2, bank: -1 },
       hidden: { legal_exposure: 3, delivery_pressure: 3 },
       ledger: { counterparty: 9, legal: 4, delivery: 3 },
-      events: ["contractor-evidence-package", "supplier-bill-discount", "court-freeze-account"],
+      events: ["contractor-evidence-package", "supplier-bill-discount", "court-freeze-account", "tower-crane-near-miss"],
       weight: 9 + (game.stakeholderStress?.contractor || 0) + (game.stakeholderStress?.suppliers || 0) + hidden.delivery_pressure
     },
     {
@@ -4554,7 +6411,7 @@ function rollWorldPressure(event, choice) {
       visible: { government: -2, bank: -1 },
       hidden: { local_isolation: 3, political_dependency: 2 },
       ledger: { official: 7, legal: 2 },
-      events: ["local-task-force-night", "local-protection-gap", "state-capital-takeover", "white-list-application-review", "urban-village-renewal-package"],
+      events: ["local-task-force-night", "local-protection-gap", "state-capital-takeover", "white-list-application-review", "urban-village-renewal-package", "county-finance-road-advance", "dust-control-stop-work"],
       weight: 9 + ledger.official + Math.abs(visible.government - 50) * 0.35 + hidden.local_isolation
     },
     {
@@ -4564,7 +6421,7 @@ function rollWorldPressure(event, choice) {
       visible: { cash: -2, government: -1 },
       hidden: { gray_risk: 4, legal_exposure: 3, boss_safety: -2 },
       ledger: { blackmail: 10, gray: 6, legal: 3 },
-      events: ["earthwork-boss-blackmail", "public-security-tea", "protective-umbrella-transfer"],
+      events: ["earthwork-boss-blackmail", "public-security-tea", "protective-umbrella-transfer", "old-demolition-video-resurfaces"],
       weight: 8 + (game.stakeholderStress?.underground || 0) * 1.4 + hidden.gray_risk
     },
     {
@@ -4574,7 +6431,7 @@ function rollWorldPressure(event, choice) {
       visible: { sales: -2, government: -2 },
       hidden: { local_isolation: 3, data_inflation: 2 },
       ledger: { competitor: 9, government: 4, audit: 3 },
-      events: competitionProfile().events,
+      events: [...competitionProfile().events, "rival-drone-video", "state-owned-rival-bid-support"],
       weight: 8 + competitionPressureScore() * 0.75 + Math.max(0, 42 - visible.government)
     },
     {
@@ -4594,7 +6451,7 @@ function rollWorldPressure(event, choice) {
       visible: { sales: -5, cash: -1, public_trust: -2 },
       hidden: { price_bubble: 2, buyer_liability: 2 },
       ledger: { inventory: 8, buyers: 4, presale: 3 },
-      events: ["discount-sale-stampede", "lower-tier-inventory-night", "channel-refund-fight", "old-owners-price-cut", "state-purchase-inventory"],
+      events: ["discount-sale-stampede", "lower-tier-inventory-night", "channel-refund-fight", "old-owners-price-cut", "state-purchase-inventory", "channel-rebate-blackmail", "media-real-estate-account"],
       weight: 10 + ledger.inventory + Math.max(0, 44 - visible.sales) + hidden.price_bubble
     },
     {
@@ -4604,7 +6461,7 @@ function rollWorldPressure(event, choice) {
       visible: { bank: -2 },
       hidden: { data_inflation: 4, financing_cost: 2 },
       ledger: { audit: 8, interest: 3, debt: 2 },
-      events: ["sales-data-meeting", "redline-reporting-night", "annual-audit-revenue-cut", "share-pledge-margin-call"],
+      events: ["sales-data-meeting", "redline-reporting-night", "annual-audit-revenue-cut", "share-pledge-margin-call", "tax-invoice-chain", "escrow-bank-weekend-freeze"],
       weight: 7 + ledger.audit + hidden.data_inflation + visible.debt * 0.2
     }
   ];
@@ -4624,15 +6481,29 @@ function rollWorldPressure(event, choice) {
   });
 }
 
+function canRepeatEvent(event) {
+  if (!event?.repeatable) return false;
+  const lastTurn = game.flags[`repeat_${event.id}_turn`] ?? -999;
+  return game.turn - lastTurn >= (event.repeatCooldown || 8);
+}
+
+function eventAlreadyConsumed(event) {
+  return Boolean(game.seenEvents[event.id]) && !canRepeatEvent(event);
+}
+
 function enqueueOneOf(ids, delay = 2, reason = "") {
-  const candidates = ids.filter((id) => DATA.events.some((event) => event.id === id) && !game.seenEvents[id] && !game.eventQueue.some((entry) => entry.id === id));
+  const candidates = ids.filter((id) => {
+    const event = eventById(id);
+    return event && !eventAlreadyConsumed(event) && !game.eventQueue.some((entry) => entry.id === id);
+  });
   if (!candidates.length) return;
   enqueueEvent(pick(candidates), delay + Math.floor(Math.random() * 3), reason);
 }
 
 function enqueueEvent(id, delay = 2, reason = "") {
-  if (!DATA.events.some((event) => event.id === id)) return;
-  if (game.seenEvents[id]) return;
+  const event = eventById(id);
+  if (!event) return;
+  if (eventAlreadyConsumed(event)) return;
   if (game.eventQueue.some((entry) => entry.id === id)) return;
   game.eventQueue.push({
     id,
@@ -4992,59 +6863,96 @@ function continueScaleTransition() {
 
 function scaleProgressBonus() {
   const ledger = refreshProjectLedger();
+  const visible = game.state.visible;
+  const activeProjects = ledger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired").length;
   const delivered = ledger.projects.filter((project) => project.stage === "delivered").length;
   const deliveryPipeline = ledger.projects.filter((project) => ["presale", "delivery"].includes(project.stage) && (project.constructionProgress || 0) >= 70).length;
-  const assetBase = Math.min(5, Math.round((ledger.marketAssetValue || 0) / 42));
-  const cashBase = Math.min(4, Math.round((ledger.freeCashCollected || 0) / 22));
-  return delivered * 3 + deliveryPipeline + assetBase + cashBase;
+  const saleableProjects = ledger.projects.filter((project) => ["presale", "delivery"].includes(project.stage)).length;
+  const assetBase = Math.min(18, Math.round(((ledger.marketAssetValue || 0) + (ledger.collateralValue || 0) * 0.35) / 24));
+  const cashBase = Math.min(16, Math.round(((ledger.freeCashCollected || 0) + Math.max(0, visible.cash - 20) * 0.65) / 13));
+  const relationBase = Math.min(12, Math.round((visible.bank + visible.government + visible.sales) / 24));
+  return activeProjects * 3 + delivered * 4 + deliveryPipeline * 2 + saleableProjects * 2 + assetBase + cashBase + relationBase;
+}
+
+function scalePromotionRequirement(nextIndex) {
+  const visible = game.state.visible;
+  const hidden = game.state.hidden;
+  const ledger = refreshProjectLedger();
+  const fundingLedger = refreshFundingLedger();
+  const openProjects = ledger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired");
+  const delivered = ledger.projects.filter((project) => project.stage === "delivered").length;
+  const nearDelivery = ledger.projects.filter((project) => ["presale", "delivery"].includes(project.stage) && (project.constructionProgress || 0) >= 68).length;
+  const saleableProjects = ledger.projects.filter((project) => ["presale", "delivery"].includes(project.stage)).length;
+  const assetBase = (ledger.marketAssetValue || 0) + (ledger.collateralValue || 0) * 0.32;
+  const rules = {
+    1: { open: 1, asset: 12, cash: 14, bank: 18, government: 18, delivery: 24, debtMax: 88, fundingStressMax: 92, legalMax: 80 },
+    2: { open: 2, saleable: 1, asset: 42, cash: 18, bank: 24, government: 22, delivery: 30, debtMax: 84, fundingStressMax: 86, legalMax: 72 },
+    3: { open: 3, saleable: 2, closedOrNear: 1, asset: 88, cash: 24, bank: 32, government: 30, delivery: 36, debtMax: 80, fundingStressMax: 78, legalMax: 62 },
+    4: { open: 4, saleable: 3, closedOrNear: 2, asset: 165, freeCash: 30, cash: 30, bank: 42, government: 36, delivery: 44, publicTrust: 38, debtMax: 76, fundingStressMax: 68, legalMax: 52 },
+    5: { open: 5, saleable: 4, closedOrNear: 3, asset: 310, freeCash: 65, cash: 44, bank: 52, government: 44, delivery: 52, publicTrust: 46, debtMax: 68, fundingStressMax: 56, legalMax: 42, bossSafety: 58 }
+  };
+  const rule = rules[nextIndex];
+  if (!rule) return false;
+  const openEnough = openProjects.length + (nextIndex <= 2 ? nearDelivery : 0) >= rule.open;
+  const closedOrNear = delivered + nearDelivery;
+  return (
+    openEnough &&
+    saleableProjects >= (rule.saleable || 0) &&
+    closedOrNear >= (rule.closedOrNear || 0) &&
+    assetBase >= rule.asset &&
+    (ledger.freeCashCollected || 0) >= (rule.freeCash || 0) &&
+    visible.cash >= rule.cash &&
+    visible.bank >= rule.bank &&
+    visible.government >= rule.government &&
+    visible.delivery >= rule.delivery &&
+    visible.public_trust >= (rule.publicTrust || 0) &&
+    visible.debt <= rule.debtMax &&
+    (fundingLedger.fundingStress || 0) <= rule.fundingStressMax &&
+    (hidden.legal_exposure || 0) <= rule.legalMax &&
+    (hidden.boss_safety || 0) >= (rule.bossSafety || 0)
+  );
 }
 
 function updateScale() {
-  const oldScale = game.scaleIndex;
   const visible = game.state.visible;
   const hidden = game.state.hidden;
-  const scenario = currentCycleScenario();
-  const minTurnAdjust = { "long-boom": -2, "normal-cycle": -1, "early-tighten": 1, "sudden-freeze": 2, "policy-rescue": 0 }[scenario.id] || 0;
-  const effectiveScaleScore = game.scaleScore + (scenario.scaleBonus || 0) + scaleProgressBonus();
-  const next = DATA.scales[game.scaleIndex + 1];
-  const minTurn = Math.max(1, (MIN_TURNS_FOR_SCALE[game.scaleIndex + 1] || 999) + minTurnAdjust);
+  const reviewIndex = canOfferScaleReview();
 
-  if (
-    next &&
-    game.turn >= minTurn &&
-    effectiveScaleScore >= next.minScore &&
-    visible.cash > 18 + game.scaleIndex * 2 &&
-    visible.debt < 82 &&
-    visible.delivery > 32 &&
-    visible.bank > 24 &&
-    visible.public_trust > 26 &&
-    hidden.boss_safety > 28 &&
-    (hidden.local_isolation || 0) < 78
-  ) {
-    game.scaleIndex += 1;
-    applyScaleCreditBuffer(oldScale, game.scaleIndex);
-    game.state.visible.debt = clamp(game.state.visible.debt + 3 + game.scaleIndex * 2);
-    game.state.hidden.delivery_pressure = clamp(game.state.hidden.delivery_pressure + 4 + game.scaleIndex);
-    game.state.hidden.political_dependency = clamp(game.state.hidden.political_dependency + 2);
-    game.notice = "";
-    game.scaleTransition = buildScaleTransition("up", DATA.scales[oldScale], currentScale());
+  if (reviewIndex && reviewIndex > game.scaleIndex) {
+    if (game.flags.pendingScaleReviewIndex !== reviewIndex) {
+      game.flags.pendingScaleReviewIndex = reviewIndex;
+      game.scaleHistory.push({
+        turn: game.turn,
+        title: `出现升桌机会：${DATA.scales[reviewIndex].title}`,
+        text: "这不是自动晋级。下一次老板桌面会让你选择：接受升桌、暂缓扩张，或者主动收缩。"
+      });
+      enqueueFeedback("bank", "positive", 4, 1, "你现在有连续项目、抵押物和回款故事，银行愿意重新看额度。但新额度不是免费午餐。");
+    }
+    return;
+  }
+
+  if (game.flags.pendingScaleReviewIndex && (
+    visible.cash <= 12 ||
+    visible.debt >= 88 ||
+    visible.delivery <= 24 ||
+    hidden.boss_safety <= 22 ||
+    (hidden.legal_exposure || 0) >= 82
+  )) {
     game.scaleHistory.push({
       turn: game.turn,
-      title: `升阶：${DATA.scales[oldScale].title} -> ${currentScale().title}`,
-      text: `${currentScale().standard} 新桌面：${contactDeskSummary()}。`
+      title: "升桌窗口关闭",
+      text: "现金、交付或安全线已经压过扩张资格，市场不再把你当成可升桌对象。"
     });
-    return;
+    game.flags.pendingScaleReviewIndex = null;
   }
 
   const currentMin = currentScale().minScore;
   if (game.scaleIndex > 0 && (game.scaleScore < currentMin - 22 || (visible.cash < 12 && visible.debt > 68) || hidden.boss_safety < 18)) {
-    game.scaleIndex -= 1;
-    game.notice = "";
-    game.scaleTransition = buildScaleTransition("down", DATA.scales[oldScale], currentScale());
+    enqueueOneOf(["project-sale-window", "final-creditor-meeting", "state-capital-takeover", "bank-branch-risk-meeting"], 0, "规模承压不会自动降级，先进入资产处置、债权人或国资谈判桌。");
     game.scaleHistory.push({
       turn: game.turn,
-      title: `收缩：${DATA.scales[oldScale].title} -> ${currentScale().title}`,
-      text: `现金和债务不支持原有规模，项目被卖、团队被砍，市场开始重新给你定价。新桌面：${contactDeskSummary()}。`
+      title: "规模承压",
+      text: "现金、债务或老板安全已经不支持当前桌面。系统不会直接降级，但接下来会把你推到处置桌。"
     });
   }
 }
@@ -5085,13 +6993,14 @@ function selectNextEvent(previousId) {
     const overdue = Math.max(0, game.turn - entry.availableTurn);
     const isReaction = REACTION_EVENT_IDS.has(entry.id);
     const isProjectPriority = entry.priority === "project";
+    const isGrowthPriority = entry.priority === "growth";
     candidates.push({
       id: entry.id,
       kind: "queued",
       entry,
-      weight: (isProjectPriority ? 86 : isReaction ? 46 : 14) +
-        overdue * (isProjectPriority ? 9 : isReaction ? 7 : 4) +
-        eventBankWeight(eventById(entry.id)) * (isProjectPriority ? 0.42 : isReaction ? 0.32 : 0.18)
+      weight: (isProjectPriority ? 86 : isGrowthPriority ? 62 : isReaction ? 46 : 14) +
+        overdue * (isProjectPriority ? 9 : isGrowthPriority ? 8 : isReaction ? 7 : 4) +
+        eventBankWeight(eventById(entry.id)) * (isProjectPriority ? 0.42 : isGrowthPriority ? 0.36 : isReaction ? 0.32 : 0.18)
     });
   });
 
@@ -5140,6 +7049,86 @@ function selectNextEvent(previousId) {
   return picked.id;
 }
 
+function rollTurnIncident(previousId) {
+  const candidates = [];
+  const pressure = currentPhase().pressure + cyclePressureAdjust() + game.scaleIndex * 0.025 + game.turn * 0.004;
+  const systemPressure = computeSystemPressure();
+  const forcedQueued = queuedEventCandidates(previousId).filter((entry) => {
+    const event = eventById(entry.id);
+    return entry.availableTurn <= game.turn && (entry.priority === "project" || entry.priority === "reaction" || event.severity === "crisis");
+  });
+
+  forcedQueued.forEach((entry) => {
+    const event = eventById(entry.id);
+    const overdue = Math.max(0, game.turn - entry.availableTurn);
+    candidates.push({
+      id: entry.id,
+      kind: "queued",
+      entry,
+      weight: 80 + overdue * 12 + eventBankWeight(event) * 0.42
+    });
+  });
+
+  if (candidates.length < 3) {
+    queuedEventCandidates(previousId)
+      .filter((entry) => !forcedQueued.includes(entry))
+      .filter((entry) => {
+        const overdue = Math.max(0, game.turn - entry.availableTurn);
+        return overdue >= 2 || Math.random() < clampNumber(0.22 + pressure * 0.18 + systemPressure * 0.18, 0.18, 0.52);
+      })
+      .forEach((entry) => {
+        const event = eventById(entry.id);
+        const overdue = Math.max(0, game.turn - entry.availableTurn);
+        candidates.push({
+          id: entry.id,
+          kind: "queued",
+          entry,
+          weight: 24 + overdue * 6 + eventBankWeight(event) * 0.18
+        });
+      });
+  }
+
+  const incidentChance = clampNumber(
+    0.1 + pressure * 0.28 + systemPressure * 0.32 + Math.min(0.12, (game.riskLedger?.liquidity || 0) / 900),
+    0.08,
+    0.68
+  );
+  if (Math.random() <= incidentChance) {
+    interruptCandidates().forEach((event) => {
+      candidates.push({
+        id: event.id,
+        kind: "interrupt",
+        weight: 18 + interruptWeight(event) * 0.72
+      });
+    });
+  }
+
+  const questionBankChance = clampNumber(0.04 + pressure * 0.12 + systemPressure * 0.16, 0.03, 0.28);
+  if (Math.random() <= questionBankChance) {
+    questionBankCandidates(previousId).forEach((event) => {
+      candidates.push({
+        id: event.id,
+        kind: "bank",
+        weight: eventBankWeight(event) * 0.22
+      });
+    });
+  }
+
+  if (!candidates.length) return null;
+  const picked = pickWeighted(candidates, (candidate) => candidate.weight);
+  if (picked.kind === "queued") {
+    removeQueuedEntry(picked.entry);
+    if (picked.entry.reason) {
+      game.scaleHistory.push({ turn: game.turn, title: "突发事件", text: picked.entry.reason });
+    }
+  }
+  if (picked.id) {
+    game.lastIncidentEvent = picked.id;
+    advanceMainStep(picked.id);
+  }
+  return picked.id || null;
+}
+
 function pickRandomQuestionBankEvent(previousId) {
   const candidates = questionBankCandidates(previousId);
   if (!candidates.length) return null;
@@ -5148,7 +7137,7 @@ function pickRandomQuestionBankEvent(previousId) {
 
 function questionBankCandidates(previousId) {
   return DATA.events.filter((event) => {
-    if (!event || event.id === previousId || game.seenEvents[event.id]) return false;
+    if (!event || event.id === previousId || eventAlreadyConsumed(event)) return false;
     if (event.id === game.origin.startEvent) return false;
     return canFireEvent(event);
   });
@@ -5259,7 +7248,7 @@ function queuedEventCandidates(previousId) {
     .filter((entry) => entry.availableTurn <= game.turn && entry.id !== previousId)
     .filter((entry) => {
       const event = eventById(entry.id);
-      return !game.seenEvents[event.id] && canFireEvent(event);
+      return event && !eventAlreadyConsumed(event) && canFireEvent(event);
     });
 }
 
@@ -5279,7 +7268,7 @@ function maybePickInterrupt() {
 function interruptCandidates() {
   return DATA.interruptEvents
     .map((id) => eventById(id))
-    .filter((event) => !game.seenEvents[event.id] && canFireEvent(event) && interruptCondition(event));
+    .filter((event) => event && !eventAlreadyConsumed(event) && canFireEvent(event) && interruptCondition(event));
 }
 
 function computeSystemPressure() {
@@ -5379,6 +7368,10 @@ function projectCrisisPhaseOverride(event) {
 }
 
 function canFireEvent(event) {
+  if (!event) return false;
+  if (event.id === "post-delivery-capital-desk") return hasProjectPipelineGap();
+  if (PROJECT_REQUIRED_EVENT_IDS.has(event.id) && !refreshProjectLedger().projects.some((project) => project.stage !== "delivered" && project.stage !== "impaired")) return false;
+  if (event.id === "delivered-wall-crack-repair" && !refreshProjectLedger().projects.some((project) => project.stage === "delivered")) return false;
   const phaseId = currentPhase().id;
   if (!event.phase.includes(phaseId) && !projectCrisisPhaseOverride(event)) return false;
   if (game.scaleIndex < event.minScale || game.scaleIndex > event.maxScale) return false;
@@ -5424,6 +7417,9 @@ function interruptCondition(event) {
   const visible = game.state.visible;
   const hidden = game.state.hidden;
   const relation = game.relations;
+  const projectLedger = refreshProjectLedger();
+  const activeProjectCount = projectLedger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired").length;
+  const deliveredCount = projectLedger.projects.filter((project) => project.stage === "delivered").length;
   const rules = {
     "supplier-blockade": hidden.off_balance_debt >= 32 || relation.suppliers <= 24,
     "school-district-promise": visible.sales >= 38 && hidden.price_bubble >= 24,
@@ -5467,7 +7463,25 @@ function interruptCondition(event) {
     "land-auction-bond-borrowed": game.phaseIndex <= 2 && (visible.cash <= 36 || visible.government >= 32 || visible.land_bank <= 34),
     "private-fund-bridge-weekend": game.phaseIndex >= 2 && (visible.cash <= 28 || (hidden.financing_cost || 0) >= 26 || visible.debt >= 48),
     "earthwork-subcontract-chain": (hidden.gray_risk >= 18 || (game.stakeholderStress?.underground || 0) >= 18 || (game.stakeholderStress?.contractor || 0) >= 28),
-    "related-bank-spv-loan": game.phaseIndex >= 1 && (visible.bank <= 38 || hidden.off_balance_debt >= 24 || (hidden.financing_cost || 0) >= 24)
+    "related-bank-spv-loan": game.phaseIndex >= 1 && (visible.bank <= 38 || hidden.off_balance_debt >= 24 || (hidden.financing_cost || 0) >= 24),
+    "branch-president-rotation": game.turn >= 4 && (visible.bank <= 46 || visible.debt >= 36 || (hidden.financing_cost || 0) >= 18),
+    "presale-cash-next-parcel": activeProjectCount > 0 && game.phaseIndex <= 3 && (projectLedger.lastFreeCash >= 1 || visible.sales >= 42 || projectLedger.marketPriceIndex >= 108),
+    "bank-credit-after-presale": activeProjectCount > 0 && game.phaseIndex <= 3 && visible.bank >= 30 && (projectLedger.collateralValue >= Math.max(18, visible.debt * 0.36) || visible.sales >= 40),
+    "split-team-next-site": activeProjectCount > 0 && game.phaseIndex <= 2 && (visible.cash >= 20 || visible.government >= 30 || visible.sales >= 42),
+    "tax-invoice-chain": game.phaseIndex >= 1 && (hidden.data_inflation >= 16 || hidden.legal_exposure >= 18 || (game.riskLedger?.audit || 0) >= 12),
+    "rainstorm-basement-flood": activeProjectCount > 0 && (hidden.delivery_pressure >= 16 || visible.delivery <= 54 || (hidden.buyer_liability || 0) >= 18),
+    "owner-livestream-site-check": activeProjectCount > 0 && ((hidden.buyer_liability || 0) >= 20 || visible.public_trust <= 52 || visible.delivery <= 50),
+    "rival-drone-video": activeProjectCount > 0 && (competitionPressureScore() >= 22 || visible.sales >= 42 || visible.delivery <= 50),
+    "steel-cement-price-jump": activeProjectCount > 0 && (visible.cash <= 46 || (game.stakeholderStress?.suppliers || 0) >= 18 || (game.stakeholderStress?.contractor || 0) >= 18),
+    "tower-crane-near-miss": activeProjectCount > 0 && (hidden.delivery_pressure >= 18 || visible.delivery <= 48 || (game.stakeholderStress?.contractor || 0) >= 22),
+    "delivered-wall-crack-repair": deliveredCount > 0 && (visible.public_trust <= 58 || (hidden.buyer_liability || 0) >= 18 || game.turn >= 8),
+    "county-finance-road-advance": game.phaseIndex <= 3 && (visible.government >= 34 || (hidden.political_dependency || 0) >= 18 || visible.land_bank >= 30),
+    "escrow-bank-weekend-freeze": activeProjectCount > 0 && game.phaseIndex >= 2 && ((hidden.presale_misuse || 0) >= 18 || (hidden.buyer_liability || 0) >= 22 || visible.bank <= 38),
+    "channel-rebate-blackmail": game.phaseIndex >= 1 && ((100 - relation.channel) >= 54 || hidden.data_inflation >= 18 || visible.sales >= 42),
+    "media-real-estate-account": game.phaseIndex >= 1 && (visible.public_trust <= 54 || visible.sales >= 44 || hidden.delivery_pressure >= 18),
+    "dust-control-stop-work": activeProjectCount > 0 && (visible.government <= 42 || visible.delivery <= 52 || (hidden.local_isolation || 0) >= 18),
+    "old-demolition-video-resurfaces": game.turn >= 8 && ((hidden.gray_risk || 0) >= 18 || (game.stakeholderStress?.underground || 0) >= 14 || (hidden.legal_exposure || 0) >= 24),
+    "state-owned-rival-bid-support": game.scaleIndex >= 2 && (game.phaseIndex >= 2 || visible.cash <= 32 || visible.delivery <= 46)
     ,
     "voluntary-exit-window": isVoluntaryExitWindowOpen()
   };
@@ -5477,6 +7491,10 @@ function interruptCondition(event) {
 function interruptWeight(event) {
   const hidden = game.state.hidden;
   const visible = game.state.visible;
+  const relation = game.relations;
+  const projectLedger = refreshProjectLedger();
+  const activeProjectCount = projectLedger.projects.filter((project) => project.stage !== "delivered" && project.stage !== "impaired").length;
+  const deliveredCount = projectLedger.projects.filter((project) => project.stage === "delivered").length;
   const weights = {
     "supplier-blockade": hidden.off_balance_debt + (100 - game.relations.suppliers),
     "school-district-promise": visible.sales + hidden.price_bubble,
@@ -5520,7 +7538,25 @@ function interruptWeight(event) {
     "land-auction-bond-borrowed": Math.max(0, 45 - visible.cash) + Math.max(0, 42 - visible.land_bank) + visible.government,
     "private-fund-bridge-weekend": Math.max(0, 42 - visible.cash) + (hidden.financing_cost || 0) + visible.debt,
     "earthwork-subcontract-chain": hidden.gray_risk + (game.stakeholderStress?.underground || 0) + (game.stakeholderStress?.contractor || 0) * 0.4,
-    "related-bank-spv-loan": Math.max(0, 45 - visible.bank) + hidden.off_balance_debt + (hidden.financing_cost || 0) + hidden.data_inflation
+    "related-bank-spv-loan": Math.max(0, 45 - visible.bank) + hidden.off_balance_debt + (hidden.financing_cost || 0) + hidden.data_inflation,
+    "branch-president-rotation": Math.max(0, 48 - visible.bank) + visible.debt * 0.45 + (hidden.financing_cost || 0),
+    "presale-cash-next-parcel": (projectLedger.lastFreeCash || 0) * 5 + Math.max(0, visible.sales - 34) + Math.max(0, (projectLedger.marketPriceIndex || 100) - 102),
+    "bank-credit-after-presale": visible.bank + Math.max(0, projectLedger.collateralValue - visible.debt * 0.3) * 0.28 + Math.max(0, visible.sales - 34),
+    "split-team-next-site": activeProjectCount * 8 + visible.government * 0.45 + Math.max(0, visible.cash - 18),
+    "tax-invoice-chain": hidden.data_inflation + hidden.legal_exposure + (game.riskLedger?.audit || 0),
+    "rainstorm-basement-flood": hidden.delivery_pressure + Math.max(0, 58 - visible.delivery) + activeProjectCount * 6,
+    "owner-livestream-site-check": (hidden.buyer_liability || 0) + Math.max(0, 58 - visible.public_trust) + Math.max(0, 54 - visible.delivery),
+    "rival-drone-video": competitionPressureScore() + Math.max(0, visible.sales - 34) + Math.max(0, 54 - visible.delivery),
+    "steel-cement-price-jump": Math.max(0, 50 - visible.cash) + (game.stakeholderStress?.suppliers || 0) + (game.stakeholderStress?.contractor || 0),
+    "tower-crane-near-miss": hidden.delivery_pressure + Math.max(0, 56 - visible.delivery) + (game.stakeholderStress?.contractor || 0),
+    "delivered-wall-crack-repair": deliveredCount * 14 + Math.max(0, 60 - visible.public_trust) + (hidden.buyer_liability || 0),
+    "county-finance-road-advance": visible.government + (hidden.political_dependency || 0) + Math.max(0, visible.land_bank - 22),
+    "escrow-bank-weekend-freeze": hidden.presale_misuse + (hidden.buyer_liability || 0) + Math.max(0, 46 - visible.bank),
+    "channel-rebate-blackmail": Math.max(0, 56 - relation.channel) + hidden.data_inflation + Math.max(0, visible.sales - 38),
+    "media-real-estate-account": Math.max(0, 58 - visible.public_trust) + Math.max(0, visible.sales - 36) + hidden.delivery_pressure,
+    "dust-control-stop-work": Math.max(0, 50 - visible.government) + Math.max(0, 56 - visible.delivery) + (hidden.local_isolation || 0),
+    "old-demolition-video-resurfaces": hidden.gray_risk + hidden.legal_exposure + (game.stakeholderStress?.underground || 0),
+    "state-owned-rival-bid-support": game.scaleIndex * 12 + Math.max(0, 44 - visible.cash) + Math.max(0, 54 - visible.delivery) + (game.relations?.state_capital || 0)
     ,
     "voluntary-exit-window": (hidden.exit_preparation || 0) + Math.max(0, visible.cash - 28) + Math.max(0, 66 - visible.debt) + Math.max(0, visible.bank - 30)
   };
@@ -5995,13 +8031,6 @@ elements.scaleContinueBtn.addEventListener("click", continueScaleTransition);
 elements.continueBtn.addEventListener("click", returnToKnowledgeHome);
 elements.resetBtn.addEventListener("click", resetGame);
 
-const saved = loadGame();
-if (saved) {
-  game = saved;
-  if (game.ended) renderDebrief();
-  else if (game.scaleTransition) renderScaleTransition();
-  else renderEvent();
-} else {
-  show(elements.startScreen);
-  renderShell();
-}
+localStorage.removeItem(SAVE_KEY);
+show(elements.startScreen);
+renderShell();

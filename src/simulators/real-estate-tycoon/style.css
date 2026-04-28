@@ -312,6 +312,20 @@ h2 {
   max-width: 980px;
 }
 
+.event-screen.office-mode {
+  max-width: 920px;
+}
+
+.event-screen.office-mode h1 {
+  font-size: clamp(28px, 4.5vw, 40px);
+}
+
+.event-screen.office-mode .briefing {
+  font-size: 15px;
+  max-width: 720px;
+  margin-bottom: 12px;
+}
+
 .event-meta {
   display: flex;
   gap: 10px;
@@ -447,6 +461,701 @@ h2 {
 .choice.selected {
   border-color: rgba(23, 105, 97, 0.55);
   background: #fbf7ef;
+}
+
+.office-assets {
+  margin: 14px 0 10px;
+}
+
+.office-board {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(213, 202, 184, 0.68);
+}
+
+.office-board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+}
+
+.office-board-head span {
+  display: block;
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.office-board-head strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.office-board-head small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: right;
+}
+
+.parcel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 7px;
+}
+
+.parcel-card {
+  border: 1px solid rgba(213, 202, 184, 0.82);
+  border-left: 4px solid var(--good);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 9px 10px;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.parcel-card.risk-3 {
+  border-left-color: var(--warn);
+}
+
+.parcel-card.risk-4,
+.parcel-card.risk-5 {
+  border-left-color: var(--bad);
+}
+
+.parcel-card.stage-land {
+  border-left-color: var(--gold);
+}
+
+.parcel-card.empty {
+  border-left-color: rgba(102, 113, 126, 0.55);
+}
+
+.parcel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.parcel-head strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.parcel-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.parcel-progress {
+  height: 4px;
+  background: rgba(213, 202, 184, 0.56);
+  overflow: hidden;
+}
+
+.parcel-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--gold));
+}
+
+.parcel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.parcel-tags span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(243, 239, 231, 0.85);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.parcel-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.action-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 9;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 820px;
+  margin: 14px 0 10px;
+  padding: 8px;
+  border: 1px solid rgba(213, 202, 184, 0.78);
+  background: rgba(255, 253, 248, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.dock-button {
+  min-width: 0;
+  min-height: 58px;
+  border: 1px solid rgba(213, 202, 184, 0.84);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  position: relative;
+  font-weight: 950;
+}
+
+.dock-icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+
+.dock-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dock-button small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.dock-button em {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent-2);
+  color: #fff;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.dock-button.active {
+  border-color: rgba(23, 105, 97, 0.72);
+  box-shadow: inset 0 -4px 0 rgba(23, 105, 97, 0.18);
+  background: #f4fbf6;
+}
+
+.dock-button.active .dock-icon {
+  color: var(--accent-2);
+}
+
+.dock-button:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.office-action-panel {
+  max-width: 820px;
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.office-map {
+  position: relative;
+  height: 330px;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid rgba(213, 202, 184, 0.76);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 22% 24%, rgba(23, 105, 97, 0.1), transparent 19%),
+    radial-gradient(circle at 78% 42%, rgba(185, 133, 46, 0.12), transparent 22%),
+    linear-gradient(135deg, rgba(23, 105, 97, 0.05), transparent 44%),
+    rgba(255, 253, 248, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}
+
+.land-market-map {
+  height: 360px;
+}
+
+.event-screen.office-mode .action-dock {
+  display: none;
+}
+
+.map-layer,
+.map-zone {
+  position: absolute;
+  pointer-events: none;
+}
+
+.map-river {
+  left: -6%;
+  right: -6%;
+  top: 47%;
+  height: 38px;
+  transform: rotate(-7deg);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(23, 105, 97, 0.08), rgba(23, 105, 97, 0.2), rgba(23, 105, 97, 0.08));
+}
+
+.map-road {
+  background: rgba(213, 202, 184, 0.78);
+  box-shadow: 0 0 0 5px rgba(213, 202, 184, 0.18);
+}
+
+.map-road-main {
+  left: 8%;
+  right: 8%;
+  top: 34%;
+  height: 7px;
+  transform: rotate(10deg);
+  border-radius: 999px;
+}
+
+.map-road-cross {
+  left: 48%;
+  top: 7%;
+  bottom: 9%;
+  width: 6px;
+  transform: rotate(4deg);
+  border-radius: 999px;
+}
+
+.map-zone {
+  color: rgba(102, 113, 126, 0.42);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.map-golden-core {
+  position: absolute;
+  z-index: 1;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle, rgba(185, 133, 46, 0.17), rgba(185, 133, 46, 0.06) 46%, transparent 70%);
+  color: rgba(185, 133, 46, 0.58);
+  font-size: 12px;
+  font-weight: 950;
+  pointer-events: none;
+}
+
+.map-zone-old {
+  left: 46%;
+  top: 40%;
+}
+
+.map-zone-new {
+  left: 17%;
+  top: 11%;
+}
+
+.map-zone-east {
+  right: 13%;
+  top: 23%;
+}
+
+.map-zone-south {
+  left: 28%;
+  bottom: 13%;
+}
+
+.map-node {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+  min-width: 0;
+  width: 92px;
+  min-height: 78px;
+  padding: 9px 8px 8px;
+  border: 1px solid rgba(213, 202, 184, 0.9);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(47, 39, 28, 0.08);
+}
+
+.map-node::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 5px;
+  border-radius: 10px 0 0 10px;
+  background: rgba(23, 105, 97, 0.72);
+}
+
+.map-node:hover {
+  border-color: rgba(23, 105, 97, 0.52);
+  box-shadow: 0 12px 24px rgba(47, 39, 28, 0.08);
+  transform: translate(-50%, calc(-50% - 1px));
+}
+
+.map-node.active {
+  background: #eef8f3;
+  border-color: rgba(23, 105, 97, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(23, 105, 97, 0.12);
+}
+
+.map-node:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.map-icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-2);
+}
+
+.map-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-node strong {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.map-node small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.map-node em {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent-2);
+  color: #fff;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 18px;
+}
+
+.map-legend {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.86);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.map-legend.owned {
+  left: 10px;
+  color: var(--accent-2);
+}
+
+.map-legend.auction {
+  left: 58px;
+  color: var(--accent);
+}
+
+.lot-node {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+  width: 104px;
+  min-height: 52px;
+  padding: 8px;
+  border: 1px solid rgba(213, 202, 184, 0.88);
+  border-left: 5px solid var(--accent);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(47, 39, 28, 0.08);
+}
+
+.lot-node.owned {
+  border-left-color: var(--accent-2);
+}
+
+.lot-node.active {
+  background: #eef8f3;
+  border-color: rgba(23, 105, 97, 0.68);
+  box-shadow: 0 12px 26px rgba(23, 105, 97, 0.13);
+}
+
+.lot-node.expensive {
+  border-left-color: var(--warn);
+}
+
+.lot-node strong,
+.lot-node small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lot-node strong {
+  font-size: 13px;
+  line-height: 1.18;
+}
+
+.lot-node small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.auction-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--accent);
+  background: rgba(255, 248, 236, 0.74);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auction-detail.owned {
+  border-left-color: var(--accent-2);
+}
+
+.auction-detail strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.auction-bid-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(213, 202, 184, 0.78);
+  border-left: 5px solid var(--accent-2);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.auction-bid-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.auction-bid-row strong {
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.auction-bid-row em {
+  min-width: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(243, 239, 231, 0.9);
+  color: var(--muted);
+  font-style: normal;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.auction-rivals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.auction-rivals span {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(213, 202, 184, 0.76);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  display: grid;
+  gap: 1px;
+}
+
+.auction-rivals span.out {
+  opacity: 0.56;
+}
+
+.auction-rivals span.partner {
+  border-color: rgba(23, 105, 97, 0.52);
+  background: #eef8f3;
+  opacity: 1;
+}
+
+.auction-rivals strong,
+.auction-rivals em,
+.auction-rivals small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auction-rivals strong {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.auction-rivals em {
+  color: var(--accent-2);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.auction-rivals small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.auction-bid-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.auction-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.auction-controls button {
+  min-height: 40px;
+  border: 1px solid rgba(213, 202, 184, 0.88);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.auction-controls button:hover {
+  border-color: rgba(23, 105, 97, 0.55);
+  background: #f4fbf6;
+}
+
+.compact-actions {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.compact-actions .office-action {
+  padding: 11px 13px;
+}
+
+.office-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.office-actions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.office-actions-head strong {
+  color: var(--accent-2);
+  font-size: 14px;
+}
+
+.office-action {
+  border-left-width: 4px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.office-empty-panel {
+  border: 1px dashed rgba(102, 113, 126, 0.45);
+  background: rgba(255, 255, 255, 0.52);
+  padding: 14px;
+  color: var(--muted);
+}
+
+.office-empty-panel strong {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.office-empty-panel p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.office-action small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.35;
 }
 
 .scale-screen {
@@ -633,6 +1342,10 @@ h2 {
 .project-brief {
   border-top: 1px solid rgba(213, 202, 184, 0.72);
   padding-top: 10px;
+}
+
+.mobile-project-brief {
+  display: none;
 }
 
 .asset-brief {
@@ -988,6 +1701,16 @@ li + li {
   .desk-drawers {
     justify-content: flex-start;
   }
+
+  body[data-screen="event"] .main-panel {
+    padding: 12px 10px 16px;
+  }
+
+  body[data-screen="event"] .event-screen.office-mode .event-meta,
+  body[data-screen="event"] .event-screen.office-mode h1,
+  body[data-screen="event"] .event-screen.office-mode .briefing {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1021,7 +1744,11 @@ li + li {
 
   .main-panel {
     min-height: auto;
-    padding: 18px 14px;
+    padding: 18px 12px 92px;
+  }
+
+  body[data-screen="event"] .main-panel {
+    padding: 8px 6px 12px;
   }
 
   .debrief-grid,
@@ -1078,6 +1805,25 @@ li + li {
     display: none;
   }
 
+  .mobile-project-brief {
+    display: block;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(213, 202, 184, 0.72);
+  }
+
+  .mobile-project-brief .asset-brief-head {
+    font-size: 12px;
+  }
+
+  .mobile-project-brief .asset-brief li {
+    padding: 8px;
+  }
+
+  .mobile-project-brief .asset-brief li small {
+    font-size: 11px;
+  }
+
   .event-meta {
     margin-bottom: 10px;
   }
@@ -1102,6 +1848,168 @@ li + li {
 
   .choice {
     padding: 15px;
+  }
+
+  .office-board-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .office-board-head small {
+    text-align: left;
+  }
+
+  .parcel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .office-map {
+    height: 258px;
+    padding: 8px;
+  }
+
+  .land-market-map {
+    height: 248px;
+  }
+
+  .map-golden-core {
+    width: 82px;
+    height: 82px;
+    font-size: 10px;
+  }
+
+  .map-node {
+    width: 74px;
+    min-height: 62px;
+    padding: 6px 5px 5px;
+  }
+
+  .map-node strong {
+    font-size: 13px;
+  }
+
+  .map-node small {
+    font-size: 10px;
+  }
+
+  .map-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .map-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lot-node {
+    width: 86px;
+    min-height: 46px;
+    padding: 6px;
+  }
+
+  .lot-node strong {
+    font-size: 12px;
+  }
+
+  .lot-node small {
+    font-size: 10px;
+  }
+
+  .auction-detail {
+    margin-top: 6px;
+    padding: 7px 8px;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .auction-bid-panel {
+    gap: 6px;
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .auction-bid-row {
+    grid-template-columns: auto 1fr auto;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .auction-bid-row em:last-child {
+    display: none;
+  }
+
+  .auction-bid-row strong {
+    font-size: 14px;
+  }
+
+  .auction-rivals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .auction-rivals span {
+    padding: 5px 6px;
+  }
+
+  .auction-rivals strong {
+    font-size: 11px;
+  }
+
+  .auction-bid-panel p {
+    font-size: 11px;
+  }
+
+  .auction-controls {
+    gap: 5px;
+  }
+
+  .auction-controls button {
+    min-height: 36px;
+    padding: 5px 3px;
+    font-size: 12px;
+  }
+
+  .compact-actions .office-action {
+    padding: 10px 12px;
+  }
+
+  .compact-actions .office-action small {
+    display: none;
+  }
+
+  .action-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: none;
+    margin: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding: 6px 7px max(6px, env(safe-area-inset-bottom));
+  }
+
+  .dock-button {
+    min-height: 50px;
+    border-radius: 7px;
+  }
+
+  .dock-icon {
+    width: 23px;
+    height: 23px;
+  }
+
+  .dock-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .dock-button small {
+    font-size: 10px;
   }
 
   .desk-drawers {

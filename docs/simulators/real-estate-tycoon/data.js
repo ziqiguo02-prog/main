@@ -96,11 +96,11 @@ window.REAL_ESTATE_TYCOON_DATA = {
   ],
   scales: [
     { id: "nobody", title: "无名小老板", standard: "先活下来。", minScore: 0 },
-    { id: "county", title: "县城开发商", standard: "能交付一个小盘，别让施工方和业主同时堵门。", minScore: 34 },
-    { id: "city", title: "城市新贵", standard: "能拿核心地，也能承受核心地的现金黑洞。", minScore: 62 },
-    { id: "regional", title: "区域房企", standard: "跨城扩张后还能看清每个项目的真实回款。", minScore: 78 },
-    { id: "top100", title: "全国百强", standard: "融资、评级、销售、交付任何一条线断了都会传染。", minScore: 108 },
-    { id: "empire", title: "地产帝国", standard: "规模本身不是护城河，可能只是更大的爆雷半径。", minScore: 220 },
+    { id: "county", title: "县城开发商", standard: "能交付一个小盘，别让施工方和业主同时堵门。", minScore: 28 },
+    { id: "city", title: "城市新贵", standard: "能拿核心地，也能承受核心地的现金黑洞。", minScore: 58 },
+    { id: "regional", title: "区域房企", standard: "跨城扩张后还能看清每个项目的真实回款。", minScore: 92 },
+    { id: "top100", title: "全国百强", standard: "融资、评级、销售、交付任何一条线断了都会传染。", minScore: 138 },
+    { id: "empire", title: "地产帝国", standard: "规模本身不是护城河，可能只是更大的爆雷半径。", minScore: 260 },
     { id: "exit", title: "高点退场者", standard: "不站到最后一桌，也许才是最难的胜利。", minScore: 999 }
   ],
   phases: [
@@ -224,7 +224,7 @@ window.REAL_ESTATE_TYCOON_DATA = {
     },
     "counterparty-retaliation": {
       name: "关联方反噬",
-      note: "总包、供应商、银行、业主、渠道和合作方都有承受极限。你把风险压给他们，他们会用停工、举报、保全、舆情和证据包反击。"
+      note: "总包、供应商、银行、业主、渠道和合作方都有承受极限。反噬本身不应抽象扣现金；现金下降必须来自结清、和解、换人进场费、停工损失、保全冻结、付息到期等具体动作。"
     },
     "competitor-pressure": {
       name: "竞争对手打击",
@@ -3137,7 +3137,7 @@ window.REAL_ESTATE_TYCOON_DATA = {
       [
         choice("submit-correction-stop", "停工整改，补手续和罚款", { cash: -8, delivery: -5, government: 2, bank: -1 }, { legal_exposure: -2, data_inflation: -3, buyer_liability: 2 }, ["government-permit-power"], "你付出现金和工期，换回手续闭合。", "政府卡口不是摆设，规划、预售和验收决定项目能不能继续变成现金。", { scaleScore: -2, blowupRisk: 0.13 }),
         choice("ask-patron-to-press", "找老关系压下执法，先别停工", { delivery: 3, cash: -3, government: 2 }, { political_dependency: 8, legal_exposure: 5, local_isolation: 3 }, ["political-embedded-enterprise", "government-permit-power"], "工地没停，留痕更重。", "关系能让卡口晚一点落下，但会把商业问题改写成权力问题。", { scaleScore: 2, blowupRisk: 0.26, followUps: [{ id: "protective-umbrella-transfer", delay: 5 }] }),
-        choice("blame-design-institute", "把责任压给设计院和报批顾问", { cash: -2, bank: -1 }, { legal_exposure: 4, local_isolation: 4 }, ["risk-transfer-chain", "counterparty-retaliation"], "你躲过第一轮解释，顾问开始留证。", "把责任压给专业方，会换来他们后续的证据反噬。", { scaleScore: 0, blowupRisk: 0.21, followUps: [{ id: "contractor-evidence-package", delay: 4 }] })
+        choice("blame-design-institute", "把责任压给设计院和报批顾问", { cash: 1, bank: -1, government: -1 }, { legal_exposure: 5, local_isolation: 5 }, ["risk-transfer-chain", "counterparty-retaliation"], "你短期没掏整改钱，但顾问、设计院和报批链开始留底自保。", "把责任压给专业方不会立刻烧现金，真正的代价是后面材料、证词和审批口径反咬。", { scaleScore: 0, blowupRisk: 0.22, followUps: [{ id: "tax-and-construction-joint-audit", delay: 4 }] })
       ],
       0,
       4,
@@ -3245,9 +3245,9 @@ window.REAL_ESTATE_TYCOON_DATA = {
         actor("银行", "这些材料会影响我们对项目现金流的判断。")
       ],
       [
-        choice("settle-core-claims", "先结清关键签证和工资，换总包复工声明", { cash: -12, delivery: 7, bank: 2, public_trust: 2 }, { legal_exposure: -4, delivery_pressure: -4 }, ["counterparty-retaliation", "delivery-first"], "现金很痛，证据链变短。", "总包反噬不是情绪问题，核心是证据和复工能力。", { scaleScore: -3, blowupRisk: 0.12 }),
+        choice("settle-core-claims", "先结清关键签证和工资，换总包复工声明", { cash: -12, delivery: 7, bank: 2, public_trust: 2 }, { legal_exposure: -4, delivery_pressure: -4 }, ["counterparty-retaliation", "delivery-first"], "现金下降，是因为你真把签证、工资和复工款付出去了；证据链因此变短。", "总包反噬不是情绪问题，核心是证据、欠款和复工能力。", { scaleScore: -3, blowupRisk: 0.12 }),
         choice("challenge-contract-validity", "反诉总包虚增签证，拖住付款", { cash: 4, delivery: -4, bank: -3 }, { legal_exposure: 8, delivery_pressure: 7, local_isolation: 4 }, ["risk-transfer-chain", "counterparty-retaliation"], "钱保住，现场和法院都更冷。", "用诉讼拖付款会把工程问题变成司法和舆情问题。", { scaleScore: 1, blowupRisk: 0.3, followUps: [{ id: "court-freeze-account", delay: 3 }] }),
-        choice("replace-contractor", "换总包，找新队伍接盘", { cash: -6, delivery: -2, sales: -2 }, { delivery_pressure: 6, legal_exposure: 5 }, ["delivery-first", "counterparty-retaliation"], "看似重启，磨合和旧账都没消失。", "换人不是清零，旧总包的证据包仍然在，新的总包还要重新信任你。", { scaleScore: -1, blowupRisk: 0.22 })
+        choice("replace-contractor", "换总包，找新队伍接盘", { cash: -6, delivery: -2, sales: -2 }, { delivery_pressure: 6, legal_exposure: 5 }, ["delivery-first", "counterparty-retaliation"], "现金下降，是新总包进场费、旧账磨合和复工保证金的价格；旧账没有清零。", "换人不是清零，旧总包的证据包仍然在，新的总包还要重新信任你。", { scaleScore: -1, blowupRisk: 0.22 })
       ],
       0,
       6,
@@ -3587,6 +3587,424 @@ window.REAL_ESTATE_TYCOON_DATA = {
       { stakes: "关系银行能给入口，但资金用途一旦写假，入口就会变成倒查路径。" }
     ),
     event(
+      "branch-president-rotation",
+      "支行换行长：旧口头承诺不算数",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "pressure",
+      ["EP031", "EP078", "EP124"],
+      ["balance-sheet-maintenance", "feedback-loop"],
+      "原来拍胸口支持你的支行行长调走了。新行长把授信材料退回来，只认真实回款、抵押折扣和监管账户流水。",
+      [
+        actor("新行长", "我不接上一任的口头承诺，只看可穿透现金流。"),
+        actor("旧客户经理", "材料能补，但别让我背你以前讲过的故事。"),
+        actor("财务总监", "关系换人以后，最先掉价的是不能写进合同的信用。")
+      ],
+      [
+        choice("clean-credit-file", "重做现金流表，接受额度缩水", { cash: -2, debt: -2, bank: 5, sales: -1 }, { data_inflation: -4, financing_cost: -2, legal_exposure: -1 }, ["balance-sheet-maintenance", "feedback-loop"], "额度少了，账更硬了。", "关系信用会换人，项目信用要靠可验证现金流。", { scaleScore: 1, blowupRisk: 0.08, relationEffects: { bank_manager: 4 } }),
+        choice("ask-old-president", "找旧行长打招呼，把材料先压过去", { cash: 3, bank: 2, government: 1 }, { political_dependency: 5, data_inflation: 3, financing_cost: 3, legal_exposure: 2 }, ["political-embedded-enterprise", "data-inflation"], "钱暂时续上，旧关系也变成新行长的把柄。", "金融关系能续命，但换人后最容易被重新定性。", { scaleScore: 3, blowupRisk: 0.18, relationEffects: { bank_manager: -2, local_official: 2 }, followUps: [{ id: "related-bank-spv-loan", delay: 4 }] }),
+        choice("pledge-next-land", "拿下一块地的故事换新增授信", { cash: 6, debt: 6, land_bank: 5, bank: 2, sales: 2 }, { financing_cost: 6, price_bubble: 3, buyer_liability: 2 }, ["land-finance-loop", "leverage-backfire"], "银行重新相信你，也重新绑住你。", "用未来土地讲现金流，本质是把银行风险押到下一轮销售。", { scaleScore: 5, blowupRisk: 0.22, relationEffects: { bank_manager: 3 }, followUps: [{ id: "interest-rollover-friday", delay: 3 }] })
+      ],
+      0,
+      5,
+      { stakes: "银行换人会把关系信用折回项目信用，过去能说过去的事，今天要重新证明。" }
+    ),
+    event(
+      "tax-invoice-chain",
+      "税务局抽到一串砂石发票",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "high",
+      ["EP004", "EP026", "EP126"],
+      ["feedback-loop", "legal-exposure", "bid-rigging-chain"],
+      "税务系统抽查材料发票，上游砂石公司、运输公司和劳务分包的票据抬头绕了几层。财务说金额不大，问题是链条太像一个圈。",
+      [
+        actor("税务稽查员", "金额不是唯一问题，真实交易、资金回流和受益人也要看。"),
+        actor("财务经理", "补税能压住一部分，但票据链解释不了。"),
+        actor("材料商", "当时大家都这么开，现在别只找我。")
+      ],
+      [
+        choice("pay-tax-reconcile", "补税重做台账，先把链条摊开", { cash: -5, bank: 1, government: -1 }, { legal_exposure: -4, data_inflation: -4, boss_safety: 2 }, ["feedback-loop", "balance-sheet-maintenance"], "现金疼，证据链变短。", "补税不是买平安，但把假口径改回真实口径能降低后续刑责。", { scaleScore: -1, blowupRisk: 0.09, relationEffects: { local_official: -1 } }),
+        choice("push-to-supplier", "让材料商补票，合同责任推回去", { cash: 2, delivery: -2 }, { legal_exposure: 4, off_balance_debt: 3, boss_safety: -2 }, ["counterparty-retaliation", "risk-transfer-chain"], "你省了现金，也把供应商推成证人。", "把责任压给知道细节的人，会换来反咬、证据包或停供。", { scaleScore: 1, blowupRisk: 0.22, relationEffects: { suppliers: -9 }, followUps: [{ id: "supplier-bill-discount", delay: 3 }] }),
+        choice("find-local-mediator", "找熟人协调口径，先别扩大", { cash: -2, government: 2, bank: 1 }, { political_dependency: 5, legal_exposure: 3, data_inflation: 3 }, ["political-embedded-enterprise", "legal-exposure"], "事小了，关系账厚了。", "协调能降温，但不能改变票据和资金的真实路径。", { scaleScore: 2, blowupRisk: 0.2, relationEffects: { local_official: 4 } })
+      ],
+      0,
+      5,
+      { stakes: "票据不是后台小事，它能把工程利润、围标、税务和个人责任串到一起。" }
+    ),
+    event(
+      "rainstorm-basement-flood",
+      "暴雨夜，地下车库开始进水",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "pressure",
+      ["EP102", "EP114", "EP126"],
+      ["delivery-first", "risk-transfer-chain"],
+      "雨下到后半夜，项目群里传来视频：地下车库积水，排水泵报警，业主开始问是不是偷工减料。",
+      [
+        actor("项目经理", "先抽水能压住视频，真查管网要停几天。"),
+        actor("业主代表", "我们买的是房，不是解释。"),
+        actor("工程总", "排水系统不修，以后每场雨都替你复盘。")
+      ],
+      [
+        choice("stop-repair-drainage", "停工排查排水系统，公开维修计划", { cash: -6, delivery: 5, public_trust: 4, sales: -2 }, { delivery_pressure: -5, legal_exposure: -1, boss_safety: 2 }, ["delivery-first", "feedback-loop"], "慢下来，风险被工程处理。", "质量问题越早按技术问题处理，越少变成舆情和法律问题。", { scaleScore: 0, blowupRisk: 0.08, relationEffects: { buyers: 5, contractor: 2 } }),
+        choice("pump-overnight-clean", "连夜抽水清场，第二天照常开放", { cash: -2, sales: 2, public_trust: -2 }, { delivery_pressure: 5, data_inflation: 3, buyer_liability: 3 }, ["narrative-control", "risk-transfer-chain"], "现场看起来恢复了，地下问题留下了。", "压住画面不等于修好系统，后面会在开放日、交付和维修基金里回来。", { scaleScore: 2, blowupRisk: 0.18, followUps: [{ id: "homebuyer-open-day", delay: 4 }] }),
+        choice("blame-city-pipe", "说是市政管网倒灌，要求政府出面", { government: -3, cash: 1, public_trust: -1 }, { local_isolation: 4, legal_exposure: 2 }, ["government-permit-power", "risk-transfer-chain"], "你把锅推到外面，也把政府拖进你的项目。", "外部原因可能存在，但没有工程证据时，推责会消耗地方缓冲。", { scaleScore: 1, blowupRisk: 0.17, relationEffects: { local_official: -4, buyers: -2 }, followUps: [{ id: "local-task-force-night", delay: 4 }] })
+      ],
+      0,
+      5,
+      { stakes: "极端天气会把纸面质量变成现场证据，房企不能只靠口径过雨季。" }
+    ),
+    event(
+      "owner-livestream-site-check",
+      "业主开直播：镜头怼到工地围挡",
+      ["shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "high",
+      ["EP110", "EP114", "EP126"],
+      ["feedback-loop", "delivery-first", "narrative-control"],
+      "几个业主约好周末直播看工地。镜头不听公关话术，只拍塔吊动不动、材料到不到、工人有多少。",
+      [
+        actor("客服主管", "删帖很难，直播间都在录屏。"),
+        actor("项目经理", "能看的地方不怕看，怕的是现在没法解释。"),
+        actor("业主", "我们每个月还房贷，你给我看现场。")
+      ],
+      [
+        choice("open-site-timeline", "开放一段工区，给出复工节点表", { cash: -3, delivery: 4, public_trust: 6, sales: -1 }, { buyer_liability: -4, delivery_pressure: -3, data_inflation: -2 }, ["feedback-loop", "delivery-first"], "不好看，但可信一点。", "面对业主时，时间表和账户说明比公关稿更重要。", { scaleScore: 0, blowupRisk: 0.1, relationEffects: { buyers: 6, local_official: 1 } }),
+        choice("block-camera-security", "让保安挡镜头，先别让它扩散", { sales: 1, public_trust: -6, government: -2 }, { legal_exposure: 4, buyer_liability: 5, boss_safety: -2 }, ["narrative-control", "risk-transfer-chain"], "视频少了一段，冲突多了一层。", "围挡能挡镜头，挡不住贷款账单和购房合同。", { scaleScore: 1, blowupRisk: 0.26, relationEffects: { buyers: -9, local_official: -3 }, followUps: [{ id: "homebuyer-lawyer-letter", delay: 3 }] }),
+        choice("invite-influencer-tour", "请本地大号参观，讲复工故事", { cash: -3, sales: 3, public_trust: 1 }, { data_inflation: 4, buyer_liability: 2 }, ["narrative-control", "platformized-sales"], "故事好听了，事实链更要跟上。", "第三方背书能短期稳定预期，但现场进度跟不上会反噬得更快。", { scaleScore: 2, blowupRisk: 0.18, relationEffects: { channel: 3 }, followUps: [{ id: "media-real-estate-account", delay: 4 }] })
+      ],
+      0,
+      5,
+      { stakes: "社媒让交付风险从合同争议变成公共证据，镜头会逼你解释真实进度。" }
+    ),
+    event(
+      "rival-drone-video",
+      "隔壁盘无人机拍到你的空工地",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "pressure",
+      ["EP078", "EP110", "EP126"],
+      ["competitor-pressure", "narrative-control", "delivery-first"],
+      "网上突然流出航拍视频：你的工地吊臂不动，隔壁盘却灯火通明。销售说客户已经拿着视频来退定。",
+      [
+        actor("销售经理", "他们不说你烂尾，只说让客户自己看。"),
+        actor("竞争对手", "市场信息透明一点，对大家都好。"),
+        actor("项目总", "工地不动，营销再会讲也没用。")
+      ],
+      [
+        choice("publish-real-progress", "发布真实进度和资金安排", { cash: -2, delivery: 3, public_trust: 4, sales: -1 }, { data_inflation: -3, buyer_liability: -2 }, ["feedback-loop", "delivery-first"], "你承认慢，也给客户可验证抓手。", "被竞争对手递刀时，最稳的反击不是更大声，而是证据更硬。", { scaleScore: 0, blowupRisk: 0.1, relationEffects: { buyers: 4, bank_manager: 1 } }),
+        choice("counter-report-rival", "举报对方违规航拍和恶意竞争", { government: 2, sales: 1, cash: -1 }, { local_isolation: 3, data_inflation: 2 }, ["competitor-pressure", "government-permit-power"], "你让对方收敛，也把战场推到监管口。", "找监管能压竞争对手，但如果自己工地问题是真的，监管也会顺手看你。", { scaleScore: 1, blowupRisk: 0.17, relationEffects: { competitors: -6, local_official: 2 }, followUps: [{ id: "planning-stop-work-order", delay: 4 }] }),
+        choice("launch-price-cut", "马上降价促销，把客户抢回来", { cash: 4, sales: 5, public_trust: -3 }, { price_bubble: 3, buyer_liability: 4 }, ["inventory-overhang", "platformized-sales"], "售楼处热了，老业主也醒了。", "降价能救短期回款，也会触发老业主、渠道和价格预期的连锁反应。", { scaleScore: 2, blowupRisk: 0.22, relationEffects: { channel: 4, buyers: -4 }, followUps: [{ id: "old-owners-price-cut", delay: 3 }] })
+      ],
+      0,
+      5,
+      { stakes: "竞争对手不一定正面打你，最有效的方式是把你的真实弱点放到客户眼前。" }
+    ),
+    event(
+      "steel-cement-price-jump",
+      "钢筋水泥三天涨了两轮",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines"],
+      "routine",
+      ["EP014", "EP114", "EP124"],
+      ["low-bid-change-order", "balance-sheet-maintenance"],
+      "材料群里一夜刷屏：钢筋、水泥、铝模都涨。总包说原合同扛不住，供应商说不加钱就按旧价排队。",
+      [
+        actor("总包老板", "低价中标不是让我替你扛周期。"),
+        actor("供应商", "现款现货，商票另说。"),
+        actor("成本经理", "今天省下来的钱，可能明天变成停工。")
+      ],
+      [
+        choice("lock-material-price", "补一笔现金，锁核心材料价", { cash: -5, delivery: 4, bank: 1 }, { delivery_pressure: -3, off_balance_debt: -1 }, ["balance-sheet-maintenance", "delivery-first"], "利润薄了，工期稳了。", "材料上涨时，现金买到的是确定性，不只是材料。", { scaleScore: 0, blowupRisk: 0.09, relationEffects: { contractor: 4, suppliers: 4 } }),
+        choice("issue-commercial-paper", "开商票让供应商继续供货", { cash: 3, delivery: 2, debt: 2 }, { off_balance_debt: 7, financing_cost: 4, legal_exposure: 1 }, ["shadow-banking-loop", "low-bid-change-order"], "工地没停，票据链加厚。", "商票像缓冲垫，也像倒计时；供应商会按贴现价重新判断你。", { scaleScore: 2, blowupRisk: 0.22, relationEffects: { suppliers: 2 }, followUps: [{ id: "supplier-bill-discount", delay: 3 }] }),
+        choice("force-original-contract", "按合同价压回去，谁违约谁赔", { cash: 2, delivery: -4 }, { legal_exposure: 4, delivery_pressure: 6, off_balance_debt: 2 }, ["counterparty-retaliation", "low-bid-change-order"], "账上省钱，现场变硬。", "合同能保护价格，但压到极限会换来停供、索赔和证据包。", { scaleScore: 1, blowupRisk: 0.24, relationEffects: { contractor: -7, suppliers: -8 }, followUps: [{ id: "contractor-evidence-package", delay: 4 }] })
+      ],
+      0,
+      4,
+      { stakes: "开发商赚的是周期差，但材料周期会先从现金、合同和工期上要钱。" }
+    ),
+    event(
+      "tower-crane-near-miss",
+      "塔吊擦过隔壁小学围墙",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "high",
+      ["EP102", "EP114", "EP126"],
+      ["worker-wage-risk", "delivery-first", "legal-exposure"],
+      "下午放学前，塔吊吊臂擦过隔壁小学围墙。没人受伤，但家长群、教育局和住建站同时知道了。",
+      [
+        actor("安全员", "今天没伤人，是运气，不是制度。"),
+        actor("校方", "我们不接受口头保证。"),
+        actor("项目经理", "停塔整改会拖进度，不停就没人敢签字。")
+      ],
+      [
+        choice("full-safety-stop", "停塔整改，请第三方验收", { cash: -6, delivery: 4, public_trust: 4, sales: -2 }, { legal_exposure: -5, boss_safety: 3, delivery_pressure: -2 }, ["delivery-first", "feedback-loop"], "工期慢了，责任边界清楚了。", "安全事故边缘不能赌概率，第三方验收是给未来留证据。", { scaleScore: -1, blowupRisk: 0.08, relationEffects: { local_official: 2, buyers: 3 } }),
+        choice("night-adjust-continue", "夜里调整设备，白天继续施工", { cash: 1, delivery: 2, public_trust: -2 }, { legal_exposure: 5, boss_safety: -3, delivery_pressure: 3 }, ["narrative-control", "legal-exposure"], "进度保住，签字的人少了。", "把安全问题当进度问题处理，会把企业风险推向个人签字风险。", { scaleScore: 2, blowupRisk: 0.26, relationEffects: { contractor: 2, local_official: -3 }, followUps: [{ id: "tax-and-construction-joint-audit", delay: 4 }] }),
+        choice("replace-safety-team", "换安全负责人，公开处罚", { cash: -3, delivery: 1, public_trust: 2 }, { legal_exposure: 1, boss_safety: 1 }, ["risk-transfer-chain", "feedback-loop"], "你给了社会一个交代，也让内部知道有人会被切割。", "换人能止血，但如果制度和工期压力不变，责任还会换个名字回来。", { scaleScore: 0, blowupRisk: 0.16, relationEffects: { contractor: -3, local_official: 1 } })
+      ],
+      0,
+      5,
+      { stakes: "安全事故的可怕之处在于，它会把施工、学校、监管和个人签字同时拉到台前。" }
+    ),
+    event(
+      "delivered-wall-crack-repair",
+      "已交付小区墙面裂缝又上群了",
+      ["shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery", "clearance"],
+      "pressure",
+      ["EP102", "EP114", "EP126"],
+      ["delivery-first", "feedback-loop", "risk-transfer-chain"],
+      "一个已经交付的小区突然在业主群刷屏：墙面裂缝、地下室渗水、维修没人接。旧项目从归档里回来了。",
+      [
+        actor("物业经理", "他们不找物业，直接找开发商。"),
+        actor("老业主", "你卖新盘的时候怎么承诺的？"),
+        actor("工程客服", "保修金不够，施工队也换了。")
+      ],
+      [
+        choice("set-repair-fund", "拿钱设专项维修组，逐户销项", { cash: -5, public_trust: 5, delivery: 3 }, { buyer_liability: -4, legal_exposure: -2, boss_safety: 2 }, ["delivery-first", "feedback-loop"], "旧账花钱，新信用回来一点。", "交付后的维修不是售后小事，它决定老业主会不会成为新项目的风险源。", { scaleScore: 0, blowupRisk: 0.08, relationEffects: { buyers: 5 } }),
+        choice("blame-decoration", "说多半是业主装修造成，先鉴定", { cash: 1, public_trust: -4, delivery: -1 }, { buyer_liability: 5, legal_exposure: 3 }, ["risk-transfer-chain", "narrative-control"], "你省了维修款，也把对抗拉长。", "责任鉴定可以做，但如果先定调推责，业主会把证据越攒越硬。", { scaleScore: 1, blowupRisk: 0.2, relationEffects: { buyers: -7 }, followUps: [{ id: "homebuyer-lawyer-letter", delay: 3 }] }),
+        choice("ask-contractor-back", "找原总包返修，先扣质保金", { cash: 2, delivery: 2 }, { legal_exposure: 3, delivery_pressure: 2 }, ["counterparty-retaliation", "delivery-first"], "钱暂时不用你出，总包的旧账又翻出来。", "扣质保金是权利，但如果旧签证和欠款没清，总包会用返修重新谈判。", { scaleScore: 1, blowupRisk: 0.18, relationEffects: { contractor: -6, buyers: 2 }, followUps: [{ id: "contractor-evidence-package", delay: 4 }] })
+      ],
+      0,
+      5,
+      { stakes: "已交付项目不是消失了，只是进入保修、物业和口碑账本。" }
+    ),
+    event(
+      "county-finance-road-advance",
+      "县里让你先垫一段配套路",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines"],
+      "pressure",
+      ["EP004", "EP031", "EP124"],
+      ["land-fiscal-pressure", "political-embedded-enterprise", "government-permit-power"],
+      "县里说小区门口那段路今年财政排不开，但路不修，你的交付和下一块地都会不好看。意思很清楚：你先垫。",
+      [
+        actor("县住建口", "这条路也是你项目价值的一部分。"),
+        actor("财务总监", "垫了就是现金流，不垫就是审批和交付风险。"),
+        actor("同行", "县里让你垫，说明你已经坐上桌了。")
+      ],
+      [
+        choice("advance-road-money", "先垫路钱，换审批和口碑", { cash: -7, government: 5, delivery: 3, sales: 2 }, { political_dependency: 5, local_isolation: -2 }, ["political-embedded-enterprise", "land-fiscal-pressure"], "路通了，地方账也更深了。", "垫资能换项目价值和地方信用，但也会把企业绑进地方财政缺口。", { scaleScore: 3, blowupRisk: 0.16, relationEffects: { local_official: 5, buyers: 2 } }),
+        choice("ask-written-offset", "要求写进会议纪要，抵扣后续费用", { cash: -2, government: -2, bank: 1 }, { political_dependency: -1, legal_exposure: -1 }, ["feedback-loop", "balance-sheet-maintenance"], "地方不爽，但账能解释。", "政商交易最怕口头承诺，能写进文件的支持才有债权价值。", { scaleScore: 1, blowupRisk: 0.1, relationEffects: { local_official: -3, bank_manager: 2 } }),
+        choice("refuse-road-delay", "不垫，按合同边界来", { cash: 2, government: -6, delivery: -2, sales: -2 }, { local_isolation: 7, boss_safety: 1 }, ["exit-discipline", "government-permit-power"], "现金保住了，地方入口冷了。", "边界能保现金，但在地方财政压力下，审批、验收和下一块地会重新定价。", { scaleScore: -2, blowupRisk: 0.18, relationEffects: { local_official: -8 }, followUps: [{ id: "local-protection-gap", delay: 3 }] })
+      ],
+      0,
+      4,
+      { stakes: "房地产不是只盖楼，地方配套、财政缺口和审批权会一起进入项目现金流。" }
+    ),
+    event(
+      "escrow-bank-weekend-freeze",
+      "周五下午，监管户拨付被银行按住",
+      ["high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "high",
+      ["EP031", "EP124", "EP126"],
+      ["escrow-control", "pre-sale-funds-leak", "balance-sheet-maintenance"],
+      "项目本来等着周五拨一笔工程款，银行突然要求补工程节点、监管账户明细和住建确认。总包已经在门口等钱。",
+      [
+        actor("银行经办", "不是不给，是材料不够让我签不了。"),
+        actor("总包老板", "你们内部流程，不能让我工人下周没饭吃。"),
+        actor("财务总监", "监管户的钱不是现金池，这是现在最疼的一课。")
+      ],
+      [
+        choice("three-party-reconcile", "银行、住建、总包三方对账后拨付", { cash: -3, delivery: 4, bank: 2, government: 1 }, { presale_misuse: -4, buyer_liability: -3, legal_exposure: -2 }, ["escrow-control", "feedback-loop"], "慢了一天，钱的性质清楚了。", "监管户拨付不是技术流程，而是购房款责任、工程进度和银行签字的交叉点。", { scaleScore: 0, blowupRisk: 0.08, relationEffects: { bank_manager: 3, contractor: 3 } }),
+        choice("move-money-around", "先从别的项目调钱垫上", { cash: 3, delivery: 2, bank: -2 }, { presale_misuse: 7, buyer_liability: 5, data_inflation: 3 }, ["pre-sale-funds-leak", "risk-transfer-chain"], "这边工地没停，那边监管户变薄。", "跨项目挪钱最像救急，也最容易把多个购房人群体连成一条责任链。", { scaleScore: 2, blowupRisk: 0.26, relationEffects: { contractor: 2, bank_manager: -4 }, followUps: [{ id: "escrow-gap-screenshot", delay: 3 }] }),
+        choice("pressure-branch-sign", "找关系让支行先签，材料后补", { cash: 5, delivery: 2, government: 1 }, { legal_exposure: 6, data_inflation: 5, financing_cost: 2 }, ["political-embedded-enterprise", "legal-exposure"], "钱出来了，签字人也被你带进来了。", "让银行先签字能救现场，但危机后会追问谁明知材料不全还放款。", { scaleScore: 2, blowupRisk: 0.28, relationEffects: { bank_manager: -6, local_official: 2 }, followUps: [{ id: "mortgage-funds-wrong-account", delay: 4 }] })
+      ],
+      1,
+      5,
+      { stakes: "监管账户让预售款从自由现金变成交付责任，周五下午最能看出谁在承担签字风险。" }
+    ),
+    event(
+      "channel-rebate-blackmail",
+      "渠道经理把返佣表发到你手机",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "pressure",
+      ["EP110", "EP125", "EP126"],
+      ["platformized-sales", "counterparty-retaliation", "data-inflation"],
+      "渠道经理说尾佣拖太久了。他发来一张表：客户电话、假到访、返佣承诺、聊天记录，一样不少。",
+      [
+        actor("渠道经理", "你不给，我也只能让客户知道自己被怎么带来的。"),
+        actor("销售总", "渠道能给热度，也能把热度变成把柄。"),
+        actor("财务", "这笔钱没写进明面成本。")
+      ],
+      [
+        choice("pay-core-rebate", "付核心返佣，换客户资料和封口", { cash: -4, sales: 2 }, { data_inflation: 2, legal_exposure: 2 }, ["platformized-sales", "counterparty-retaliation"], "人先安静，灰账还在。", "给钱能压住短期反咬，但也承认了渠道链知道你的真实销售质量。", { scaleScore: 1, blowupRisk: 0.18, relationEffects: { channel: 4 } }),
+        choice("audit-channel-list", "审渠道名单，砍虚假到访和水分", { cash: -1, sales: -3, public_trust: 2 }, { data_inflation: -5, price_bubble: -2 }, ["feedback-loop", "platformized-sales"], "销量难看，客户质量清楚。", "去水分会伤增长叙事，但能减少未来销售数据倒查。", { scaleScore: -1, blowupRisk: 0.1, relationEffects: { channel: -5, bank_manager: 1 } }),
+        choice("replace-channel", "换渠道公司，让新人接盘", { sales: 3, cash: 1, public_trust: -2 }, { legal_exposure: 4, data_inflation: 4 }, ["risk-transfer-chain", "platformized-sales"], "新渠道进来了，旧渠道也没消失。", "切割合作方最容易触发反咬，因为对方手里只剩证据和怨气。", { scaleScore: 2, blowupRisk: 0.24, relationEffects: { channel: -9 }, followUps: [{ id: "channel-poaching-war", delay: 3 }] })
+      ],
+      0,
+      5,
+      { stakes: "渠道不是流量机器，它有记忆、账本和反咬能力。" }
+    ),
+    event(
+      "media-real-estate-account",
+      "本地房产号问你要一个说法",
+      ["shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "routine",
+      ["EP110", "EP125", "EP126"],
+      ["narrative-control", "feedback-loop", "platformized-sales"],
+      "本地房产号发来提纲：施工进度、降价传闻、监管账户、老业主投诉。他们说今晚发稿，给你一个回应窗口。",
+      [
+        actor("房产号编辑", "不回应，我们就按业主和渠道说法写。"),
+        actor("公关", "买稿能压一篇，压不住所有截图。"),
+        actor("销售总", "这篇出来，明天案场就会被问爆。")
+      ],
+      [
+        choice("open-documents", "给节点表、监管户说明和现场照片", { cash: -1, public_trust: 4, bank: 1, sales: -1 }, { data_inflation: -3, buyer_liability: -2 }, ["feedback-loop", "balance-sheet-maintenance"], "文章不漂亮，但问题可核验。", "公开不是表演，必须拿出能被业主、银行和监管同时核对的材料。", { scaleScore: 0, blowupRisk: 0.09, relationEffects: { buyers: 3, bank_manager: 1 } }),
+        choice("buy-soft-article", "投一笔广告，换温和标题", { cash: -3, sales: 3, public_trust: -1 }, { data_inflation: 4, price_bubble: 2 }, ["narrative-control", "platformized-sales"], "标题温和了，事实没变。", "舆论投放可以争取时间，但如果现场没有改善，下一次会更贵更难压。", { scaleScore: 2, blowupRisk: 0.16, relationEffects: { channel: 2 } }),
+        choice("lawyer-letter-media", "发律师函，要求停止传播", { cash: -2, public_trust: -3, government: -1 }, { legal_exposure: 3, local_isolation: 2 }, ["narrative-control", "legal-exposure"], "对方收敛一点，业主更想知道你怕什么。", "用法律动作处理事实争议，可能把讨论从房子带到证据。", { scaleScore: 0, blowupRisk: 0.2, relationEffects: { buyers: -4 }, followUps: [{ id: "owner-livestream-site-check", delay: 3 }] })
+      ],
+      0,
+      5,
+      { stakes: "媒体不是单纯好坏，它会把散落的业主、渠道和工地信息整合成公共叙事。" }
+    ),
+    event(
+      "dust-control-stop-work",
+      "扬尘红牌挂到围挡上",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "routine",
+      ["EP014", "EP102", "EP124"],
+      ["government-permit-power", "delivery-first"],
+      "环保和住建联合巡查，围挡外泥浆、裸土和渣土车被拍了个正着。红牌挂上去，售楼处客户也看见了。",
+      [
+        actor("住建站", "停几天还是停半个月，看你整改材料。"),
+        actor("项目经理", "喷淋、覆盖、洗车槽都要钱。"),
+        actor("客户", "连工地都管不好，楼能管好吗？")
+      ],
+      [
+        choice("standardize-site", "按标准整改工地，补设备和台账", { cash: -4, delivery: 2, public_trust: 2, government: 1 }, { legal_exposure: -2, local_isolation: -1 }, ["delivery-first", "feedback-loop"], "现场像样了，现金少了。", "工地标准化不是装样子，它会影响验收、客户信任和事故概率。", { scaleScore: 0, blowupRisk: 0.08, relationEffects: { local_official: 2 } }),
+        choice("relationship-warning", "找熟人先摘红牌，整改慢慢补", { cash: 1, government: 2, delivery: 1 }, { political_dependency: 4, legal_exposure: 3, data_inflation: 2 }, ["political-embedded-enterprise", "government-permit-power"], "红牌摘得快，账本补得慢。", "关系能缩短处罚时间，但不能替你完成现场治理。", { scaleScore: 2, blowupRisk: 0.18, relationEffects: { local_official: 3 }, followUps: [{ id: "tax-and-construction-joint-audit", delay: 5 }] }),
+        choice("push-to-contractor-site", "罚总包现场管理费，让他们整改", { cash: 2, delivery: -1 }, { legal_exposure: 2, delivery_pressure: 3 }, ["counterparty-retaliation", "risk-transfer-chain"], "你把成本推下去，也把总包怨气推上来。", "现场责任可以分包，但停工和舆情最后仍会回到开发商。", { scaleScore: 1, blowupRisk: 0.17, relationEffects: { contractor: -5 }, followUps: [{ id: "contractor-evidence-package", delay: 4 }] })
+      ],
+      0,
+      4,
+      { stakes: "监管卡口常常不是大案，而是用小问题卡住项目节奏。" }
+    ),
+    event(
+      "old-demolition-video-resurfaces",
+      "旧改清场视频突然被翻出来",
+      ["shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery"],
+      "high",
+      ["EP004", "EP110", "EP126"],
+      ["gray-governance", "legal-exposure", "narrative-control"],
+      "几年前旧改清场的视频被重新剪出来：土方车、拉横幅的人、一个熟悉的村干部。评论区开始问你和当年的清场队是什么关系。",
+      [
+        actor("土方老板", "那时候谁让谁去的，大家心里都有数。"),
+        actor("公关", "这不是普通舆情，它有人名和车牌。"),
+        actor("法务", "删视频不是唯一问题，原始证据在哪里更重要。")
+      ],
+      [
+        choice("settle-old-household", "找当事户补偿和解，留下书面闭环", { cash: -5, public_trust: 2, government: -1 }, { gray_risk: -3, legal_exposure: -3, boss_safety: 2 }, ["gray-governance", "feedback-loop"], "钱花在旧账上，风险往回收一点。", "灰色旧账要闭合，不能只靠删帖；补偿、文件和当事人态度都重要。", { scaleScore: -1, blowupRisk: 0.1, relationEffects: { underground: -1, local_official: -1 } }),
+        choice("ask-earthwork-delete", "让土方老板找人删视频", { cash: -2, public_trust: -2 }, { gray_risk: 6, legal_exposure: 5, boss_safety: -3 }, ["gray-governance", "protective-umbrella-risk"], "视频可能少了，土方老板更知道你怕什么。", "继续用灰色力量处理灰色旧账，会把对方从工具人变成债权人。", { scaleScore: 1, blowupRisk: 0.28, relationEffects: { underground: 3, buyers: -2 }, followUps: [{ id: "earthwork-boss-blackmail", delay: 3 }] }),
+        choice("public-compensation-ledger", "公开旧改补偿台账和第三方复核", { cash: -3, government: -2, public_trust: 4 }, { data_inflation: -3, legal_exposure: -2, gray_risk: -2 }, ["feedback-loop", "legal-exposure"], "地方不一定高兴，但证据更清楚。", "把灰色争议拉回文件和第三方复核，是把刑事化风险往民事和行政边界推。", { scaleScore: 0, blowupRisk: 0.12, relationEffects: { local_official: -3, buyers: 3 } })
+      ],
+      0,
+      5,
+      { stakes: "旧改时代留下的人和视频，会在企业变大或市场变坏时重新找回来。" }
+    ),
+    event(
+      "state-owned-rival-bid-support",
+      "国企对手拿着白名单方案进场",
+      ["high-turnover", "three-red-lines", "sales-freeze", "guaranteed-delivery", "clearance"],
+      "pressure",
+      ["EP031", "EP078", "EP124"],
+      ["state-purchase-floor", "competitor-pressure", "political-embedded-enterprise"],
+      "你还在谈展期，国企对手已经带着白名单、代建团队和低息资金来找地方。话说得客气：共同保交付，实质是接你的盘面。",
+      [
+        actor("国企项目总", "我们不抢，只是地方需要一个更稳的主体。"),
+        actor("银行", "谁能交楼，谁的方案就更像方案。"),
+        actor("你的人", "他们拿的是稳定牌，我们拿的是老板牌。")
+      ],
+      [
+        choice("invite-jv", "让国企小股进入，换白名单和融资", { cash: 6, bank: 5, government: 4, delivery: 4, land_bank: -4 }, { control_loss: 7, political_dependency: 5, boss_safety: 2 }, ["state-purchase-floor", "political-embedded-enterprise"], "钱和信用来了，控制权少了。", "国资进场能救交付，但它救的是项目，不一定救老板的控制权。", { scaleScore: 1, blowupRisk: 0.12, relationEffects: { state_capital: 8, local_official: 4 } }),
+        choice("outbid-state-rival", "自己加码保交付承诺，别让盘被接走", { cash: -5, debt: 4, government: 2, delivery: 2 }, { financing_cost: 5, political_dependency: 4, buyer_liability: 3 }, ["leverage-backfire", "political-embedded-enterprise"], "你保住牌桌，也把承诺写得更重。", "危机里抢回控制权很贵，因为你要同时向地方、银行和业主证明自己还能撑。", { scaleScore: 3, blowupRisk: 0.24, relationEffects: { local_official: 2, bank_manager: -1 }, followUps: [{ id: "white-list-application-review", delay: 3 }] }),
+        choice("sell-one-project-to-state", "把最难项目交给国企，保其他盘", { cash: 8, debt: -6, land_bank: -8, delivery: 3, government: 2 }, { exit_preparation: 7, control_loss: 4, local_isolation: -1 }, ["cycle-asset-trader", "state-purchase-floor"], "你丢掉一块难骨头，换回时间。", "主动让渡问题项目可能保住整体，但成交价和处置权不会按你最理想的方式来。", { scaleScore: -3, blowupRisk: 0.1, relationEffects: { state_capital: 6, bank_manager: 3 } })
+      ],
+      2,
+      5,
+      { stakes: "国企不是简单救星，也是竞争者、处置者和地方稳定工具。" }
+    ),
+    event(
+      "presale-cash-next-parcel",
+      "第一批按揭款刚到，土拍群已经发新地",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines"],
+      "pressure",
+      ["EP031", "EP101", "EP124"],
+      ["land-finance-loop", "leverage-backfire", "cycle-asset-trader"],
+      "你这个盘还没交付，但预售回款和银行按揭已经让账面好看起来。自然资源群里推了一块新地，报名期很短，地方也希望你继续举牌。",
+      [
+        actor("投拓经理", "现在不拿，等第一个盘交完，好地早没了。"),
+        actor("财务总监", "这笔回款不是全都自由，监管户和工程款都盯着。"),
+        actor("县里窗口", "你第一个盘卖得动，第二块地才有故事。")
+      ],
+      [
+        choice("use-presale-as-deposit", "用可动用回款交保证金", { cash: -6, debt: 5, land_bank: 10, government: 3, bank: 2, sales: 2 }, { buyer_liability: 4, financing_cost: 4, delivery_pressure: 3, price_bubble: 3 }, ["land-finance-loop", "presale-cashflow-trap"], "你把回款变成下一块地，也把交付责任往后压了一层。", "房地产滚动扩张的核心不是等交付，而是用预售回款、按揭和抵押空间提前上下一张桌。", { scaleScore: 7, blowupRisk: 0.2, relationEffects: { local_official: 3, bank_manager: 2 }, followUps: [{ id: "escrow-bank-weekend-freeze", delay: 4 }] }),
+        choice("reserve-cash-build-first", "先把钱留给工程进度，地块只跟踪", { cash: 2, delivery: 4, government: -2, sales: -1 }, { delivery_pressure: -3, financing_cost: -1, exit_preparation: 2 }, ["delivery-first", "exit-discipline"], "你慢了一步，但项目更像能交。", "不拿地也是选择：它会降低增长叙事，却提高第一个盘闭合的概率。", { scaleScore: 0, blowupRisk: 0.08, relationEffects: { local_official: -2, bank_manager: 1 } }),
+        choice("bring-financial-partner", "拉金融小股东垫保证金，收益分成", { cash: 2, debt: 3, land_bank: 7, bank: 3, government: 1 }, { financing_cost: 5, control_loss: 4, legal_exposure: 2 }, ["related-party-financing", "land-finance-loop"], "你少出现金，也多了分账和控制权问题。", "外部资金能提高拿地速度，但会让项目未来收益、控制权和清偿顺位更复杂。", { scaleScore: 5, blowupRisk: 0.18, relationEffects: { bank_manager: 3, state_capital: 2 } })
+      ],
+      0,
+      5,
+      { stakes: "房地产常常不是交完一个再做下一个，而是还没交付就用回款和信用去滚下一块地。" }
+    ),
+    event(
+      "bank-credit-after-presale",
+      "银行看了网签表，主动问你要不要加额度",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines"],
+      "pressure",
+      ["EP031", "EP078", "EP124"],
+      ["balance-sheet-maintenance", "land-finance-loop", "leverage-backfire"],
+      "支行看到网签、按揭和抵押物估值都在变好，主动给你一个新增授信窗口。钱可以进来，但银行问得很细：是补工程、还短债，还是拿下一块地？",
+      [
+        actor("授信经理", "卖得动，我们可以谈额度；用途不同，价格也不同。"),
+        actor("财务总监", "补工程是慢钱，拿地是快故事。"),
+        actor("投拓经理", "银行主动开口的时候，市场窗口不会太差。")
+      ],
+      [
+        choice("borrow-for-next-land", "新增授信用来拿下一块地", { cash: 8, debt: 9, land_bank: 9, bank: 2, sales: 3, government: 2 }, { financing_cost: 5, price_bubble: 4, buyer_liability: 2 }, ["land-finance-loop", "leverage-backfire"], "现金进来了，债和货值一起膨胀。", "银行额度会放大顺周期能力，也会放大下行期债务和交付责任。", { scaleScore: 8, blowupRisk: 0.22, relationEffects: { bank_manager: 4, local_official: 2 }, followUps: [{ id: "interest-rollover-friday", delay: 4 }] }),
+        choice("borrow-for-construction", "新增授信只补工程和交付节点", { cash: 4, debt: 4, delivery: 5, bank: 2, sales: 1 }, { delivery_pressure: -4, financing_cost: 2, buyer_liability: -1 }, ["delivery-first", "balance-sheet-maintenance"], "规模没猛涨，但项目更能闭合。", "同样是贷款，用途决定它是扩张燃料还是交付保险。", { scaleScore: 2, blowupRisk: 0.12, relationEffects: { bank_manager: 3, contractor: 3 } }),
+        choice("keep-credit-unused", "额度先批下来，不马上提款", { bank: 5, government: -1, sales: -1 }, { financing_cost: -1, exit_preparation: 3 }, ["exit-discipline", "balance-sheet-maintenance"], "你保留弹药，也让增长故事变淡。", "授信不是必须马上花掉；真正稀缺的是能在需要时提款，而不是一拿到钱就扩张。", { scaleScore: 1, blowupRisk: 0.08, relationEffects: { bank_manager: 4, local_official: -1 } })
+      ],
+      0,
+      5,
+      { stakes: "上行期银行会把销售和抵押物重新定价，开发商的诱惑是把信用窗口误认为利润。" }
+    ),
+    event(
+      "split-team-next-site",
+      "项目还没交，投拓已经要第二支队伍",
+      ["early-expansion", "shelter-reform-boom", "high-turnover"],
+      "pressure",
+      ["EP101", "EP114", "EP126"],
+      ["land-finance-loop", "delivery-first", "risk-transfer-chain"],
+      "现有项目还在施工，投拓说下一块地必须提前准备：要么扩项目团队，要么把当前项目的一部分人抽走，要么找外部代建。",
+      [
+        actor("投拓经理", "等第一个盘交了再招人，第二块地就晚了。"),
+        actor("工程经理", "把人抽走，当前项目质量和工期都会掉。"),
+        actor("代建公司", "我们能接，但控制权和管理费要写清楚。")
+      ],
+      [
+        choice("hire-second-team", "花钱组第二支项目队伍", { cash: -5, land_bank: 6, delivery: 2, government: 2 }, { financing_cost: 2, political_dependency: 2 }, ["land-finance-loop", "delivery-first"], "管理半径变大，现金先变薄。", "扩张不只是拿地，还要有能同时跑多个项目的组织能力。", { scaleScore: 5, blowupRisk: 0.14, relationEffects: { contractor: 2, local_official: 2 } }),
+        choice("pull-current-team", "从当前项目抽骨干去看新地", { cash: 1, land_bank: 7, sales: 2, delivery: -5 }, { delivery_pressure: 6, buyer_liability: 3 }, ["risk-transfer-chain", "leverage-backfire"], "新地推进快了，老盘开始松。", "高周转最危险的是把同一套人马当成无限产能。", { scaleScore: 6, blowupRisk: 0.24, relationEffects: { contractor: -3 }, followUps: [{ id: "owner-livestream-site-check", delay: 4 }] }),
+        choice("use-asset-light-partner", "让代建伙伴接新地前期，自己保操盘权", { cash: -2, land_bank: 5, bank: 2, delivery: 1 }, { control_loss: 3, political_dependency: 2, financing_cost: 1 }, ["political-embedded-enterprise", "exit-discipline"], "你降低现金压力，也让新项目多了一个主人。", "轻资产能扩半径，但会牺牲一部分控制权和利润。", { scaleScore: 3, blowupRisk: 0.13, relationEffects: { state_capital: 3, bank_manager: 2 } })
+      ],
+      0,
+      4,
+      { stakes: "从小老板变开发商，不只看胆量，还看组织能不能同时承受多个项目。" }
+    ),
+    event(
+      "post-delivery-capital-desk",
+      "三盘交完，银行反而问你下一块地",
+      ["early-expansion", "shelter-reform-boom", "high-turnover", "three-red-lines", "sales-freeze"],
+      "pressure",
+      ["EP031", "EP078", "EP124", "EP126"],
+      ["cycle-asset-trader", "land-finance-loop", "exit-discipline"],
+      "工地安静下来，已交付项目归档。账上没有待处理楼盘，银行客户经理却把授信表推回来：你到底是继续滚下一块地、还债空窗、接代建小股，还是趁责任闭合退出？",
+      [
+        actor("银行客户经理", "项目交了是信用，不是未来现金流。明年的货值在哪里？"),
+        actor("县住建口", "你要继续做，就别让售楼处和工地断档；你要退，也要把尾账说清楚。"),
+        actor("财务总监", "空账本不是安全，它只是让我们第一次能选择不上桌。")
+      ],
+      [
+        choice("roll-next-land", "再拿一块地，让现金继续转", { cash: -8, debt: 8, land_bank: 12, sales: 4, government: 3, bank: 2 }, { financing_cost: 5, price_bubble: 5, buyer_liability: 2, delivery_pressure: 3 }, ["land-finance-loop", "leverage-backfire"], "牌桌继续转，货值和债务一起回来。", "房地产顺周期赚钱靠滚动，但滚动不是利润本身；下一块地会把自由现金重新锁进土地和工程。", { scaleScore: 8, blowupRisk: 0.18, relationEffects: { local_official: 3, bank_manager: 2 }, followUps: [{ id: "land-auction-bond-borrowed", delay: 3 }] }),
+        choice("deleverage-window", "先还债，保一年空窗", { cash: -4, debt: -10, delivery: 3, bank: 4, government: -2, sales: -3 }, { financing_cost: -5, exit_preparation: 8, local_isolation: 3, boss_safety: 3 }, ["exit-discipline", "balance-sheet-maintenance"], "你把风险降下来，也让地方和渠道觉得你不够进取。", "空窗期能救资产负债表，但会牺牲增长故事；真正的纪律是不在干净时又把自己推回高杠杆。", { scaleScore: -4, blowupRisk: 0.08, relationEffects: { bank_manager: 4, local_official: -2 }, followUps: [{ id: "voluntary-exit-window", delay: 3 }] }),
+        choice("asset-light-management", "接代建小股，赚管理费不重拿地", { cash: 3, debt: 2, land_bank: 4, delivery: 5, government: 3, bank: 2 }, { political_dependency: 3, financing_cost: 1, buyer_liability: 1 }, ["delivery-first", "political-embedded-enterprise", "exit-discipline"], "现金压力轻一点，控制权也轻一点。", "代建和小股模式能降低资产负担，但你赚的是管理费和关系信用，不再完全控制项目命运。", { scaleScore: 3, blowupRisk: 0.1, relationEffects: { state_capital: 4, local_official: 3, bank_manager: 2 } })
+      ],
+      0,
+      5,
+      { stakes: "项目交付不是终点，而是资本重新配置的窗口。继续、收缩、轻资产和退出都不是完美答案。", repeatable: true, repeatCooldown: 5 }
+    ),
+    event(
       "voluntary-exit-window",
       "你忽然发现：现在收手也许还能睡着",
       ["shelter-reform-boom", "high-turnover", "three-red-lines"],
@@ -3652,6 +4070,7 @@ window.REAL_ESTATE_TYCOON_DATA = {
     "unfinished-neighbor",
     "wealth-product-redemption",
     "old-owners-price-cut",
+    "post-delivery-capital-desk",
     "project-sale-window",
     "supplier-blockade",
     "presale-supervision-account",
@@ -3711,6 +4130,7 @@ window.REAL_ESTATE_TYCOON_DATA = {
     "liquidation-petition",
     "local-protection-gap",
     "mature-asset-sale-rumor",
+    "post-delivery-capital-desk",
     "voluntary-exit-window",
     "office-vacancy-rent-roll",
     "foreign-fund-takeover-review",
@@ -3721,6 +4141,24 @@ window.REAL_ESTATE_TYCOON_DATA = {
     "land-auction-bond-borrowed",
     "private-fund-bridge-weekend",
     "earthwork-subcontract-chain",
-    "related-bank-spv-loan"
+    "related-bank-spv-loan",
+    "branch-president-rotation",
+    "presale-cash-next-parcel",
+    "bank-credit-after-presale",
+    "split-team-next-site",
+    "tax-invoice-chain",
+    "rainstorm-basement-flood",
+    "owner-livestream-site-check",
+    "rival-drone-video",
+    "steel-cement-price-jump",
+    "tower-crane-near-miss",
+    "delivered-wall-crack-repair",
+    "county-finance-road-advance",
+    "escrow-bank-weekend-freeze",
+    "channel-rebate-blackmail",
+    "media-real-estate-account",
+    "dust-control-stop-work",
+    "old-demolition-video-resurfaces",
+    "state-owned-rival-bid-support"
   ];
 })();
