@@ -737,11 +737,24 @@ async function copyFileIfPresent(from, to) {
   }
 }
 
+async function copyDirIfPresent(from, to) {
+  try {
+    await fs.cp(from, to, { recursive: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
+}
+
 async function copySimulatorAssets(targetDir) {
   await ensureDir(targetDir);
   await Promise.all(
     simulatorPublicFiles.map((file) => copyFile(path.join(simulatorSourceDir, file), path.join(targetDir, file)))
   );
+  await Promise.all([
+    copyFileIfPresent(path.join(simulatorSourceDir, 'README.md'), path.join(targetDir, 'README.md')),
+    copyDirIfPresent(path.join(simulatorSourceDir, 'systems'), path.join(targetDir, 'systems'))
+  ]);
 }
 
 async function buildIndexHtml(versionTag) {

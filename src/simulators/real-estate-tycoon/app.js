@@ -1,3 +1,25 @@
+import {
+  buildJointDevelopmentProposals,
+  buildRelationLoanOffer,
+  jointProfileForAction,
+  loanProfileForAction
+} from "./systems/relation/negotiation.js";
+import {
+  createCompetitorRoster,
+  generateAuctionCompetitors,
+  normalizeCompetitorRoster,
+  recordCompetitorAuctionOutcome
+} from "./systems/auction/competitors.js";
+import {
+  auctionChatActionProfile,
+  auctionChatContactById,
+  auctionChatContactProfiles,
+  auctionChatGroupById,
+  auctionChatGroups
+} from "./systems/auction/chat.js";
+import { renderCityPlanBase } from "./systems/auction/city-map.js";
+import { renderLandMarketBoard as renderAuctionMapBoard } from "./systems/auction/map-view.js";
+
 const DATA = window.REAL_ESTATE_TYCOON_DATA;
 const SAVE_KEY = "real-estate-tycoon-county-contractor-v7";
 
@@ -10,6 +32,7 @@ const SEVERITY_RISK = {
 
 const MAX_TURNS = 90;
 const OFFICE_EVENT_ID = "__office_turn__";
+const MAX_CONSECUTIVE_INCIDENTS = 2;
 const MIN_TURNS_FOR_SCALE = [1, 4, 10, 24, 42, 68, 999];
 const DEFAULT_PHASE_TURNS = [1, 13, 26, 39, 52, 65, 78];
 const DEFAULT_PHASE_DURATION_RANGES = [[11, 15], [11, 15], [11, 15], [11, 15], [11, 14], [10, 14]];
@@ -1249,6 +1272,12 @@ function normalizeProjectRecord(project) {
     lastIssueTurn: 0,
     issueCount: 0,
     escrowUsedForConstruction: 0,
+    contractorPayable: 0,
+    lastContractorDue: 0,
+    lastContractorPaid: 0,
+    lastContractSales: 0,
+    cashModelV2: false,
+    cashWindow: 0,
     deliveredTurn: null,
     deliverySettlementCash: 0,
     deliveryDebtPaid: 0
@@ -1256,6 +1285,17 @@ function normalizeProjectRecord(project) {
   Object.entries(defaults).forEach(([key, value]) => {
     if (normalized[key] === undefined || normalized[key] === null) normalized[key] = value;
   });
+  const sold = Math.max(0, Number(normalized.soldValue) || 0);
+  const collected = Math.max(0, Number(normalized.cashCollected) || 0);
+  const realizedCash =
+    Math.max(0, Number(normalized.freeCashCollected) || 0) +
+    Math.max(0, Number(normalized.escrowCash) || 0) +
+    Math.max(0, Number(normalized.escrowUsedForConstruction) || 0) +
+    Math.max(0, Number(normalized.deliverySettlementCash) || 0);
+  if (!normalized.cashModelV2 && sold > 0 && collected >= sold * 0.92 && realizedCash > 0 && realizedCash < collected * 0.98) {
+    normalized.cashCollected = Math.max(0, Math.min(sold, Math.round(realizedCash)));
+  }
+  normalized.cashModelV2 = true;
   return normalized;
 }
 
@@ -1281,6 +1321,9 @@ function createFundingLedger() {
     presaleCash: 0,
     mortgageFlow: 0,
     stateBridge: 0,
+    friendLoan: 0,
+    microLoan: 0,
+    undergroundLoan: 0,
     assetSaleCash: 0,
     tailSaleCash: 0,
     interestDue: 0,
@@ -1303,6 +1346,9 @@ function seedFundingLedger(ledger, state) {
   const offBook = hidden.off_balance_debt || 0;
   ledger.bankLoan = Math.max(0, Math.round(debt * 0.52));
   ledger.trustLoan = Math.max(0, Math.round(debt * 0.2 + offBook * 0.14));
+  ledger.friendLoan = Math.max(0, Math.round(offBook * 0.1));
+  ledger.microLoan = Math.max(0, Math.round(offBook * 0.08));
+  ledger.undergroundLoan = Math.max(0, Math.round((hidden.gray_risk || 0) * 0.12));
   ledger.supplierCredit = Math.max(0, Math.round(offBook * 0.45));
   ledger.commercialPaper = Math.max(0, Math.round(offBook * 0.38));
   ledger.presaleCash = Math.max(0, Math.round((hidden.buyer_liability || 0) * 0.55));
@@ -1358,11 +1404,16 @@ function createGame() {
       channel: 18,
       state_capital: 10,
       media: 20,
-      underground: 8
+      underground: 8,
+      private_friends: 32,
+      micro_lender: 10
     },
-    seenEvents: {},
-    incidentLog: [],
-    history: [],
+	    seenEvents: {},
+	    incidentLog: [],
+	    causalLog: [],
+	    currentEventCause: null,
+	    pendingCauseContext: null,
+	    history: [],
     feedbackQueue: [],
     activeFeedback: [],
     riskLedger: createRiskLedger(),
@@ -1371,9 +1422,19 @@ function createGame() {
     goodwillEvents: [],
     projectLedger: seedProjectLedger(createProjectLedger(), state),
     fundingLedger: seedFundingLedger(createFundingLedger(), state),
+    districtMarket: createDistrictMarket(),
+    landRegistry: [],
+    competitorRoster: createCompetitorRoster(),
     auctionDesk: null,
     selectedAuctionLotId: null,
+    selectedAuctionDistrict: null,
     selectedProjectId: null,
+    selectedProjectAction: null,
+    selectedFinanceChannel: null,
+    selectedFinanceContact: null,
+    selectedRelationGroup: null,
+    selectedRelationContact: null,
+    selectedRelationAction: null,
     auctionBidState: null,
     scaleHistory: [
       {
@@ -1383,7 +1444,7 @@ function createGame() {
       }
     ],
     modelCounts: {},
-    flags: { phaseStartTurn: 1, officeTurns: 0 },
+    flags: { phaseStartTurn: 1, officeTurns: 0, incidentStreak: 0 },
     notice: "",
     scaleTransition: null,
     pendingAdvance: null,
@@ -1408,6 +1469,8 @@ function normalizeGame(saved) {
     state_capital: 10,
     media: 20,
     underground: 8,
+    private_friends: 32,
+    micro_lender: 10,
     ...(normalized.relations || {})
   };
   normalized.origin = normalized.origin || DATA.origins[0];
@@ -1422,8 +1485,11 @@ function normalizeGame(saved) {
   normalized.eventQueue = (normalized.eventQueue || []).map((entry) =>
     typeof entry === "string" ? { id: entry, availableTurn: normalized.turn || 1 } : entry
   );
-  normalized.incidentLog = normalized.incidentLog || [];
-  normalized.feedbackQueue = normalized.feedbackQueue || [];
+	  normalized.incidentLog = normalized.incidentLog || [];
+	  normalized.causalLog = normalized.causalLog || [];
+	  normalized.currentEventCause = normalized.currentEventCause || null;
+	  normalized.pendingCauseContext = normalized.pendingCauseContext || null;
+	  normalized.feedbackQueue = normalized.feedbackQueue || [];
   normalized.activeFeedback = normalized.activeFeedback || [];
   normalized.seenEvents = normalized.seenEvents || {};
   normalized.history = normalized.history || [];
@@ -1436,15 +1502,26 @@ function normalizeGame(saved) {
   if (!normalized.projectLedger.projects.length) seedProjectLedger(normalized.projectLedger, normalized.state);
   normalized.fundingLedger = { ...createFundingLedger(), ...(normalized.fundingLedger || {}) };
   if (!normalized.fundingLedger.seeded) seedFundingLedger(normalized.fundingLedger, normalized.state);
+  normalized.districtMarket = normalizeDistrictMarket(normalized.districtMarket || createDistrictMarket());
+  normalized.landRegistry = normalized.landRegistry || [];
+  normalized.competitorRoster = normalizeCompetitorRoster(normalized.competitorRoster || createCompetitorRoster());
   normalized.auctionDesk = normalized.auctionDesk || null;
   normalized.selectedAuctionLotId = normalized.selectedAuctionLotId || null;
+  normalized.selectedAuctionDistrict = normalized.selectedAuctionDistrict || null;
   normalized.selectedProjectId = normalized.selectedProjectId || null;
+  normalized.selectedProjectAction = normalized.selectedProjectAction || null;
+  normalized.selectedFinanceChannel = normalized.selectedFinanceChannel || null;
+  normalized.selectedFinanceContact = normalized.selectedFinanceContact || null;
+  normalized.selectedRelationGroup = normalized.selectedRelationGroup || null;
+  normalized.selectedRelationContact = normalized.selectedRelationContact || null;
+  normalized.selectedRelationAction = normalized.selectedRelationAction || null;
   normalized.auctionBidState = normalized.auctionBidState || null;
   normalized.scaleHistory = normalized.scaleHistory || [];
   normalized.modelCounts = normalized.modelCounts || {};
   normalized.flags = normalized.flags || {};
   normalized.flags.phaseStartTurn = normalized.flags.phaseStartTurn || 1;
   normalized.flags.officeTurns = normalized.flags.officeTurns || 0;
+  normalized.flags.incidentStreak = normalized.flags.incidentStreak || 0;
   normalized.notice = normalized.notice || "";
   normalized.scaleTransition = normalized.scaleTransition || null;
   normalized.pendingAdvance = normalized.pendingAdvance || null;
@@ -1484,6 +1561,7 @@ function show(screen) {
   screen.classList.remove("hidden");
   const screenName = screenNameFor(screen);
   document.body.dataset.screen = screenName;
+  if (screenName !== "event") document.body.classList.remove("auction-focus-active");
   if (elements.newGameBtn) elements.newGameBtn.textContent = screenName === "debrief" ? "再开一局" : "新开一局";
 }
 
@@ -1650,7 +1728,10 @@ function ensureFundingLedger() {
 function fundingDebtExposure(ledger = ensureFundingLedger()) {
   return (
     (ledger.bankLoan || 0) +
+    (ledger.friendLoan || 0) * 0.92 +
     (ledger.trustLoan || 0) * 1.15 +
+    (ledger.microLoan || 0) * 1.32 +
+    (ledger.undergroundLoan || 0) * 1.72 +
     (ledger.bondDebt || 0) * 1.05 +
     (ledger.supplierCredit || 0) * 0.72 +
     (ledger.commercialPaper || 0) * 0.9 +
@@ -1663,17 +1744,22 @@ function refreshFundingLedger() {
   const projectLedger = refreshProjectLedger();
   const visible = game.state.visible;
   const securedDebt =
-    (ledger.bankLoan || 0) * 0.72 +
-    (ledger.trustLoan || 0) * 0.46 +
-    (ledger.bondDebt || 0) * 0.18 +
+	    (ledger.bankLoan || 0) * 0.72 +
+	    (ledger.friendLoan || 0) * 0.2 +
+	    (ledger.trustLoan || 0) * 0.46 +
+	    (ledger.microLoan || 0) * 0.58 +
+	    (ledger.undergroundLoan || 0) * 0.72 +
+	    (ledger.bondDebt || 0) * 0.18 +
     visible.debt * 0.16;
   ledger.collateralBorrowingRoom = Math.round(clampNumber(projectLedger.collateralValue - securedDebt, -90, 120));
   ledger.fundingStress = Math.round(clampNumber(
     (ledger.interestDue || 0) * 3 +
       (ledger.rolloverNeed || 0) * 2.2 +
       Math.max(0, -ledger.collateralBorrowingRoom) * 0.85 +
-      (ledger.trustLoan || 0) * 0.18 +
-      (ledger.commercialPaper || 0) * 0.22 +
+	      (ledger.trustLoan || 0) * 0.18 +
+	      (ledger.microLoan || 0) * 0.45 +
+	      (ledger.undergroundLoan || 0) * 0.75 +
+	      (ledger.commercialPaper || 0) * 0.22 +
       Math.max(0, 34 - visible.bank) * 0.9,
     0,
     160
@@ -1684,7 +1770,10 @@ function refreshFundingLedger() {
 function fundingCarryRaw(ledger = ensureFundingLedger()) {
   return (
     (ledger.bankLoan || 0) * 0.012 +
+    (ledger.friendLoan || 0) * 0.022 +
     (ledger.trustLoan || 0) * 0.028 +
+    (ledger.microLoan || 0) * 0.06 +
+    (ledger.undergroundLoan || 0) * 0.11 +
     (ledger.bondDebt || 0) * 0.022 +
     (ledger.supplierCredit || 0) * 0.014 +
     (ledger.commercialPaper || 0) * 0.024 +
@@ -1702,7 +1791,7 @@ function fundingSourceLine() {
   if (!game) return "暂无融资来源";
   const ledger = refreshFundingLedger();
   const nonBank = Math.round((ledger.trustLoan || 0) + (ledger.bondDebt || 0) + (ledger.commercialPaper || 0));
-  return `银${Math.round(ledger.bankLoan || 0)}｜非标${nonBank}｜供${Math.round(ledger.supplierCredit || 0)}`;
+  return `银${Math.round(ledger.bankLoan || 0)}｜友${Math.round(ledger.friendLoan || 0)}｜小${Math.round(ledger.microLoan || 0)}｜黑${Math.round(ledger.undergroundLoan || 0)}｜非标${nonBank}`;
 }
 
 function debtCarryEstimate() {
@@ -1752,6 +1841,18 @@ function signalHealthDegrees(card) {
   return `${Math.round(health * 2.7)}deg`;
 }
 
+function cashDashboardScore(visible, hidden, ledger, fundingLedger) {
+  const cashPressure = Math.max(0, 70 - visible.cash) * 1.22;
+  const carryPressure =
+    (hidden.financing_cost || 0) * 0.16 +
+    ledger.interest * 0.14 +
+    (fundingLedger.interestDue || 0) * 0.22 +
+    Math.max(0, 24 - visible.bank) * 0.18 +
+    Math.max(0, -fundingLedger.collateralBorrowingRoom) * 0.08;
+  const cap = visible.cash >= 90 ? 14 : visible.cash >= 70 ? 24 : visible.cash >= 45 ? 46 : 100;
+  return clampNumber(cashPressure + carryPressure, 0, cap);
+}
+
 function dashboardCards() {
   const visible = game.state.visible;
   const hidden = game.state.hidden;
@@ -1760,13 +1861,7 @@ function dashboardCards() {
   const fundingLedger = refreshFundingLedger();
   const carry = debtCarryEstimate();
   const relation = relationScore();
-  const liquidityScore =
-    Math.max(0, 42 - visible.cash) * 1.15 +
-    (hidden.financing_cost || 0) * 0.5 +
-    ledger.interest * 0.35 +
-    Math.max(0, 32 - visible.bank) * 0.8 +
-    (fundingLedger.interestDue || 0) * 0.65 +
-    Math.max(0, -fundingLedger.collateralBorrowingRoom) * 0.25;
+  const liquidityScore = cashDashboardScore(visible, hidden, ledger, fundingLedger);
   const rolloverScore =
     Math.max(0, visible.debt - 42) * 1.05 +
     hidden.off_balance_debt * 0.55 +
@@ -1811,7 +1906,7 @@ function dashboardCards() {
       key: "cash",
       label: "现金",
       value: visible.cash,
-      state: visible.cash <= 18 ? "只能短撑" : carry.cashDrain > 0 || fundingLedger.interestDue >= 4 ? "被利息咬" : visible.cash <= 35 ? "偏薄" : "能周转",
+      state: visible.cash <= 18 ? "只能短撑" : visible.cash <= 35 ? "偏薄" : visible.cash >= 70 ? "充裕" : carry.cashDrain > 0 || fundingLedger.interestDue >= 4 ? "被利息咬" : "能周转",
       note: `现金${visible.cash}，${fundingShortLine()}`,
       score: liquidityScore
     },
@@ -1889,9 +1984,9 @@ function dashboardGroups() {
   return [
     {
       key: "funding",
-      label: "资金",
-      score: groupScore("cash", "rollover", "sales"),
-      hot: groupHot("cash", "rollover", "sales")
+      label: `资金 ${byKey.cash?.value ?? game.state.visible.cash}`,
+      score: byKey.cash?.score || 0,
+      hot: byKey.cash?.hot || false
     },
     {
       key: "project",
@@ -2205,12 +2300,14 @@ function renderEvent() {
 
   syncPhaseForEvent(game.currentEvent);
   const event = eventById(game.currentEvent);
-  const phase = currentPhase();
-  show(elements.eventScreen);
-  elements.eventScreen.classList.remove("office-mode");
-  renderShell();
+	  const phase = currentPhase();
+	  show(elements.eventScreen);
+	  elements.eventScreen.classList.remove("office-mode");
+	  elements.eventScreen.classList.remove("auction-focus-mode");
+	  document.body.classList.remove("auction-focus-active");
+	  renderShell();
   elements.eventPhase.textContent = phase.title;
-  elements.eventSource.textContent = severityLabel(event.severity);
+	  elements.eventSource.textContent = severityLabel(event.severity);
   const feedbackItems = game.activeFeedback || [];
   elements.feedbackList.innerHTML = feedbackItems.length
     ? feedbackItems.map((feedback) => `
@@ -2220,27 +2317,24 @@ function renderEvent() {
         </div>
       `).join("")
     : "";
-  elements.feedbackList.classList.toggle("hidden", !feedbackItems.length);
-  elements.eventTitle.textContent = event.title;
-  elements.eventBriefing.textContent = event.briefing;
-  const dockCatalog = buildOfficeActionCatalog();
-  const dockLocked = event.severity === "crisis";
-  elements.assetBoard.innerHTML = officeAssetBoard(dockCatalog.context);
-  elements.assetBoard.classList.remove("hidden");
-  elements.actionDock.innerHTML = renderActionDock(dockCatalog.groups, null, { locked: dockLocked });
-  elements.actionDock.classList.remove("hidden");
-  elements.actionDock.querySelectorAll("button[data-category]").forEach((button) => {
-    button.addEventListener("click", () => selectOfficeCategory(button.dataset.category));
-  });
+	  elements.feedbackList.classList.toggle("hidden", !feedbackItems.length);
+	  elements.eventTitle.textContent = event.title;
+	  elements.eventBriefing.textContent = eventBriefingWithCause(event);
+  elements.eventBriefing.classList.remove("hidden");
+  elements.assetBoard.innerHTML = "";
+  elements.assetBoard.classList.add("hidden");
+  elements.actionDock.innerHTML = "";
+  elements.actionDock.classList.add("hidden");
   elements.actorList.innerHTML = "";
   elements.actorList.classList.add("hidden");
   elements.choiceList.classList.remove("office-action-panel");
-  elements.choiceList.innerHTML = event.choices
+  const displayedChoices = event.choices.slice(0, 2);
+  elements.choiceList.innerHTML = displayedChoices
     .map((choice, index) => `
       <button class="choice" type="button" data-choice="${escapeHtml(choice.id)}" data-index="${index}">${escapeHtml(choice.label)}</button>
     `)
     .join("");
-  const choiceHints = event.choices.map((_, index) => choiceHint(event, index));
+  const choiceHints = displayedChoices.map((_, index) => choiceHint(event, index));
   const showChoiceHint = (index) => {
     const hint = choiceHints[index];
     if (!hint) return;
@@ -2287,8 +2381,17 @@ function renderEvent() {
     <p>${escapeHtml(contactDeskSummary())}</p>
     <small>${escapeHtml(competitionTacticLine())}</small>
   `;
-  elements.mobileProjectBrief.classList.remove("hidden");
-  elements.mobileProjectBrief.innerHTML = mobileProjectLedgerBrief();
+	  elements.mobileProjectBrief.innerHTML = "";
+	  elements.mobileProjectBrief.classList.add("hidden");
+	}
+
+function eventBriefingWithCause(event) {
+  const cause = game.currentEventCause;
+  if (!cause || cause.eventId !== event.id) return event.briefing;
+  const parts = [];
+  if (cause.choiceLabel) parts.push(`前因：第 ${cause.turn} 回合你选择了「${cause.choiceLabel}」。`);
+  if (cause.reason) parts.push(cause.reason);
+  return `${event.briefing}\n\n${parts.join(" ")}`;
 }
 
 function modelName(tag) {
@@ -2693,6 +2796,108 @@ const OFFICE_ACTION_DEFS = [
     lesson: "交付不是总进度条，而是每一栋楼、每一笔监管资金和每一批业主的闭环。"
   },
   {
+    id: "project-site-supervision",
+    category: "project",
+    slot: "layout",
+    condition: (ctx) => ctx.activeProjects.length > 0,
+    weight: (ctx) => 32 + Math.max(0, 58 - ctx.visible.delivery) + (ctx.projectPressure ? 10 : 0),
+    label: "亲自去工地监工，把真实进度和虚报拆开",
+    hint: "能减少工程虚报和停工风险，但会暴露施工和付款缺口。",
+    visibleEffects: { delivery: 5, public_trust: 1, cash: -2 },
+    hiddenEffects: { data_inflation: -3, delivery_pressure: -3, legal_exposure: -1 },
+    relationEffects: { contractor: 2, suppliers: 1 },
+    models: ["delivery-first", "audit-revenue-recognition"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "你把现场、付款和进度重新对了一遍，少了一些纸面好看的虚假进展。",
+    lesson: "监工不是装样子，是真正确认钱有没有变成工程量。"
+  },
+  {
+    id: "project-marketing-campaign",
+    category: "project",
+    slot: "opportunity",
+    condition: (ctx) => ctx.saleableProjects.length > 0 || ctx.visible.sales <= 62,
+    weight: (ctx) => 28 + Math.max(0, 62 - ctx.visible.sales) + Math.max(0, ctx.ledger.marketPriceIndex - 98) * 0.35,
+    label: "做一轮真实宣发，把区位、样板间和交付节点讲清楚",
+    hint: "能提高来访和销售，但不能乱承诺学校、地铁和交付时间。",
+    visibleEffects: { sales: 7, public_trust: 2, cash: -3 },
+    hiddenEffects: { price_bubble: 2, buyer_liability: 1 },
+    relationEffects: { channel: 2, buyers: 2 },
+    models: ["phantom-demand", "feedback-loop"],
+    sourceEpisodes: ["EP114", "EP126"],
+    scaleScore: 1,
+    consequence: "售楼处有了真实卖点，客户来访变多，但每一句宣传都会变成后面的证据。",
+    lesson: "宣发不是越热越好，房地产宣传最怕把未来不确定性写成确定承诺。"
+  },
+  {
+    id: "project-channel-screening",
+    category: "project",
+    slot: "layout",
+    condition: (ctx) => ctx.saleableProjects.length > 0,
+    weight: (ctx) => 26 + Math.max(0, 55 - ctx.visible.sales) + Math.max(0, ctx.hidden.price_bubble || 0) * 0.18,
+    label: "筛一遍渠道客户，别只看认购数字",
+    hint: "销售数字可能变慢，但回款质量和退房风险更清楚。",
+    visibleEffects: { sales: -1, public_trust: 3, bank: 1 },
+    hiddenEffects: { data_inflation: -3, buyer_liability: -2, price_bubble: -2 },
+    relationEffects: { channel: -1, buyers: 3 },
+    models: ["phantom-demand", "audit-revenue-recognition"],
+    sourceEpisodes: ["EP114", "EP124"],
+    scaleScore: -1,
+    consequence: "你少了一些虚热认购，但按揭、回款和退房风险更真实。",
+    lesson: "销售不是签单数量，而是能不能变成可解释的回款。"
+  },
+  {
+    id: "project-quality-inspection",
+    category: "project",
+    slot: "pressure",
+    condition: (ctx) => ctx.activeProjects.length > 0 && (ctx.visible.delivery <= 62 || (ctx.hidden.buyer_liability || 0) >= 16),
+    weight: (ctx) => 30 + Math.max(0, 62 - ctx.visible.delivery) + Math.max(0, ctx.hidden.buyer_liability || 0) * 0.3,
+    label: "请第三方抽检质量，先把隐患暴露在内部",
+    hint: "短期难看、要花钱，但能降低交付后维权和返修爆雷。",
+    visibleEffects: { cash: -4, delivery: 4, public_trust: 2 },
+    hiddenEffects: { buyer_liability: -4, legal_exposure: -2, delivery_pressure: -2 },
+    relationEffects: { buyers: 2, contractor: -1 },
+    models: ["delivery-first", "legal-exposure"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: -1,
+    consequence: "质量问题被提前摆上桌，难看但可修，不至于交付后集中爆。",
+    lesson: "质量检查越早越像成本，越晚越像危机。"
+  },
+  {
+    id: "project-contractor-schedule",
+    category: "project",
+    slot: "pressure",
+    condition: (ctx) => ctx.activeProjects.length > 0,
+    weight: (ctx) => 25 + (game.stakeholderStress?.contractor || 0) * 0.4 + Math.max(0, ctx.hidden.delivery_pressure || 0) * 0.2,
+    label: "跟总包重排施工计划，先保可交付楼栋",
+    hint: "部分楼栋会慢下来，但能把有限现金集中到最关键节点。",
+    visibleEffects: { delivery: 4, cash: -2, sales: -1 },
+    hiddenEffects: { delivery_pressure: -4, buyer_liability: -2 },
+    relationEffects: { contractor: 4, buyers: 1 },
+    models: ["delivery-first", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "你不再平均撒钱，而是把总包、楼栋和现金节点排出优先级。",
+    lesson: "项目管理的核心是排序，不是每条线都假装能同时推进。"
+  },
+  {
+    id: "project-owner-briefing",
+    category: "project",
+    slot: "layout",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && (ctx.visible.public_trust <= 60 || (ctx.hidden.buyer_liability || 0) >= 14),
+    weight: (ctx) => 24 + Math.max(0, 60 - ctx.visible.public_trust) + Math.max(0, ctx.hidden.buyer_liability || 0) * 0.25,
+    label: "做业主进度简报，别让群里只剩谣言",
+    hint: "会被追问细节，但能把情绪从谣言拉回工程节点。",
+    visibleEffects: { public_trust: 5, delivery: 2, sales: -1 },
+    hiddenEffects: { buyer_liability: -3, local_isolation: -1 },
+    relationEffects: { buyers: 5, local_official: 1 },
+    models: ["feedback-loop", "delivery-first"],
+    sourceEpisodes: ["EP114", "EP126"],
+    scaleScore: 0,
+    consequence: "业主不一定满意，但他们开始围绕具体节点追问，而不是只听最坏版本。",
+    lesson: "业主沟通不是公关稿，而是把不可验证情绪变成可验证节点。"
+  },
+  {
     id: "high-point-exit-office",
     slot: "special",
     condition: () => isVoluntaryExitWindowOpen() || isExitWindowOpen(),
@@ -2708,6 +2913,522 @@ const OFFICE_ACTION_DEFS = [
     endingCandidate: "high_point_exit",
     consequence: "你不再追求最大规模，而是试图在债权人和地方还愿意谈时离开牌桌。",
     lesson: "高点离场不是逃跑按钮，它要求资产、债务、交付和个人安全都还没有同时破线。"
+  }
+];
+
+const DESK_ACTION_DEFS = [
+  {
+    id: "finance-bank-development-loan",
+    category: "finance",
+    financeChannel: "bank",
+    slot: "opportunity",
+    condition: (ctx) => ctx.visible.bank >= 18,
+    weight: (ctx) => 44 + Math.max(0, ctx.visible.bank - 24) + Math.max(0, ctx.relations.bank_manager || 0) * 0.35,
+    label: "咨询开发贷准入，先问银行要看哪些材料",
+    hint: "通用咨询：证照、抵押物、销售流水、监管户、担保链和真实现金流。",
+    visibleEffects: { cash: 10, debt: 9, bank: 4, government: 1 },
+    hiddenEffects: { financing_cost: 3, data_inflation: 1, legal_exposure: 1 },
+    relationEffects: { bank_manager: 4, local_official: 1 },
+    models: ["whitelist-financing", "balance-sheet-maintenance", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124", "EP126"],
+    scaleScore: 3,
+    consequence: "银行先给了开发贷准入清单：项目证照、抵押物、销售流水、监管户、担保链和真实现金流都要能解释。",
+    lesson: "银行钱成本较低，代价是材料真实度、抵押顺位和地方信用一起被审查。"
+  },
+  {
+    id: "finance-bank-escrow-pledge",
+    category: "finance",
+    financeChannel: "bank",
+    slot: "pressure",
+    condition: (ctx) => ctx.saleableProjects.length > 0 && ctx.visible.bank >= 20,
+    weight: (ctx) => 35 + Math.max(0, ctx.funding.rolloverNeed || 0) + Math.max(0, ctx.visible.bank - 28),
+    label: "咨询按揭回款和监管户能不能支持周转",
+    hint: "先问通用口径：哪些回款可用、哪些必须留在监管户，后面再落到具体项目。",
+    visibleEffects: { cash: 7, debt: 6, bank: 3, delivery: 1 },
+    hiddenEffects: { financing_cost: 3, presale_misuse: -2, data_inflation: 1 },
+    relationEffects: { bank_manager: 3, buyers: 1 },
+    models: ["escrow-control", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 2,
+    consequence: "你先把监管户、按揭回款和工程节点问清楚，知道哪些钱能用，哪些钱动了会变成交付责任。",
+    lesson: "银行融资经常不是看故事，而是看账户、抵押和可验证回款。"
+  },
+  {
+    id: "finance-friend-bridge-loan",
+    category: "finance",
+    financeChannel: "friends",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.cash <= 45 || ctx.cashPressure,
+    weight: (ctx) => 42 + Math.max(0, 40 - ctx.visible.cash) + Math.max(0, ctx.relations.private_friends || 0) * 0.28,
+    label: "找工程圈老友短借一笔过桥钱",
+    hint: "到账比银行快，但还不上会把朋友关系变成债权关系。",
+    visibleEffects: { cash: 7, debt: 5 },
+    hiddenEffects: { off_balance_debt: 5, financing_cost: 4, legal_exposure: 2 },
+    relationEffects: { private_friends: 2, contractor: 1 },
+    models: ["related-party-financing", "risk-transfer-chain"],
+    sourceEpisodes: ["EP004", "EP124"],
+    scaleScore: 1,
+    consequence: "朋友把钱打进来，你先活过这个节点；但借条、担保和还款时间会压到你们的私人关系上。",
+    lesson: "熟人钱不是没有成本，逾期会把人情债变成诉讼、反咬和圈层信誉损失。"
+  },
+  {
+    id: "finance-friend-equity-sidecar",
+    category: "finance",
+    financeChannel: "friends",
+    relationGroup: "friends",
+    relationContactId: "friend-investor",
+    slot: "layout",
+    condition: (ctx) => (ctx.relations.private_friends || 0) >= 80 && (ctx.visible.cash <= 48 || ctx.activeProjects.length > 0),
+    weight: (ctx) => 34 + Math.max(0, ctx.relations.private_friends || 0) * 0.22,
+    label: "让同学投资人做小股，换现金和背书",
+    hint: "不用马上付利息，但收益顺位、用章和退出权会被写进协议。",
+    visibleEffects: { cash: 9, debt: -1, bank: 1 },
+    hiddenEffects: { control_loss: 7, legal_exposure: 3, off_balance_debt: 2 },
+    relationEffects: { private_friends: 5, competitors: -1 },
+    models: ["related-party-financing", "control-right-risk"],
+    sourceEpisodes: ["EP004", "EP101"],
+    scaleScore: 2,
+    consequence: "股东钱让现金表好看一点，但项目章、分红、退出和谁先拿钱都变成新博弈。",
+    lesson: "合股不是免费融资，真正交易的是现金压力和未来控制权。"
+  },
+  {
+    id: "finance-nonbank-microloan",
+    category: "finance",
+    financeChannel: "nonbank",
+    relationGroup: "other",
+    relationContactId: "other-loan-boss",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.cash <= 42 || ctx.funding.rolloverNeed >= 6,
+    weight: (ctx) => 38 + Math.max(0, 38 - ctx.visible.cash) + Math.max(0, ctx.funding.rolloverNeed || 0),
+    label: "用抵押物找小贷公司做短期周转",
+    hint: "钱快，综合成本高；续不上会迅速变成法律和抵押处置问题。",
+    visibleEffects: { cash: 9, debt: 8, bank: -1 },
+    hiddenEffects: { financing_cost: 8, off_balance_debt: 6, legal_exposure: 2 },
+    relationEffects: { micro_lender: 5, trust_channel: 2 },
+    models: ["risk-transfer-chain", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 1,
+    consequence: "小贷老板看抵押和退出来源，钱来得快，利息和续作压力也来得快。",
+    lesson: "非标融资解决的是时间，不解决资产质量；它会把未来几轮现金流提前吃掉。"
+  },
+  {
+    id: "finance-nonbank-trust-bridge",
+    category: "finance",
+    financeChannel: "nonbank",
+    slot: "opportunity",
+    condition: (ctx) => ctx.scaleReviewIndex === null && ctx.visible.land_bank >= 18,
+    weight: (ctx) => 30 + Math.max(0, ctx.visible.land_bank - 20) * 0.35 + Math.max(0, ctx.relations.trust_channel || 0) * 0.3,
+    label: "包装收益权，找信托/非标资金过桥",
+    hint: "额度更大，但资金成本和结构复杂度都更高。",
+    visibleEffects: { cash: 13, debt: 12, sales: 1 },
+    hiddenEffects: { financing_cost: 10, off_balance_debt: 8, data_inflation: 3, legal_exposure: 3 },
+    relationEffects: { trust_channel: 5, bank_manager: -1 },
+    models: ["related-party-financing", "audit-revenue-recognition", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 3,
+    consequence: "收益权和资产包被包装成融资材料，账面现金上来了，结构里也多了几层以后会被追问的承诺。",
+    lesson: "非标资金越像魔术，越要记住它最后仍然要靠销售、抵押或接盘人退出。"
+  },
+  {
+    id: "finance-underground-short-money",
+    category: "finance",
+    financeChannel: "underground",
+    relationGroup: "other",
+    relationContactId: "other-loan-boss",
+    slot: "crisis",
+    condition: (ctx) => (ctx.ledger.marketAssetValue || 0) + ctx.visible.cash >= ctx.visible.debt,
+    weight: (ctx) => 28 + Math.max(0, 32 - ctx.visible.cash) + Math.max(0, ctx.hidden.gray_risk || 0) * 0.18,
+    label: "接一笔高息地下短钱，先堵今天的窟窿",
+    hint: "现金最快，但会显著增加灰线、老板安全和法律风险。",
+    visibleEffects: { cash: 8, debt: 7, government: -2, bank: -1 },
+    hiddenEffects: { financing_cost: 12, gray_risk: 10, boss_safety: -6, legal_exposure: 5 },
+    relationEffects: { underground: 8, micro_lender: 3 },
+    models: ["gray-governance", "protective-umbrella-risk", "leverage-backfire"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: -1,
+    consequence: "今天的窟窿被堵住了，但催收、担保和灰线会直接贴到老板身上。",
+    lesson: "高息短钱不是融资方案，而是把经营风险换成人身安全、法律和声誉风险。"
+  },
+  {
+    id: "finance-underground-cut",
+    category: "finance",
+    financeChannel: "underground",
+    slot: "layout",
+    condition: (ctx) => (ctx.hidden.gray_risk || 0) >= 16 || (ctx.relations.underground || 0) >= 14,
+    weight: (ctx) => 36 + (ctx.hidden.gray_risk || 0) + Math.max(0, ctx.relations.underground || 0) * 0.4,
+    label: "停止滚高息，先谈切割和还款边界",
+    hint: "现金会痛，但能降低后面的催收和安全风险。",
+    visibleEffects: { cash: -5, debt: -2, government: 1 },
+    hiddenEffects: { financing_cost: -5, gray_risk: -7, boss_safety: 4, legal_exposure: 1 },
+    relationEffects: { underground: -6, micro_lender: -2 },
+    models: ["exit-discipline", "gray-governance"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: -2,
+    consequence: "你没有继续借黑线的钱，而是承认成本已经越过经营边界。",
+    lesson: "及时止损会损失现金和面子，但能阻止债务从公司问题变成安全问题。"
+  },
+  {
+    id: "relation-friend-chat",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 22 + Math.max(0, 45 - (ctx.relations.private_friends || 0)),
+    label: "请工程圈老友吃饭，摸真实现金和工地消息",
+    hint: "花小钱修关系，能知道谁有钱、谁缺钱、谁可能翻脸。",
+    visibleEffects: { cash: -1, delivery: 1 },
+    hiddenEffects: { local_isolation: -2 },
+    relationEffects: { private_friends: 5, contractor: 2 },
+    models: ["feedback-loop", "related-party-financing"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: 0,
+    consequence: "你没有马上借钱，而是先把朋友关系和工地真实状态摸清楚。",
+    lesson: "关系线的第一步不是开口要钱，而是确认对方能给什么、要什么、会在何时翻脸。"
+  },
+  {
+    id: "relation-friend-site-audit",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "layout",
+    condition: (ctx) => ctx.activeProjects.length > 0 || ctx.visible.delivery <= 58,
+    weight: (ctx) => 27 + Math.max(0, 58 - ctx.visible.delivery) + Math.max(0, ctx.relations.contractor || 0) * 0.18,
+    label: "让工程圈老友陪你看现场，把真实进度摸清楚",
+    hint: "不直接来钱，但能知道哪里缺钱、哪里虚报、哪里快停工。",
+    visibleEffects: { delivery: 3, cash: -1 },
+    hiddenEffects: { data_inflation: -3, delivery_pressure: -2 },
+    relationEffects: { contractor: 4, private_friends: 2 },
+    models: ["delivery-first", "audit-revenue-recognition"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "你把工地真实进度和付款缺口重新对了一遍，后面不容易被漂亮报表误导。",
+    lesson: "房地产经营里，现场真实进度比口头承诺更能决定现金该往哪里打。"
+  },
+  {
+    id: "relation-friend-borrow",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.cash <= 44,
+    weight: (ctx) => 32 + Math.max(0, 42 - ctx.visible.cash) + Math.max(0, ctx.relations.private_friends || 0) * 0.2,
+    label: "跟老友讲清还款日，借一笔短钱",
+    hint: "关系越好越容易借，但逾期会把朋友推成债主。",
+    visibleEffects: { cash: 5, debt: 4 },
+    hiddenEffects: { off_balance_debt: 4, legal_exposure: 2 },
+    relationEffects: { private_friends: 1 },
+    models: ["related-party-financing", "counterparty-retaliation"],
+    sourceEpisodes: ["EP004", "EP124"],
+    scaleScore: 1,
+    consequence: "朋友愿意帮忙，但他也要求白纸黑字和还款日。",
+    lesson: "熟人债最怕含糊，含糊会把私人信任变成未来争议。"
+  },
+  {
+    id: "relation-friend-repayment-talk",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.debt >= 26 || (ctx.hidden.off_balance_debt || 0) >= 8,
+    weight: (ctx) => 25 + Math.max(0, ctx.hidden.off_balance_debt || 0) + Math.max(0, ctx.relations.private_friends || 0) * 0.12,
+    label: "跟老友重排还款表，先别让人情债翻脸",
+    hint: "不会解决根本资金问题，但能把现金节点和关系风险摊开。",
+    visibleEffects: { cash: 2, delivery: 1 },
+    hiddenEffects: { off_balance_debt: -2, legal_exposure: -1, financing_cost: 1 },
+    relationEffects: { private_friends: 3, contractor: 2 },
+    models: ["related-party-financing", "counterparty-retaliation"],
+    sourceEpisodes: ["EP004", "EP124"],
+    scaleScore: 0,
+    consequence: "你没有继续含糊拖欠，而是把还款节奏、工地节点和退出口径摊开说。",
+    lesson: "朋友关系能帮你扛一段时间，但必须用明确账期阻止关系债权化。"
+  },
+  {
+    id: "relation-investor-exit-talk",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-investor",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 24 + Math.max(0, 50 - (ctx.relations.private_friends || 0)) * 0.2,
+    label: "跟同学投资人讲清退出路径，先建立可信口径",
+    hint: "先谈钱怎么退、收益怎么算、最坏情况谁承担，而不是马上要钱。",
+    visibleEffects: { sales: 1, bank: 1, cash: -1 },
+    hiddenEffects: { control_loss: -1, legal_exposure: -1 },
+    relationEffects: { private_friends: 4 },
+    models: ["control-right-risk", "related-party-financing"],
+    sourceEpisodes: ["EP004", "EP101"],
+    scaleScore: 0,
+    consequence: "投资人没有立刻掏大钱，但开始相信你不是只会画饼的人。",
+    lesson: "股东关系的信任来自退出规则，而不是饭桌上的热情。"
+  },
+  {
+    id: "relation-friend-joint-dev",
+    category: "relation",
+    relationGroup: "friends",
+    relationContactId: "friend-contractor",
+    slot: "layout",
+    condition: (ctx) => ctx.activeProjects.length > 0 || ctx.visible.land_bank >= 12,
+    weight: (ctx) => 28 + Math.max(0, ctx.relations.private_friends || 0) * 0.22,
+    label: "拉工程圈老友合股做一块小项目",
+    hint: "能分担资金和施工，但控制权、成本口径和退出价要写死。",
+    visibleEffects: { cash: 6, delivery: 3, debt: 2 },
+    hiddenEffects: { control_loss: 6, legal_exposure: 3, off_balance_debt: 2 },
+    relationEffects: { private_friends: 4, contractor: 4 },
+    models: ["control-right-risk", "related-party-financing"],
+    sourceEpisodes: ["EP004", "EP101"],
+    scaleScore: 2,
+    consequence: "朋友变成合伙人，施工效率好一点，账本和控制权也多了一个人。",
+    lesson: "合伙能降低单点压力，也会制造新的分账、用章和退出冲突。"
+  },
+  {
+    id: "relation-gov-progress-sync",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-housing",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 30 + Math.max(0, 45 - ctx.visible.government),
+    label: "向住建窗口同步真实施工和监管户计划",
+    hint: "关系会稳一些，但不能再乱讲进度。",
+    visibleEffects: { government: 4, public_trust: 2, cash: -1 },
+    hiddenEffects: { political_dependency: 2, data_inflation: -2, legal_exposure: -1 },
+    relationEffects: { local_official: 5, buyers: 1 },
+    models: ["escrow-control", "delivery-first"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "住建口知道你在真实补窟窿，后面业主和监管户口径更容易协调。",
+    lesson: "政府关系不是单纯吃饭，它经常是把不可验证叙事改成可验证进度。"
+  },
+  {
+    id: "relation-gov-whitelist",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-housing",
+    slot: "opportunity",
+    condition: (ctx) => ctx.visible.government >= 28 && ctx.visible.bank >= 20,
+    weight: (ctx) => 34 + Math.max(0, ctx.visible.government - 28) + Math.max(0, ctx.visible.bank - 22),
+    label: "找项目口协调白名单和银行会商",
+    hint: "能改善融资口径，也会加深政治依赖和材料约束。",
+    visibleEffects: { cash: 5, debt: 3, government: 4, bank: 4 },
+    hiddenEffects: { political_dependency: 6, data_inflation: 2, control_loss: 2 },
+    relationEffects: { local_official: 5, bank_manager: 2, state_capital: 1 },
+    models: ["whitelist-financing", "political-embedded-enterprise"],
+    sourceEpisodes: ["EP101", "EP126"],
+    scaleScore: 2,
+    consequence: "政府愿意把你放进会商桌，银行也会要求更清晰的项目和账户材料。",
+    lesson: "政商关系能降低融资摩擦，也会把企业绑进更强的地方责任。"
+  },
+  {
+    id: "relation-gov-protection",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-platform",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 30 + Math.max(0, 50 - ctx.visible.government),
+    label: "找项目口做合规护航，减少被卡和被刁难",
+    hint: "政府线不出资，只帮你把审批、检查、监管户和白名单口径走顺。",
+    visibleEffects: { government: 3, bank: 1 },
+    hiddenEffects: { local_isolation: -4, legal_exposure: -1, political_dependency: 3 },
+    relationEffects: { local_official: 3, state_capital: 1 },
+    models: ["political-embedded-enterprise", "whitelist-financing"],
+    sourceEpisodes: ["EP101", "EP126"],
+    scaleScore: 0,
+    consequence: "政府线没有给你钱，但后续审批、检查和监管账户更不容易被随便卡住。",
+    lesson: "政府关系的核心不是现金，而是规则解释权、窗口保护和被刁难时的缓冲。"
+  },
+  {
+    id: "relation-gov-dry-share",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-platform",
+    slot: "crisis",
+    condition: (ctx) => ctx.visible.government >= 26 && ((ctx.hidden.local_isolation || 0) >= 12 || ctx.visible.bank <= 42 || ctx.projectPressure),
+    weight: (ctx) => 24 + Math.max(0, ctx.visible.government - 26) + Math.max(0, ctx.hidden.local_isolation || 0) * 0.25,
+    label: "暗里承诺项目干股，换窗口保护和少被刁难",
+    hint: "政府人员不出资，只拿未来利益承诺；保护会变强，倒查和控制风险也会变重。",
+    visibleEffects: { government: 6, bank: 2, delivery: 1 },
+    hiddenEffects: { legal_exposure: 8, gray_risk: 7, political_dependency: 8, control_loss: 5, boss_safety: -3 },
+    relationEffects: { local_official: 5, state_capital: 4, competitors: -3 },
+    models: ["political-embedded-enterprise", "gray-governance", "control-right-risk", "legal-exposure"],
+    sourceEpisodes: ["EP004", "EP101", "EP126"],
+    scaleScore: 1,
+    consequence: "对方没有出钱，但默认以后在项目收益里有一份。审批和检查口径顺了一些，未来倒查和反咬证据也变多了。",
+    lesson: "干股不是融资，是权力保护和利益输送的交换；它最危险的地方是没有明面合同，却会留下真实利益链。"
+  },
+  {
+    id: "relation-gov-complaint-buffer",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-housing",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.public_trust <= 56 || (ctx.hidden.buyer_liability || 0) >= 18,
+    weight: (ctx) => 28 + Math.max(0, 56 - ctx.visible.public_trust) + Math.max(0, ctx.hidden.buyer_liability || 0) * 0.35,
+    label: "请住建窗口牵头业主沟通，先稳投诉和监管户口径",
+    hint: "政府不替你出钱，但能把业主、监管户和施工节点拉到同一张表上。",
+    visibleEffects: { government: 3, public_trust: 3, delivery: 1, cash: -1 },
+    hiddenEffects: { buyer_liability: -3, local_isolation: -2, political_dependency: 2 },
+    relationEffects: { local_official: 4, buyers: 2 },
+    models: ["escrow-control", "delivery-first"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "住建窗口没有替你解决资金，但让投诉、监管户和施工节点有了统一口径。",
+    lesson: "政府关系提供的是秩序和压力协调，不是无条件输血。"
+  },
+  {
+    id: "relation-gov-inspection-headsup",
+    category: "relation",
+    relationGroup: "government",
+    relationContactId: "gov-platform",
+    slot: "layout",
+    condition: (ctx) => (ctx.hidden.local_isolation || 0) >= 10 || ctx.visible.government <= 46,
+    weight: (ctx) => 26 + Math.max(0, ctx.hidden.local_isolation || 0) * 0.35 + Math.max(0, 46 - ctx.visible.government),
+    label: "让城投联系人提前提醒检查重点，少被临时卡脖子",
+    hint: "这是权力保护，不是资金投入；能减少刁难，也会增加地方依赖。",
+    visibleEffects: { government: 3, delivery: 1 },
+    hiddenEffects: { local_isolation: -4, political_dependency: 3, legal_exposure: -1 },
+    relationEffects: { state_capital: 3, local_official: 2 },
+    models: ["political-embedded-enterprise", "counterparty-retaliation"],
+    sourceEpisodes: ["EP101", "EP126"],
+    scaleScore: 0,
+    consequence: "城投联系人让你知道哪些材料和现场最容易被查，少了一些临时刁难。",
+    lesson: "保护不是免死金牌，而是让规则提前变清楚。"
+  },
+  {
+    id: "relation-bank-materials",
+    category: "relation",
+    relationGroup: "bank",
+    relationContactId: "bank-manager",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 28 + Math.max(0, 45 - ctx.visible.bank),
+    label: "带真实材料见支行林经理，先争取信任额度",
+    hint: "少讲故事，多给材料；银行关系会变稳，造数空间会变小。",
+    visibleEffects: { bank: 5, cash: -1 },
+    hiddenEffects: { data_inflation: -3, financing_cost: -1, legal_exposure: -1 },
+    relationEffects: { bank_manager: 5 },
+    models: ["audit-revenue-recognition", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP124"],
+    scaleScore: 0,
+    consequence: "银行没立刻放大钱，但你从模糊客户变成可继续跟进的客户。",
+    lesson: "银行关系不是只靠饭局，稳定材料和可解释现金流才是长期信用。"
+  },
+  {
+    id: "relation-bank-escrow-map",
+    category: "relation",
+    relationGroup: "bank",
+    relationContactId: "bank-manager",
+    slot: "layout",
+    condition: (ctx) => ctx.saleableProjects.length > 0 || ctx.visible.bank <= 50,
+    weight: (ctx) => 27 + Math.max(0, 50 - ctx.visible.bank) + Math.max(0, ctx.relations.bank_manager || 0) * 0.14,
+    label: "请林经理帮你拆监管户、按揭回款和还款节点",
+    hint: "不会凭空加钱，但能看清哪些钱能周转、哪些钱不能碰。",
+    visibleEffects: { bank: 4, cash: 1, delivery: 1 },
+    hiddenEffects: { presale_misuse: -3, financing_cost: -1, data_inflation: -1 },
+    relationEffects: { bank_manager: 4 },
+    models: ["escrow-control", "balance-sheet-maintenance"],
+    sourceEpisodes: ["EP124", "EP126"],
+    scaleScore: 0,
+    consequence: "你把监管户、按揭回款和银行还款表拆清楚了，现金安排不再只凭感觉。",
+    lesson: "资金盘能滚起来，是因为回款和还款之间有时间差；看不清这张表就会误用监管钱。"
+  },
+  {
+    id: "relation-bank-risk-brief",
+    category: "relation",
+    relationGroup: "bank",
+    relationContactId: "bank-risk",
+    slot: "layout",
+    condition: (ctx) => (ctx.hidden.data_inflation || 0) >= 8 || ctx.visible.debt >= 35,
+    weight: (ctx) => 24 + (ctx.hidden.data_inflation || 0) + Math.max(0, ctx.visible.debt - 30) * 0.4,
+    label: "向风控口解释担保链和真实现金流",
+    hint: "短期会暴露问题，但能降低后面突然抽贷的概率。",
+    visibleEffects: { bank: 4, sales: -1 },
+    hiddenEffects: { data_inflation: -4, legal_exposure: -2, financing_cost: -1 },
+    relationEffects: { bank_manager: 3 },
+    models: ["balance-sheet-maintenance", "audit-revenue-recognition"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: -1,
+    consequence: "风控看到的不全是漂亮数字，但也看到了你愿意解释和修补的路径。",
+    lesson: "把问题讲清楚有时比继续包装更能保住融资关系。"
+  },
+  {
+    id: "relation-bank-covenant-reset",
+    category: "relation",
+    relationGroup: "bank",
+    relationContactId: "bank-risk",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.debt >= 34 || (ctx.funding.rolloverNeed || 0) >= 4,
+    weight: (ctx) => 28 + Math.max(0, ctx.visible.debt - 30) + Math.max(0, ctx.funding.rolloverNeed || 0) * 2,
+    label: "跟风控口谈还款触发条件，避免一刀切抽贷",
+    hint: "会暴露压力，但能把抽贷风险变成可谈的节点。",
+    visibleEffects: { bank: 3, debt: -1, cash: 2 },
+    hiddenEffects: { financing_cost: 1, legal_exposure: -2, data_inflation: -2 },
+    relationEffects: { bank_manager: 3 },
+    models: ["balance-sheet-maintenance", "risk-transfer-chain"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 0,
+    consequence: "银行没有忘记风险，但愿意把抽贷条件写成可跟踪节点。",
+    lesson: "真正的展期不是求情，而是把风险变成银行能解释的还款路径。"
+  },
+  {
+    id: "relation-other-boundary",
+    category: "relation",
+    relationGroup: "other",
+    relationContactId: "other-earthwork",
+    slot: "layout",
+    condition: () => true,
+    weight: (ctx) => 26 + Math.max(0, ctx.hidden.gray_risk || 0) * 0.5,
+    label: "跟土方中间人划清账和现场边界",
+    hint: "现场效率会下降一点，但灰线和安全风险会少一些。",
+    visibleEffects: { delivery: -1, cash: -1, government: 1 },
+    hiddenEffects: { gray_risk: -5, boss_safety: 3, legal_exposure: 1 },
+    relationEffects: { underground: -4, contractor: -1 },
+    models: ["gray-governance", "counterparty-retaliation"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: -1,
+    consequence: "你把过去含糊的现场关系写清一点，但被切掉的人未必高兴。",
+    lesson: "灰色效率越早被制度化，爆雷时越少变成人身和刑事问题。"
+  },
+  {
+    id: "relation-other-earthwork-settlement",
+    category: "relation",
+    relationGroup: "other",
+    relationContactId: "other-earthwork",
+    slot: "pressure",
+    condition: (ctx) => ctx.visible.delivery <= 60 || (ctx.hidden.delivery_pressure || 0) >= 18,
+    weight: (ctx) => 25 + Math.max(0, 60 - ctx.visible.delivery) + Math.max(0, ctx.hidden.delivery_pressure || 0) * 0.25,
+    label: "跟土方中间人结清关键节点，保住现场不断工",
+    hint: "要花现金，但能少一点停工和现场反咬。",
+    visibleEffects: { cash: -3, delivery: 4 },
+    hiddenEffects: { delivery_pressure: -3, gray_risk: 1, boss_safety: 1 },
+    relationEffects: { contractor: 2, underground: 1 },
+    models: ["delivery-first", "gray-governance"],
+    sourceEpisodes: ["EP004", "EP124"],
+    scaleScore: 0,
+    consequence: "你用一笔节点款换现场继续推进，但也承认土方关系会继续影响项目节奏。",
+    lesson: "施工现场不是表格，关键节点的钱不到位，进度和安全都会一起变坏。"
+  },
+  {
+    id: "relation-other-micro-extension",
+    category: "relation",
+    relationGroup: "other",
+    relationContactId: "other-loan-boss",
+    slot: "crisis",
+    condition: (ctx) => ctx.visible.debt >= 28 || (ctx.hidden.financing_cost || 0) >= 16,
+    weight: (ctx) => 26 + Math.max(0, ctx.hidden.financing_cost || 0) + Math.max(0, ctx.relations.micro_lender || 0) * 0.12,
+    label: "跟小贷老板谈展期和抵押边界，别让催收升级",
+    hint: "利息会更重，但能降低立刻被处置和被上门的风险。",
+    visibleEffects: { cash: 3, debt: 2 },
+    hiddenEffects: { financing_cost: 4, boss_safety: 3, legal_exposure: -1, gray_risk: 1 },
+    relationEffects: { micro_lender: 3, underground: 1 },
+    models: ["risk-transfer-chain", "gray-governance"],
+    sourceEpisodes: ["EP004", "EP126"],
+    scaleScore: -1,
+    consequence: "小贷老板愿意给时间，但这不是便宜钱，后面利息和抵押约束会更硬。",
+    lesson: "高成本债的展期只买时间，不买利润；时间必须换成真实回款。"
   }
 ];
 
@@ -2793,10 +3514,10 @@ function scaleReviewActions(nextIndex) {
 }
 
 const OFFICE_ACTION_CATEGORIES = [
-  { id: "land", label: "土地", empty: "现在没有合适的地块窗口。" },
+  { id: "land", label: "土拍", empty: "现在没有合适的地块窗口。" },
   { id: "finance", label: "资金", empty: "现在没有合适的融资动作。" },
-  { id: "project", label: "项目", empty: "现在没有必须你亲自处理的项目/销售动作。" },
   { id: "relation", label: "关系", empty: "现在没有合适的关系/安全动作。" },
+  { id: "project", label: "项目", empty: "现在没有必须你亲自处理的项目/销售动作。" },
   { id: "scale", label: "升桌", empty: "现在还没有升桌评审。" }
 ];
 
@@ -2828,19 +3549,810 @@ const OFFICE_ACTION_CATEGORY_BY_ID = {
   "scale-review-shrink": "scale"
 };
 
+const FINANCE_CHANNELS = [
+  {
+    id: "bank",
+    label: "银行",
+    title: "银行借款",
+    tone: "白钱、慢钱、看材料",
+    requirements: ["项目证照和土地/在建工程抵押", "销售回款和监管户流水", "债务表、担保表、真实现金流", "银行关系和地方协调口径"],
+    risk: "利率低一些，但审批慢、材料穿透强；银行和政府关系越稳，展期和额度越容易谈。"
+  },
+  {
+    id: "friends",
+    label: "朋友/股东",
+    title: "朋友借款与股东短拆",
+    tone: "熟人钱、快一点、伤关系",
+    requirements: ["过去的人情和共同项目", "借条、担保或股权分成口径", "谁先回款、谁承担坏账", "还不上时的诉讼和翻脸成本"],
+    risk: "利息可以谈，但关系会被债务化；逾期会降低朋友关系，严重时进入诉讼或反咬。"
+  },
+  {
+    id: "nonbank",
+    label: "小贷/非标",
+    title: "小贷、信托、非标过桥",
+    tone: "快钱、贵钱、看抵押",
+    requirements: ["抵押物或应收款质押", "短期限退出来源", "实际控制人担保", "手续费、通道费和续作条件"],
+    risk: "到账快，但综合资金成本高，续不上会把债务和法律暴露一起推高。"
+  },
+  {
+    id: "underground",
+    label: "高利贷",
+    title: "地下钱和高息短钱",
+    tone: "黑钱、最快、最危险",
+    requirements: ["个人担保和灰色关系", "非常短的还款窗口", "高额利息和违约处置", "安全风险和切割成本"],
+    risk: "只作为危机选项展示：现金来得快，但灰线、老板安全和法律风险会迅速恶化。"
+  }
+];
+
+const FINANCE_LENDERS = [
+  {
+    id: "bank-lin",
+    channel: "bank",
+    name: "林经理",
+    org: "县支行客户经理",
+    relationKey: "bank_manager",
+    fundingChannel: "bankLoan",
+    rate: [1.1, 1.8],
+    baseLimit: 35,
+    relationWeight: 0.45,
+    assetWeight: 0.32,
+    debtDrag: 0.28,
+    debtRatio: 0.88,
+    note: "看证照、抵押物、监管户和销售流水"
+  },
+  {
+    id: "bank-sun",
+    channel: "bank",
+    name: "孙行长",
+    org: "县支行分管行长",
+    relationKey: "bank_manager",
+    fundingChannel: "bankLoan",
+    rate: [1.0, 1.6],
+    baseLimit: 48,
+    relationWeight: 0.5,
+    assetWeight: 0.38,
+    debtDrag: 0.34,
+    debtRatio: 0.86,
+    note: "额度更大，但会盯抵押率和项目闭环"
+  },
+  {
+    id: "friend-zhou",
+    channel: "friends",
+    name: "周建强",
+    org: "工程圈老友",
+    relationKey: "private_friends",
+    fundingChannel: "friendLoan",
+    rate: [1.4, 3.2],
+    baseLimit: 20,
+    relationWeight: 0.58,
+    assetWeight: 0.08,
+    debtDrag: 0.12,
+    debtRatio: 0.72,
+    note: "熟人钱快，但逾期先伤关系"
+  },
+  {
+    id: "friend-chen",
+    channel: "friends",
+    name: "陈予安",
+    org: "同学投资人",
+    relationKey: "private_friends",
+    fundingChannel: "friendLoan",
+    rate: [1.8, 3.8],
+    baseLimit: 26,
+    relationWeight: 0.52,
+    assetWeight: 0.12,
+    debtDrag: 0.1,
+    debtRatio: 0.76,
+    note: "可以短拆，也可能要股权或优先回本"
+  },
+  {
+    id: "micro-du",
+    channel: "nonbank",
+    name: "杜老板",
+    org: "小贷老板",
+    relationKey: "micro_lender",
+    fundingChannel: "microLoan",
+    rate: [4.8, 7.5],
+    baseLimit: 45,
+    relationWeight: 0.22,
+    assetWeight: 0.42,
+    debtDrag: 0.16,
+    debtRatio: 0.96,
+    note: "钱快，抵押和担保要硬"
+  },
+  {
+    id: "micro-tufang",
+    channel: "nonbank",
+    name: "土方中间人",
+    org: "担保过桥",
+    relationKey: "micro_lender",
+    fundingChannel: "microLoan",
+    rate: [5.5, 8.5],
+    baseLimit: 35,
+    relationWeight: 0.18,
+    assetWeight: 0.36,
+    debtDrag: 0.1,
+    debtRatio: 0.98,
+    note: "先扣手续费，续不上就盯抵押"
+  },
+  {
+    id: "gray-hu",
+    channel: "underground",
+    name: "胡四海",
+    org: "灰线资金人",
+    relationKey: "underground",
+    fundingChannel: "undergroundLoan",
+    rate: [8.5, 12],
+    baseLimit: 60,
+    relationWeight: 0.12,
+    assetWeight: 0.48,
+    debtDrag: 0.04,
+    debtRatio: 1,
+    note: "今天能到，逾期就不是电话催"
+  },
+  {
+    id: "gray-ma",
+    channel: "underground",
+    name: "马老板",
+    org: "高息短钱",
+    relationKey: "underground",
+    fundingChannel: "undergroundLoan",
+    rate: [9.5, 16],
+    baseLimit: 70,
+    relationWeight: 0.08,
+    assetWeight: 0.52,
+    debtDrag: 0,
+    debtRatio: 1,
+    note: "资不抵债前都能谈，代价最硬"
+  }
+];
+
+function financeChannelForAction(action) {
+  if (action.financeChannel) return action.financeChannel;
+  if (["collateral-bank-credit", "bank-rollover-talk", "weekly-cash-table"].includes(action.id)) return "bank";
+  return "bank";
+}
+
+function financeLenderProfiles(channelId, context = officeActionContext()) {
+  const visible = context.visible || {};
+  const asset = context.ledger?.marketAssetValue || 0;
+  const collateral = Math.max(0, asset - visible.debt * 0.45);
+  return FINANCE_LENDERS
+    .filter((lender) => lender.channel === channelId)
+    .map((lender) => {
+      const relation = Math.round(context.relations?.[lender.relationKey] || 0);
+      const limit = Math.max(
+        8,
+        Math.round(
+          lender.baseLimit +
+            relation * lender.relationWeight +
+            collateral * lender.assetWeight -
+            visible.debt * lender.debtDrag
+        )
+      );
+      const pressure = context.cashPressure ? 0.25 : 0;
+      const relationDiscount = clampNumber(relation / 120, 0, 0.65);
+      const rate = Number((lender.rate[1] - (lender.rate[1] - lender.rate[0]) * relationDiscount + pressure).toFixed(1));
+      return { ...lender, relation, limit, rate };
+    });
+}
+
+function financeAmountOptions(lender, context = officeActionContext()) {
+  const scaleBoost = game.scaleIndex >= 3 ? [150, 200] : game.scaleIndex >= 2 ? [120, 150] : [];
+  const base = [20, 50, 100, ...scaleBoost];
+  const options = base
+    .filter((amount) => amount <= lender.limit)
+    .slice(0, 5);
+  if (options.length) return options;
+  return [Math.max(8, Math.min(20, lender.limit))];
+}
+
+function financeLoanAction(lender, amount, context = officeActionContext()) {
+  const monthlyInterest = Math.max(1, Math.round(amount * lender.rate / 100));
+  const isBank = lender.channel === "bank";
+  const isFriend = lender.channel === "friends";
+  const isMicro = lender.channel === "nonbank";
+  const isGray = lender.channel === "underground";
+  const relationshipGain = isBank ? { bank_manager: 1 } : isFriend ? { private_friends: 1 } : isMicro ? { micro_lender: 2 } : { underground: 3 };
+  const hiddenEffects = {
+    financing_cost: monthlyInterest,
+    off_balance_debt: isBank ? 0 : Math.max(1, Math.round(amount * (isFriend ? 0.18 : isMicro ? 0.34 : 0.52))),
+    legal_exposure: isBank ? 1 : isFriend ? 2 : isMicro ? 3 : 5,
+    gray_risk: isGray ? Math.max(5, Math.round(amount * 0.12)) : isMicro ? Math.max(1, Math.round(amount * 0.035)) : 0,
+    boss_safety: isGray ? -Math.max(3, Math.round(amount * 0.06)) : 0
+  };
+  return {
+    id: `finance-loan-${lender.id}-${amount}`,
+    category: "finance",
+    financeChannel: lender.channel,
+    label: `借 ${amount}`,
+    hint: `${lender.name}｜月息 ${lender.rate}%｜每轮息 ${monthlyInterest}｜${lender.note}`,
+    visibleEffects: {
+      cash: amount,
+      debt: Math.max(1, Math.round(amount * lender.debtRatio)),
+      bank: isBank ? 2 : isFriend ? 0 : -1,
+      government: isGray ? -2 : 0
+    },
+    hiddenEffects,
+    relationEffects: relationshipGain,
+    models: [isBank ? "whitelist-financing" : isFriend ? "related-party-financing" : "risk-transfer-chain", "leverage-backfire"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: isGray ? -1 : isBank ? 2 : 1,
+    fundingChannel: lender.fundingChannel,
+    fundingPrincipal: amount,
+    fundingMonthlyRate: lender.rate,
+    fundingMonthlyInterest: monthlyInterest,
+    consequence: `${lender.name}放款 ${amount}，月息 ${lender.rate}%，每轮付息约 ${monthlyInterest}。${lender.note}。`,
+    lesson: "借款按钮必须同时写清本金、利率、抵押/担保和逾期后果，否则玩家看不出资金盘怎么滚大。"
+  };
+}
+
+function financeMaintenanceActions(lender, context = officeActionContext()) {
+  const actions = [];
+  if (lender.channel === "bank") {
+    actions.push({
+      id: `finance-maintain-${lender.id}-materials`,
+      category: "finance",
+      financeChannel: lender.channel,
+      label: "补材料",
+      hint: `${lender.name}｜花 3 现金｜提高银行口径，额度以后更宽`,
+      visibleEffects: { cash: -3, bank: 4 },
+      hiddenEffects: { data_inflation: -1, financing_cost: -1 },
+      relationEffects: { bank_manager: 2 },
+      models: ["whitelist-financing", "balance-sheet-maintenance"],
+      sourceEpisodes: ["EP101", "EP124"],
+      scaleScore: 0,
+      consequence: `你把证照、抵押物、监管户和销售流水补给${lender.name}，银行口径稍微顺了一点。`,
+      lesson: "银行不是只看你会不会讲故事，而是看材料能不能闭环。"
+    });
+  }
+  if ((context.visible.debt || 0) >= 24 || (context.funding.rolloverNeed || 0) >= 4) {
+    actions.push({
+      id: `finance-repay-${lender.id}`,
+      category: "finance",
+      financeChannel: lender.channel,
+      label: "还 10",
+      hint: `先还一小段本金，减少后面付息和翻脸风险。`,
+      visibleEffects: { cash: -10, debt: -8, bank: lender.channel === "bank" ? 1 : 0 },
+      hiddenEffects: { financing_cost: -2, off_balance_debt: lender.channel === "bank" ? 0 : -3, gray_risk: lender.channel === "underground" ? -4 : 0 },
+      relationEffects: { [lender.relationKey]: lender.channel === "underground" ? -1 : 1 },
+      models: ["exit-discipline", "balance-sheet-maintenance"],
+      sourceEpisodes: ["EP124"],
+      scaleScore: 0,
+      consequence: `你先还 ${lender.name} 一小段，本金和付息压力降一点。`,
+      lesson: "还款不是浪费机会，它能把资金盘从失控边缘拉回来。"
+    });
+  }
+  return actions;
+}
+
+function financeActionsForLender(lender, context = officeActionContext()) {
+  if (!lender) return [];
+  return [
+    ...financeAmountOptions(lender, context).map((amount) => financeLoanAction(lender, amount, context)),
+    ...financeMaintenanceActions(lender, context)
+  ];
+}
+
+const RELATION_GROUPS = [
+  { id: "friends", label: "朋友", note: "熟人、股东、工程圈老关系，能借钱也最容易翻脸。" },
+  { id: "government", label: "政府部门", note: "住建、项目口、城投窗口，决定审批、监管户、白名单和地方态度。" },
+  { id: "bank", label: "银行", note: "支行客户经理、风控和总行条线，决定额度、展期和材料穿透。" },
+  { id: "other", label: "其他关系", note: "小贷、土方、中间人和灰色渠道，效率高但后患重。" }
+];
+
+const RELATION_CONTACTS = [
+  {
+    id: "friend-contractor",
+    group: "friends",
+    name: "工程圈老友",
+    role: "能凑短钱，也懂工地真实进度",
+    relationKey: "private_friends",
+    actionIds: ["relation-friend-chat", "relation-friend-site-audit", "relation-friend-borrow", "relation-friend-repayment-talk", "relation-friend-joint-dev"]
+  },
+  {
+    id: "friend-investor",
+    group: "friends",
+    name: "同学投资人",
+    role: "有闲钱，但会要求分成和退出条款",
+    relationKey: "private_friends",
+    actionIds: ["relation-investor-exit-talk", "finance-friend-equity-sidecar"]
+  },
+  {
+    id: "gov-housing",
+    group: "government",
+    name: "住建窗口",
+    role: "管预售、监管户、施工进度和业主投诉",
+    relationKey: "local_official",
+    actionIds: ["relation-gov-progress-sync", "relation-gov-complaint-buffer", "relation-gov-whitelist"]
+  },
+  {
+    id: "gov-platform",
+    group: "government",
+    name: "城投联系人",
+    role: "能协调窗口和地方保护，但不直接出资",
+    relationKey: "state_capital",
+    actionIds: ["relation-gov-protection", "relation-gov-dry-share", "relation-gov-inspection-headsup", "relation-gov-whitelist"]
+  },
+  {
+    id: "bank-manager",
+    group: "bank",
+    name: "县支行林经理",
+    role: "额度、展期、监管户口径的第一道门",
+    relationKey: "bank_manager",
+    actionIds: ["relation-bank-materials", "relation-bank-escrow-map", "collateral-bank-credit", "bank-rollover-talk"]
+  },
+  {
+    id: "bank-risk",
+    group: "bank",
+    name: "总行风控口",
+    role: "看穿透材料、担保链和现金流真实性",
+    relationKey: "bank_manager",
+    actionIds: ["relation-bank-risk-brief", "relation-bank-covenant-reset", "clean-invoice-chain"]
+  },
+  {
+    id: "other-loan-boss",
+    group: "other",
+    name: "小贷老板",
+    role: "钱快、利息高、担保硬",
+    relationKey: "micro_lender",
+    actionIds: ["finance-nonbank-microloan", "relation-other-micro-extension", "finance-underground-short-money"]
+  },
+  {
+    id: "other-earthwork",
+    group: "other",
+    name: "土方中间人",
+    role: "能协调现场，也可能把灰线带进项目",
+    relationKey: "underground",
+    actionIds: ["relation-other-boundary", "relation-other-earthwork-settlement", "cut-gray-line"]
+  }
+];
+
+function relationContactById(contactId) {
+  return RELATION_CONTACTS.find((contact) => contact.id === contactId) || null;
+}
+
+const AUCTION_PARTNER_CONTACTS = [
+  {
+    id: "partner-zhou",
+    name: "周建强",
+    org: "工程圈老友",
+    circle: "工程圈",
+    role: "懂施工，能垫一部分保证金和土方款",
+    relationKeys: ["private_friends", "contractor"],
+    minRelation: 24,
+    cash: [8, 22],
+    playerShare: 58,
+    playerControl: 56,
+    vetoPremium: 1.28,
+    term: "你 58%，周建强 42%；你主导拿地，他管施工和垫资，工程款优先回。"
+  },
+  {
+    id: "partner-liang",
+    name: "梁守成",
+    org: "县城工程老板",
+    circle: "工程圈",
+    role: "愿意垫土方和主体工程款，但要求工程款优先",
+    relationKeys: ["contractor", "private_friends"],
+    minRelation: 80,
+    cash: [9, 26],
+    playerShare: 56,
+    playerControl: 54,
+    vetoPremium: 1.22,
+    term: "你 56%，梁守成 44%；他垫工程和保证金，回款先清工程款。"
+  },
+  {
+    id: "partner-chen",
+    name: "陈予安",
+    org: "同学投资人",
+    circle: "投资圈",
+    role: "出现金，要求清晰分红和退出条款",
+    relationKeys: ["private_friends"],
+    minRelation: 28,
+    cash: [10, 30],
+    playerShare: 54,
+    playerControl: 52,
+    vetoPremium: 1.24,
+    term: "你 54%，陈予安 46%；他出资金，你操盘，超过估值上限要双方同意。"
+  },
+  {
+    id: "partner-han",
+    name: "韩思远",
+    org: "同学基金合伙人",
+    circle: "投资圈",
+    role: "钱更规范，但协议、分红和退出条款会更硬",
+    relationKeys: ["private_friends"],
+    minRelation: 80,
+    cash: [16, 42],
+    playerShare: 51,
+    playerControl: 49,
+    vetoPremium: 1.18,
+    term: "你 51%，韩思远 49%；他出资金和风控，超过估值必须投委会同意。"
+  },
+  {
+    id: "partner-wang",
+    name: "王振北",
+    org: "本地房产老板",
+    circle: "本地房产圈",
+    role: "懂本地牌桌，能一起拿地，也会卡控制权",
+    relationKeys: ["competitors", "local_official"],
+    minRelation: 80,
+    cash: [12, 34],
+    playerShare: 52,
+    playerControl: 48,
+    vetoPremium: 1.2,
+    term: "你 52%，王振北 48%；你做操盘，他负责本地协调和部分保证金。"
+  },
+  {
+    id: "partner-feng",
+    name: "冯启明",
+    org: "外来小房企老板",
+    circle: "本地房产圈",
+    role: "资金比本地老板厚，但更看重收益顺位",
+    relationKeys: ["competitors", "bank_manager"],
+    minRelation: 80,
+    cash: [18, 48],
+    playerShare: 48,
+    playerControl: 44,
+    vetoPremium: 1.16,
+    term: "你 48%，冯启明 52%；对方出资金，你让出部分收益和用章。"
+  },
+  {
+    id: "partner-zhao",
+    name: "赵主任",
+    org: "县城投联系人",
+    circle: "政府窗口",
+    role: "带城投信用，但会要求共同用章和资金封闭",
+    investor: false,
+    relationKeys: ["state_capital", "local_official"],
+    minRelation: 26,
+    cash: [14, 42],
+    playerShare: 45,
+    playerControl: 42,
+    vetoPremium: 1.16,
+    term: "你 45%，城投平台 55%；你做本地操盘，但用章、融资和价格上限由对方卡口。"
+  },
+  {
+    id: "partner-he",
+    name: "何科长",
+    org: "自然资源窗口",
+    circle: "政府窗口",
+    role: "不出资，能提前说清规划、指标和闲置风险",
+    investor: false,
+    relationKeys: ["local_official"],
+    minRelation: 12,
+    cash: [0, 0],
+    playerShare: 76,
+    playerControl: 70,
+    vetoPremium: 1.1,
+    term: "不出资，只提供规划口径和指标边界；你保留控制权，但政治依赖和倒查风险会上升。"
+  },
+  {
+    id: "partner-qian",
+    name: "钱副总",
+    org: "县建投平台",
+    circle: "政府窗口",
+    role: "平台信用强，但资金封闭、利润分配和用章都要写死",
+    relationKeys: ["state_capital", "local_official"],
+    minRelation: 18,
+    cash: [10, 32],
+    playerShare: 46,
+    playerControl: 41,
+    vetoPremium: 1.12,
+    term: "你 46%，建投平台 54%；平台带信用和部分保证金，项目公司、监管户和分配顺位要共同签。"
+  },
+  {
+    id: "partner-ma",
+    name: "马主任",
+    org: "住建审批口",
+    circle: "政府窗口",
+    role: "不出资，能减少后续报建和验收被卡",
+    investor: false,
+    relationKeys: ["local_official"],
+    minRelation: 10,
+    cash: [0, 0],
+    playerShare: 78,
+    playerControl: 72,
+    vetoPremium: 1.08,
+    term: "不出资，只能提供报建节奏和验收边界；项目后续更顺，但不能替你解决现金。"
+  },
+  {
+    id: "partner-lu",
+    name: "陆总",
+    org: "县国资运营公司",
+    circle: "政府窗口",
+    role: "更像资产处置人，愿意看项目公司和未来回购口径",
+    relationKeys: ["state_capital", "local_official"],
+    minRelation: 20,
+    cash: [8, 24],
+    playerShare: 44,
+    playerControl: 38,
+    vetoPremium: 1.1,
+    term: "你 44%，国资运营公司 56%；对方带信用和部分保证金，但资产处置、监管户和退出价要写死。"
+  },
+  {
+    id: "partner-cao",
+    name: "曹主任",
+    org: "开发区管委会",
+    circle: "政府窗口",
+    role: "不出资，能解释产业、商业和住宅指标的转换边界",
+    investor: false,
+    relationKeys: ["local_official"],
+    minRelation: 8,
+    cash: [0, 0],
+    playerShare: 80,
+    playerControl: 74,
+    vetoPremium: 1.08,
+    term: "不出资，只能给产业导入、用地转换和配建节奏口径；你保留控制权，但后续承诺会被追着兑现。"
+  },
+  {
+    id: "partner-yu",
+    name: "于副总",
+    org: "产业园平台",
+    circle: "政府窗口",
+    role: "平台钱不多，但能把产业故事、招商和土地口径打包",
+    relationKeys: ["state_capital", "local_official"],
+    minRelation: 14,
+    cash: [6, 18],
+    playerShare: 49,
+    playerControl: 45,
+    vetoPremium: 1.13,
+    term: "你 49%，产业园平台 51%；平台出少量保证金和招商口径，你要让出项目公司部分用章和招商收益。"
+  },
+  {
+    id: "partner-shao",
+    name: "邵经理",
+    org: "国企代建公司",
+    circle: "政府窗口",
+    role: "能管工程和合规材料，但会把付款、成本和质量责任写得很死",
+    relationKeys: ["state_capital", "contractor"],
+    minRelation: 18,
+    cash: [5, 16],
+    playerShare: 52,
+    playerControl: 48,
+    vetoPremium: 1.12,
+    term: "你 52%，国企代建 48%；对方管工程、材料和节点，你保留操盘但成本口径和付款顺位受约束。"
+  },
+  {
+    id: "partner-lin",
+    name: "林经理",
+    org: "县支行客户经理",
+    circle: "银行口",
+    role: "不是股东，能给授信口径和保证金过桥",
+    investor: false,
+    relationKeys: ["bank_manager"],
+    minRelation: 30,
+    cash: [6, 20],
+    playerShare: 70,
+    playerControl: 64,
+    vetoPremium: 1.18,
+    term: "你 70%，银行只做授信支持；价格过高或材料解释不清，林经理会停掉口子。"
+  },
+  {
+    id: "partner-sun",
+    name: "孙行长",
+    org: "县支行分管行长",
+    circle: "银行口",
+    role: "能给额度方向，但会盯抵押率、监管户和真实现金流",
+    investor: false,
+    relationKeys: ["bank_manager"],
+    minRelation: 18,
+    cash: [0, 0],
+    playerShare: 72,
+    playerControl: 66,
+    vetoPremium: 1.14,
+    term: "不入股，只给授信口径；材料、抵押、监管户解释不通时会立刻收口。"
+  },
+  {
+    id: "partner-du",
+    name: "杜老板",
+    org: "小贷老板",
+    circle: "资金圈",
+    role: "钱快、利息重，违约后催收压力很硬",
+    relationKeys: ["micro_lender", "underground"],
+    minRelation: 22,
+    cash: [8, 28],
+    playerShare: 62,
+    playerControl: 58,
+    vetoPremium: 1.2,
+    term: "你 62%，杜老板 38%；他提供短钱，约定优先回款和高息，安全风险上升。"
+  }
+];
+
+const JOINT_BID_ALLOWED_CIRCLES = new Set(["工程圈", "投资圈", "资金圈", "本地房产圈", "政府窗口", "银行口"]);
+const AUCTION_PARTNER_GROUPS = [
+  { id: "classmates", label: "同学", icon: "同", circles: ["投资圈"] },
+  { id: "bosses", label: "圈内老板", icon: "圈", circles: ["工程圈", "本地房产圈", "资金圈"] },
+  { id: "platform", label: "政府/平台", icon: "政", circles: ["政府窗口", "银行口"] }
+];
+const AUCTION_PARTNER_RELATION_GATE_DISABLED = true;
+
+const AUCTION_ESTIMATE_LEVELS = [
+  { id: "quick", label: "熟人快评", cost: 1, spread: 0.18, ceilingBuffer: 1.2, hint: "便宜快，误差大，只能判断别明显买贵。" },
+  { id: "county", label: "县城评估师", cost: 2, spread: 0.1, ceilingBuffer: 1.13, hint: "一回合出结果，适合普通地块。" },
+  { id: "expert", label: "省城专家组", cost: 4, spread: 0.055, ceilingBuffer: 1.08, hint: "更准、更贵，能看政策、配建和去化风险。" }
+];
+
+function auctionPartnerScore(profile, context = officeActionContext()) {
+  return Math.max(...(profile.relationKeys || []).map((key) => context.relations[key] || 0), 0);
+}
+
+function auctionPartnerCandidates(lot, context = officeActionContext()) {
+  return AUCTION_PARTNER_CONTACTS
+    .filter((profile) => JOINT_BID_ALLOWED_CIRCLES.has(profile.circle))
+    .map((profile) => {
+      const relationScore = auctionPartnerScore(profile, context);
+      const requiredRelation = profile.minRelation || 0;
+      const minRelation = AUCTION_PARTNER_RELATION_GATE_DISABLED ? 0 : requiredRelation;
+      const relationBoost = clampNumber((relationScore - requiredRelation) / 82, -0.18, 0.32);
+      const landScale = clampNumber(lot.startPrice / 80, 0.7, 2.4);
+      const cashSupport = profile.investor === false ? 0 : Math.max(2, Math.round(randomInRange(profile.cash) * landScale * (1 + relationBoost)));
+      const maxPrice = Math.max(lot.startPrice + 1, Math.round(lot.startPrice * profile.vetoPremium + relationScore * 0.08));
+      return {
+        ...profile,
+        minRelation,
+        requiredRelation,
+        gateDisabled: AUCTION_PARTNER_RELATION_GATE_DISABLED && requiredRelation > 0,
+        relationScore,
+        available: relationScore >= minRelation,
+        cashSupport,
+        maxPrice
+      };
+    });
+}
+
+function auctionPartnerGroupCandidates(candidates, groupId = "classmates") {
+  const group = AUCTION_PARTNER_GROUPS.find((item) => item.id === groupId) || AUCTION_PARTNER_GROUPS[0];
+  return candidates.filter((candidate) => group.circles.includes(candidate.circle));
+}
+
+function auctionPartnerById(lot, partnerId, context = officeActionContext()) {
+  return auctionPartnerCandidates(lot, context).find((item) => item.id === partnerId) || null;
+}
+
+function combineEffectBuckets(...buckets) {
+  const merged = {};
+  buckets.forEach((bucket) => {
+    Object.entries(bucket || {}).forEach(([key, value]) => {
+      merged[key] = (merged[key] || 0) + value;
+    });
+  });
+  return merged;
+}
+
+function auctionPartnerTermAdjustments(partner, lot) {
+  const relationScore = Number(partner?.relationScore || 0);
+  const intimacyDelta = clampNumber((relationScore - 40) / 7, -9, 8);
+  const cashPressure = partner?.investor === false
+    ? 0
+    : clampNumber(((partner?.cashSupport || 0) - lot.startPrice * 0.22) / Math.max(3, lot.startPrice * 0.08), -4, 9);
+  const officialDrag = partner?.circle === "政府窗口" ? 2 : 0;
+  const bankerDrag = partner?.circle === "银行口" ? 1 : 0;
+  const bossDrag = ["本地房产圈", "资金圈"].includes(partner?.circle) ? 2 : 0;
+  return {
+    share: Math.round(intimacyDelta - cashPressure * 0.55 - officialDrag - bankerDrag - bossDrag),
+    control: Math.round(intimacyDelta * 0.8 - cashPressure * 0.72 - officialDrag * 1.8 - bankerDrag - bossDrag * 1.4),
+    maxPrice: 1 + clampNumber(intimacyDelta / 260, -0.035, 0.05)
+  };
+}
+
+function auctionPartnerBidVariants(partner, lot) {
+  if (!partner) return [];
+  if (partner.investor === false) {
+    const official = partner.circle === "政府窗口";
+    return [
+      {
+        id: "support",
+        label: official ? "只要窗口保护" : "只要授信口径",
+        hint: official
+          ? "不拿钱，只换规划、报建、验收或平台会商边界。"
+          : "不入股，只先确认保证金、抵押和开发贷口径。",
+        term: partner.term,
+        cashMultiplier: 1,
+        shareDelta: 0,
+        controlDelta: 0,
+        maxPriceMultiplier: 1,
+        visibleEffects: official ? { government: 1 } : { bank: 1 },
+        hiddenEffects: official ? { political_dependency: 2 } : { data_inflation: -1 }
+      },
+      {
+        id: official ? "dry-share" : "hard-credit",
+        label: official ? "承诺干股换保护" : "要求更硬授信支持",
+        hint: official
+          ? "更容易被保护，也更容易留下倒查和控制权风险。"
+          : "银行口径更明确，但监管户、抵押和材料穿透会更硬。",
+        term: official
+          ? `${partner.term} 另承诺项目小股或顾问费口径，换后续报建、检查和平台协调缓冲。`
+          : `${partner.term} 你接受更强监管户和抵押约束，换更明确的保证金/开发贷窗口。`,
+        cashMultiplier: 1,
+        shareDelta: official ? -4 : -2,
+        controlDelta: official ? -8 : -4,
+        maxPriceMultiplier: 0.98,
+        visibleEffects: official ? { government: 3, cash: -1 } : { bank: 3, cash: -1 },
+        hiddenEffects: official ? { political_dependency: 7, legal_exposure: 5, control_loss: 3 } : { data_inflation: -2, control_loss: 2 }
+      }
+    ];
+  }
+  return [
+    {
+      id: "standard",
+      label: "按当前比例上桌",
+      hint: "出资、操盘和退出按这份条件写，最容易谈成。",
+      term: partnerTermFor(partner, lot),
+      cashMultiplier: 1,
+      shareDelta: 0,
+      controlDelta: 0,
+      maxPriceMultiplier: 1,
+      visibleEffects: {},
+      hiddenEffects: {}
+    },
+    {
+      id: "control",
+      label: "你追加保证金，主导操盘",
+      hint: "你多承担现金和现场责任，所以话语权更高；对方少出钱，价格上限更保守。",
+      term: `${partner.name}让你主导操盘，但少出保证金；你要追加一段现金，并承担更多现场和回款责任。`,
+      cashMultiplier: 0.72,
+      playerCashRatio: 0.18,
+      shareDelta: 3,
+      controlDelta: 8,
+      maxPriceMultiplier: 0.94,
+      visibleEffects: {},
+      hiddenEffects: { delivery_pressure: 1 }
+    },
+    {
+      id: "cash",
+      label: "对方多出保证金",
+      hint: "共同资金更厚，但收益、用章和退出价会更偏向对方。",
+      term: `${partner.name}多出保证金和前期款，但你让出收益顺位、部分用章和退出价决定权。`,
+      cashMultiplier: 1.32,
+      shareDelta: -5,
+      controlDelta: -8,
+      maxPriceMultiplier: 1.03,
+      visibleEffects: { bank: 1 },
+      hiddenEffects: { control_loss: 4, financing_cost: 1 }
+    }
+  ];
+}
+
+function materializeAuctionPartnerVariant(partner, lot, variantId = "standard") {
+  const variants = auctionPartnerBidVariants(partner, lot);
+  const variant = variants.find((item) => item.id === variantId) || variants[0];
+  const cashSupport = partner.investor === false
+    ? 0
+    : Math.max(1, Math.round((partner.cashSupport || 0) * (variant.cashMultiplier || 1)));
+  const playerCashCost = Math.max(0, Math.round((variant.playerCashRatio || 0) * Math.max(lot.startPrice, cashSupport)));
+  const variantCashCost = Math.max(0, -Number(variant.visibleEffects?.cash || 0));
+  const termAdjustments = auctionPartnerTermAdjustments({ ...partner, cashSupport }, lot);
+  return {
+    ...partner,
+    variant,
+    variantId: variant.id,
+    variantLabel: variant.label,
+    cashSupport,
+    playerShare: clampNumber((partner.playerShare || 55) + termAdjustments.share + (variant.shareDelta || 0), 35, 82),
+    playerControl: clampNumber((partner.playerControl || 52) + termAdjustments.control + (variant.controlDelta || 0), 25, 86),
+    maxPrice: Math.max(lot.startPrice + 1, Math.round((partner.maxPrice || lot.startPrice) * termAdjustments.maxPrice * (variant.maxPriceMultiplier || 1))),
+    playerCashCost,
+    confirmCost: 1 + playerCashCost + variantCashCost,
+    term: variant.term || partnerTermFor(partner, lot)
+  };
+}
+
 function officeActionCategoryFor(def) {
   return def.category || OFFICE_ACTION_CATEGORY_BY_ID[def.id] || "project";
 }
 
 const AUCTION_DISTRICT_COORDS = {
-  东郊: { x: 78, y: 36 },
-  河湾: { x: 42, y: 58 },
-  新区: { x: 24, y: 24 },
-  老城: { x: 52, y: 42 },
-  南站: { x: 32, y: 78 },
-  北湖: { x: 71, y: 72 },
-  临港: { x: 86, y: 58 },
-  核心区: { x: 52, y: 42 }
+  东郊: { x: 78, y: 38 },
+  河湾: { x: 32, y: 58 },
+  新区: { x: 22, y: 26 },
+  老城: { x: 50, y: 40 },
+  南站: { x: 47, y: 76 },
+  北湖: { x: 66, y: 22 },
+  临港: { x: 84, y: 66 },
+  工业区: { x: 74, y: 72 },
+  农业区: { x: 18, y: 72 },
+  核心区: { x: 50, y: 40 }
 };
 
 const AUCTION_DISTRICT_PREMIUM = {
@@ -2851,13 +4363,146 @@ const AUCTION_DISTRICT_PREMIUM = {
   北湖: 0.98,
   新区: 0.88,
   东郊: 0.82,
-  河湾: 0.76
+  河湾: 0.76,
+  工业区: 0.7,
+  农业区: 0.58
 };
 
+const DISTRICT_MARKET_BASE = {
+  核心区: { index: 128, growth: 0.14, volatility: 1.4, maturity: 0.9 },
+  老城: { index: 118, growth: 0.08, volatility: 1.2, maturity: 0.82 },
+  南站: { index: 104, growth: 0.42, volatility: 2.4, maturity: 0.46 },
+  临港: { index: 96, growth: 0.5, volatility: 3.1, maturity: 0.34 },
+  北湖: { index: 94, growth: 0.48, volatility: 2.7, maturity: 0.35 },
+  新区: { index: 88, growth: 0.58, volatility: 3.4, maturity: 0.25 },
+  东郊: { index: 82, growth: 0.5, volatility: 3.8, maturity: 0.22 },
+  河湾: { index: 78, growth: 0.38, volatility: 3.2, maturity: 0.18 },
+  工业区: { index: 72, growth: 0.32, volatility: 3.6, maturity: 0.16 },
+  农业区: { index: 56, growth: 0.26, volatility: 4.1, maturity: 0.08 }
+};
+
+const AUCTION_DISTRICT_LOT_OFFSETS = [
+  { x: -5, y: -4 },
+  { x: 5, y: -3 },
+  { x: -4, y: 5 },
+  { x: 6, y: 5 },
+  { x: 0, y: -7 },
+  { x: 0, y: 7 }
+];
+
+function auctionLotPosition(index, district) {
+  const anchor = AUCTION_DISTRICT_COORDS[district] || AUCTION_DISTRICT_COORDS.东郊;
+  const offset = AUCTION_DISTRICT_LOT_OFFSETS[index % AUCTION_DISTRICT_LOT_OFFSETS.length];
+  const lane = Math.floor(index / AUCTION_DISTRICT_LOT_OFFSETS.length);
+  return {
+    x: clampNumber(anchor.x + offset.x + lane * 3, 9, 91),
+    y: clampNumber(anchor.y + offset.y + lane * 3, 12, 86)
+  };
+}
+
+function createDistrictMarket() {
+  const entries = {};
+  Object.entries(DISTRICT_MARKET_BASE).forEach(([district, base]) => {
+    entries[district] = {
+      index: Math.round(base.index + randomInRange([-4, 4])),
+      momentum: Number((base.growth + (Math.random() - 0.5) * 0.18).toFixed(2)),
+      heat: clamp(Math.round(28 + base.growth * 52 + randomInRange([-10, 10])), 8, 96),
+      lastTurn: 1
+    };
+  });
+  return entries;
+}
+
+function normalizeDistrictMarket(market = {}) {
+  const normalized = {};
+  Object.entries(DISTRICT_MARKET_BASE).forEach(([district, base]) => {
+    normalized[district] = {
+      index: Math.round(market[district]?.index ?? base.index),
+      momentum: Number(market[district]?.momentum ?? base.growth),
+      heat: clamp(Math.round(market[district]?.heat ?? (28 + base.growth * 52)), 8, 96),
+      lastTurn: market[district]?.lastTurn || 1
+    };
+  });
+  return normalized;
+}
+
+function ensureDistrictMarket() {
+  if (!game.districtMarket) game.districtMarket = createDistrictMarket();
+  game.districtMarket = normalizeDistrictMarket(game.districtMarket);
+  updateDistrictMarketForTurn();
+  return game.districtMarket;
+}
+
+function districtMarketInfo(district) {
+  const market = ensureDistrictMarket();
+  return market[district] || market.东郊 || { index: 90, momentum: 0.3, heat: 30 };
+}
+
+function updateDistrictMarketForTurn() {
+  if (!game?.districtMarket) return;
+  Object.entries(game.districtMarket).forEach(([district, item]) => {
+    const base = DISTRICT_MARKET_BASE[district] || DISTRICT_MARKET_BASE.东郊;
+    const elapsed = Math.max(0, (game.turn || 1) - (item.lastTurn || 1));
+    if (!elapsed) return;
+    for (let step = 0; step < elapsed; step += 1) {
+      const cycle = currentCycleScenario();
+      const policyBoost = game.phaseIndex <= 2 ? 0.45 : game.phaseIndex <= 4 ? -0.05 : -0.46;
+      const conversionBoost = (game.turn >= 12 && ["工业区", "农业区"].includes(district)) ? 0.5 : 0;
+      const rotationBoost = (game.turn >= 6 && ["新区", "东郊", "南站", "临港", "北湖"].includes(district)) ? 0.44 : 0;
+      const matureDrag = base.maturity * (game.phaseIndex >= 2 ? 0.34 : 0.12);
+      const noise = (Math.random() - 0.5) * base.volatility;
+      const drift = base.growth + policyBoost + rotationBoost + conversionBoost - matureDrag + (cycle?.priceDriftAdjust || 0) * 0.42 + noise;
+      item.index = clamp(Math.round((item.index || base.index) + drift), 42, 188);
+      item.momentum = Number((drift * 0.45 + (item.momentum || 0) * 0.55).toFixed(2));
+      item.heat = clamp(Math.round((item.heat || 30) + drift * 1.3 + noise), 4, 99);
+    }
+    item.lastTurn = game.turn || 1;
+  });
+}
+
+function districtTrendLabel(district) {
+  const info = districtMarketInfo(district);
+  if (info.momentum >= 1.2) return "快涨";
+  if (info.momentum >= 0.35) return "升温";
+  if (info.momentum <= -1.1) return "回落";
+  if (info.momentum <= -0.3) return "转弱";
+  return "横盘";
+}
+
+function cityPlanningSnapshot() {
+  if (!game) return {};
+  const market = ensureDistrictMarket();
+  const turn = game.turn || 1;
+  const heat = (district) => market[district]?.heat || 0;
+  const index = (district) => market[district]?.index || 0;
+  const agriReady = turn >= 12 || index("农业区") >= 64 || heat("农业区") >= 56;
+  const industrialReady = turn >= 10 || index("工业区") >= 76 || heat("工业区") >= 58;
+  const newReady = turn >= 6 || heat("新区") >= 54 || index("新区") >= 94;
+  const eastReady = turn >= 8 || heat("东郊") >= 54 || index("东郊") >= 90;
+  const badges = [];
+  if (newReady) badges.push({ x: 122, y: 48, text: "学校/道路预期", tone: "growth", width: 132 });
+  if (eastReady) badges.push({ x: 708, y: 86, text: "产业路预期", tone: "growth", width: 118 });
+  if (industrialReady) badges.push({ x: 702, y: 386, text: "工改商窗口", tone: "conversion", width: 118 });
+  if (agriReady) badges.push({ x: 76, y: 374, text: "农地转用传闻", tone: "conversion", width: 132 });
+  return {
+    phaseClass: turn >= 14 ? "phase-expansion" : turn >= 7 ? "phase-corridor" : "phase-opening",
+    districts: {
+      new: { stage: newReady ? "growth" : "reserved", label: newReady ? "新区升温" : "新区预留" },
+      east: { stage: eastReady ? "growth" : "reserved", label: eastReady ? "东郊升温" : "东郊边缘" },
+      industrial: { stage: industrialReady ? "conversion" : "industrial", label: industrialReady ? "工改商" : "工业区" },
+      agri: { stage: agriReady ? "conversion" : "farmland", label: agriReady ? "农转用" : "大片农地" },
+      riverbend: { stage: heat("河湾") >= 52 ? "growth" : "reserved", label: "河湾" },
+      south: { stage: turn >= 9 ? "growth" : "reserved", label: "南站" },
+      core: { stage: "mature", label: "老城" }
+    },
+    badges
+  };
+}
+
 const AUCTION_SCALE_PROFILES = [
-  { districts: ["老城", "东郊", "河湾", "新区"], size: [8, 20], price: [8, 18], competition: [16, 38], lots: 4, label: "县城边缘盘", center: "县城中心" },
-  { districts: ["老城", "南站", "东郊", "新区", "河湾"], size: [14, 34], price: [16, 38], competition: [28, 54], lots: 5, label: "县城地块", center: "县城中心" },
-  { districts: ["核心区", "南站", "新区", "北湖", "老城"], size: [26, 58], price: [36, 82], competition: [42, 70], lots: 5, label: "城市扩张盘", center: "市中心" },
+  { districts: ["老城", "新区", "东郊", "河湾", "工业区", "农业区"], size: [8, 20], price: [8, 18], competition: [16, 38], lots: 6, label: "县城边缘盘", center: "县城中心" },
+  { districts: ["老城", "南站", "东郊", "新区", "河湾", "工业区"], size: [14, 34], price: [16, 38], competition: [28, 54], lots: 6, label: "县城地块", center: "县城中心" },
+  { districts: ["核心区", "南站", "新区", "北湖", "老城", "工业区"], size: [26, 58], price: [36, 82], competition: [42, 70], lots: 6, label: "城市扩张盘", center: "市中心" },
   { districts: ["核心区", "北湖", "临港", "南站", "新区", "老城"], size: [48, 98], price: [76, 158], competition: [58, 84], lots: 6, label: "区域大盘", center: "省域核心" },
   { districts: ["核心区", "临港", "北湖", "南站", "新区", "老城"], size: [82, 168], price: [138, 292], competition: [68, 94], lots: 6, label: "百强牌桌", center: "都市核心" },
   { districts: ["核心区", "临港", "北湖", "南站", "新区", "老城", "东郊"], size: [130, 280], price: [260, 560], competition: [78, 99], lots: 7, label: "帝国级资产包", center: "超级核心" }
@@ -2867,67 +4512,46 @@ function auctionProfile() {
   return AUCTION_SCALE_PROFILES[clamp(game?.scaleIndex || 0, 0, AUCTION_SCALE_PROFILES.length - 1)];
 }
 
-const AUCTION_COMPETITOR_ARCHETYPES = [
-  { id: "local-snake", name: "本地熟人盘", style: "卡保证金，爱找关系压价", bidStyle: "压价", cash: [24, 58], aggression: 0.46, patience: 0.72, relation: 0.76 },
-  { id: "fast-turnover", name: "高周转同行", style: "先抢地，再用预售滚现金", bidStyle: "快抢", cash: [42, 96], aggression: 0.78, patience: 0.45, relation: 0.38 },
-  { id: "state-platform", name: "城投平台", style: "不急，但能等政策和白名单", bidStyle: "慢等", cash: [58, 138], aggression: 0.42, patience: 0.88, relation: 0.86 },
-  { id: "outside-brand", name: "外来大牌", style: "预算厚，喜欢核心地段", bidStyle: "核心", cash: [76, 190], aggression: 0.64, patience: 0.66, relation: 0.44 },
-  { id: "shadow-money", name: "信托资金盘", style: "报价狠，后面资金成本也狠", bidStyle: "硬顶", cash: [54, 158], aggression: 0.86, patience: 0.38, relation: 0.32 },
-  { id: "builder-boss", name: "工程老板", style: "懂施工，怕高地价压利润", bidStyle: "算账", cash: [28, 74], aggression: 0.34, patience: 0.62, relation: 0.52 },
-  { id: "state-builder", name: "国企施工局", style: "成本低，喜欢和地方绑定", bidStyle: "稳拿", cash: [68, 176], aggression: 0.52, patience: 0.82, relation: 0.8 },
-  { id: "channel-speculator", name: "渠道热钱盘", style: "看热度，不看交付", bidStyle: "追涨", cash: [38, 116], aggression: 0.82, patience: 0.32, relation: 0.28 }
-];
-
-function generateAuctionCompetitors() {
-  const count = clamp(2 + Math.floor((game.scaleIndex || 0) / 2) + (Math.random() < 0.45 ? 1 : 0), 2, 6);
-  const pool = [...AUCTION_COMPETITOR_ARCHETYPES]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, count);
-  return pool.map((item, index) => {
-    const cash = randomInRange(item.cash) + game.scaleIndex * randomInRange([10, 22]);
-    return {
-      ...item,
-      id: `${item.id}-${game.turn}-${index}`,
-      cash,
-      budgetBias: clampNumber(0.88 + item.aggression * 0.28 + Math.random() * 0.22, 0.82, 1.35),
-      active: true,
-      lastBid: 0,
-      mood: "观望"
-    };
-  });
+function auctionMarketFlags() {
+  return {
+    isBoom: isBoomPhase(),
+    isDownturn: isDownturnPhase()
+  };
 }
 
 function auctionDeskKey(context = officeActionContext()) {
-  return `${game.turn}-${game.scaleIndex}-${game.phaseIndex}-${context.ledger.marketPriceIndex}`;
+  return `${game.scaleIndex}-${game.phaseIndex}`;
 }
 
 function generateAuctionLots(context = officeActionContext()) {
   const profile = auctionProfile();
+  const districtMarket = ensureDistrictMarket();
   const market = context.ledger.marketPriceIndex || 100;
   const phaseHeat = isBoomPhase() ? 1.08 : isDownturnPhase() ? 0.88 : 1;
   const count = Math.max(3, profile.lots + (game.scaleIndex >= 2 && Math.random() < 0.35 ? 1 : 0));
   return Array.from({ length: count }, (_, index) => {
     const district = profile.districts[index % profile.districts.length];
-    const coord = AUCTION_DISTRICT_COORDS[district] || { x: 50, y: 50 };
+    const districtInfo = districtMarket[district] || districtMarket.东郊 || { index: 90, heat: 30 };
     const size = randomInRange(profile.size);
     const basePrice = randomInRange(profile.price);
     const premium = AUCTION_DISTRICT_PREMIUM[district] || 1;
     const centerScarcity = ["核心区", "老城"].includes(district) ? 1 + game.scaleIndex * 0.025 : 1;
-    const startPrice = Math.max(5, Math.round((basePrice + size * (0.35 + game.scaleIndex * 0.08)) * premium * centerScarcity * (market / 100) * phaseHeat));
+    const localMarket = (market * 0.35 + districtInfo.index * 0.65) / 100;
+    const startPrice = Math.max(5, Math.round((basePrice + size * (0.35 + game.scaleIndex * 0.08)) * premium * centerScarcity * localMarket * phaseHeat));
     const deposit = Math.max(2, Math.round(startPrice * (0.18 + game.scaleIndex * 0.018)));
-    const competition = clamp(randomInRange(profile.competition) + (isBoomPhase() ? 8 : 0) + Math.max(0, 38 - game.state.visible.government) * 0.18 + Math.max(0, premium - 1) * 18, 8, 98);
+    const competition = clamp(randomInRange(profile.competition) + (isBoomPhase() ? 8 : 0) + Math.max(0, 38 - game.state.visible.government) * 0.18 + Math.max(0, premium - 1) * 18 + districtInfo.heat * 0.16, 8, 98);
     const quality = clamp(randomInRange([38, 74]) + game.scaleIndex * 4 + (district === "核心区" ? 12 : district === "老城" ? 7 : 0), 25, 96);
     const policyRisk = clamp(randomInRange([12, 42]) + (district === "老城" ? 12 : 0) + (district === "核心区" ? 10 : 0) + game.phaseIndex * 4, 8, 96);
-    const expectedValue = Math.max(startPrice + 6, Math.round(startPrice * (1.18 + quality / 230 + Math.max(0, market - 100) / 420)));
+    const expectedValue = Math.max(startPrice + 6, Math.round(startPrice * (1.18 + quality / 230 + Math.max(0, districtInfo.index - 100) / 380)));
     const landBankGain = Math.max(6, Math.round(size * 0.42 + quality * 0.08));
-    const spreadX = ((index % 3) - 1) * 4;
-    const spreadY = (Math.floor(index / 3) - 0.5) * 5;
-    const x = clampNumber(coord.x + spreadX + randomInRange([-4, 4]), 9, 91);
-    const y = clampNumber(coord.y + spreadY + randomInRange([-4, 4]), 12, 86);
+    const position = auctionLotPosition(index, district);
     return {
       id: `L${game.turn}-${game.scaleIndex}-${index + 1}`,
       title: `${district}${index + 1}号地`,
       district,
+      districtIndex: districtInfo.index,
+      districtMomentum: districtInfo.momentum,
+      districtHeat: districtInfo.heat,
       tier: profile.label,
       premium,
       size,
@@ -2938,13 +4562,14 @@ function generateAuctionLots(context = officeActionContext()) {
       quality,
       policyRisk,
       landBankGain,
-      x,
-      y
+      x: position.x,
+      y: position.y
     };
   });
 }
 
 function ensureAuctionDesk(context = officeActionContext()) {
+  ensureDistrictMarket();
   const key = auctionDeskKey(context);
   if (!game.auctionDesk || game.auctionDesk.key !== key || !Array.isArray(game.auctionDesk.lots)) {
     game.auctionDesk = {
@@ -2953,7 +4578,8 @@ function ensureAuctionDesk(context = officeActionContext()) {
       scaleIndex: game.scaleIndex,
       phaseIndex: game.phaseIndex,
       lots: generateAuctionLots(context),
-      competitors: generateAuctionCompetitors()
+      competitors: generateAuctionCompetitors(game, auctionMarketFlags()),
+      soldLots: []
     };
     game.selectedAuctionLotId = null;
     game.auctionBidState = null;
@@ -2967,6 +4593,12 @@ function ensureAuctionDesk(context = officeActionContext()) {
 function selectedAuctionLot(context = officeActionContext()) {
   const desk = ensureAuctionDesk(context);
   return desk.lots.find((lot) => lot.id === game.selectedAuctionLotId) || null;
+}
+
+function isAuctionFocusFlow(context = officeActionContext()) {
+  const lot = selectedAuctionLot(context);
+  const state = lot && game.auctionBidState?.lotId === lot.id ? game.auctionBidState : null;
+  return Boolean(lot && state && state.phase === "result");
 }
 
 function auctionBidChance(lot, strategy, context = officeActionContext()) {
@@ -3031,51 +4663,189 @@ function auctionRaiseStep(lot, mode = "follow") {
   return base + randomInRange([0, Math.max(1, Math.round(base * 0.45))]);
 }
 
+function auctionManualRaiseAmount(lot, size = "small") {
+  const price = Math.max(1, lot.startPrice || 1);
+  const steps = price >= 240
+    ? [20, 50]
+    : price >= 120
+      ? [10, 20]
+      : price >= 50
+        ? [5, 10]
+        : [1, 5];
+  return size === "big" ? steps[1] : steps[0];
+}
+
 function ensureAuctionBidState(lot, context = officeActionContext()) {
   if (!lot) return null;
   const desk = ensureAuctionDesk(context);
   if (!game.auctionBidState || game.auctionBidState.lotId !== lot.id) {
-    const activeRivals = [...(desk.competitors || generateAuctionCompetitors())]
+    const activeRivals = [...(desk.competitors || generateAuctionCompetitors(game, auctionMarketFlags()))]
       .sort(() => Math.random() - 0.5)
-      .slice(0, clamp(2 + Math.floor(game.scaleIndex / 2), 2, 5))
+      .slice(0, clamp(4 + Math.floor((game.scaleIndex || 0) / 2), 4, 6))
       .map((rival) => ({ ...rival, active: true, lastBid: 0 }));
     game.auctionBidState = {
       lotId: lot.id,
+      phase: "prep",
+      prepMode: null,
+      mapExpanded: false,
+      estimate: null,
       round: 1,
       currentPrice: lot.startPrice,
       leader: "挂牌价",
       ourBid: 0,
+      playerBidCount: 0,
       jointPartner: null,
-      message: "第一轮，先看谁愿意把价格抬起来。",
+      jointTerm: "",
+      prepTurns: 0,
+      usedChatActions: {},
+      message: "选中地块。拍前可以圈内沟通、联合竞标，或者直接进入拍卖。",
+      log: [],
+      result: null,
       rivals: activeRivals
     };
   }
   return game.auctionBidState;
 }
 
-function competitorWantsToRaise(rival, lot, state, nextPrice) {
+function shouldShowAuctionMapForState(state) {
+  if (!state) return true;
+  return state.phase !== "result";
+}
+
+function pushAuctionLog(state, text) {
+  state.log = [...(state.log || []), text].slice(-6);
+}
+
+function setAuctionIntel(state, intel = {}) {
+  if (!state) return;
+  state.lastIntel = {
+    speaker: intel.speaker || "",
+    label: intel.label || "圈内消息",
+    text: intel.text || "",
+    turn: game?.turn || 1
+  };
+}
+
+function auctionEstimateLevelById(levelId) {
+  return AUCTION_ESTIMATE_LEVELS.find((level) => level.id === levelId) || AUCTION_ESTIMATE_LEVELS[1];
+}
+
+function auctionEstimate(lot, context = officeActionContext(), levelId = "county") {
+  const level = auctionEstimateLevelById(levelId);
+  const market = context.ledger.marketPriceIndex || 100;
+  const riskDiscount = Math.max(0, lot.policyRisk - 25) * 0.09 + Math.max(0, lot.competition - 45) * 0.05;
+  const qualityPremium = Math.max(0, lot.quality - 45) * 0.14;
+  const fair = Math.max(lot.startPrice + 1, Math.round(lot.startPrice * (1.05 + qualityPremium / 100 + Math.max(0, market - 95) / 500 - riskDiscount / 100)));
+  return {
+    levelId: level.id,
+    label: level.label,
+    cost: level.cost,
+    low: Math.max(lot.startPrice, Math.round(fair * (1 - level.spread))),
+    high: Math.max(lot.startPrice + 1, Math.round(fair * (1 + level.spread))),
+    ceiling: Math.max(lot.startPrice + 1, Math.round(fair * level.ceilingBuffer)),
+    note: lot.policyRisk >= 45
+      ? "专家提示：政策和配建风险偏高，不能只看货值。"
+      : lot.competition >= 55
+        ? "专家提示：竞争偏热，真正风险在溢价后的现金流。"
+        : "专家提示：可以参与，但要给保证金和后续开发贷留余地。"
+  };
+}
+
+function partnerTermFor(rival, lot) {
+  if (rival.term) return rival.term;
+  const name = rival.name || "联合方";
+  if (/城投|国企|平台|施工局/.test(name)) return "你操盘 45%，对方资金/信用 55%，重大事项共同签字。";
+  if (/熟人|本地/.test(name)) return "你出 60%，对方协调和少量保证金 40%，后续关系账要写清。";
+  if (/信托|热钱|渠道/.test(name)) return "你操盘 70%，对方短钱 30%，约定优先回款和收益分成。";
+  if (/外来|大牌/.test(name)) return "你本地操盘 40%，对方品牌和资金 60%，收益和控制权都要让。";
+  return `你 55%，${name} 45%，按保证金和后续融资责任分账。`;
+}
+
+function competitorWantsToRaise(rival, lot, state, nextPrice, index = 0) {
   if (!rival.active) return false;
   const centerLove = ["核心区", "老城"].includes(lot.district) ? 0.12 : 0;
-  const budgetLimit = rival.cash * rival.budgetBias;
+  const estimate = state.estimate || auctionAutoEstimate(lot);
+  const irrationalStyle = ["硬顶", "快抢", "追涨"].includes(rival.bidStyle);
+  const strategicStyle = ["稳拿", "核心", "地标"].includes(rival.bidStyle);
+  const valuationCap = Math.max(
+    lot.startPrice + 1,
+    estimate.ceiling *
+      (1 + (rival.aggression || 0) * 0.12 + (rival.patience || 0) * 0.05 + (irrationalStyle ? 0.16 : 0) + (strategicStyle ? 0.08 : 0) + Math.max(0, lot.districtHeat - 55) / 420)
+  );
+  const cashCap = Math.max(lot.startPrice + 1, rival.cash * rival.budgetBias);
+  const budgetLimit = Math.min(cashCap, valuationCap);
+  const cheapForPocket = nextPrice <= Math.min(budgetLimit * 0.72, estimate.ceiling * 1.08);
+  const mustFightStyle = ["硬顶", "快抢", "稳拿", "核心", "地标"].includes(rival.bidStyle);
+  if (nextPrice > valuationCap) return false;
+  if (cheapForPocket && state.round <= 4) return true;
+  if (mustFightStyle && nextPrice <= Math.min(budgetLimit * 0.9, estimate.ceiling * 1.2) && state.round <= 5) return Math.random() < 0.88;
+  if (state.round <= 2 && index <= 1 && nextPrice <= budgetLimit && Math.random() < 0.72) return true;
   const pricePain = nextPrice / Math.max(1, lot.startPrice);
+  const earlyTableDrag = game.scaleIndex <= 1 ? 0.11 : 0;
+  const chatDrag = state.chatEffect === "boss-truce" ? 0.12 : state.chatEffect === "gov-window" ? 0.05 : 0;
   const willingness =
-    rival.aggression * 0.42 +
-    rival.patience * 0.24 +
+    rival.aggression * 0.5 +
+    rival.patience * 0.3 +
+    Math.max(0, (rival.cash || 0) / Math.max(1, nextPrice) - 2) * 0.035 +
     centerLove +
     Math.max(0, lot.quality - 50) / 260 -
     Math.max(0, pricePain - 1.08) * 0.42 -
-    state.round * 0.055;
-  return nextPrice <= budgetLimit && Math.random() < clampNumber(willingness, 0.08, 0.86);
+    state.round * 0.045 -
+    earlyTableDrag -
+    chatDrag;
+  return nextPrice <= budgetLimit && Math.random() < clampNumber(willingness, 0.06, 0.82);
+}
+
+function jointBudgetForState(state, context = officeActionContext()) {
+  return Math.round((context.visible.cash || 0) + (state.jointPartner?.cashSupport || 0));
+}
+
+function auctionAvailableBudget(state, context = officeActionContext()) {
+  return state?.jointPartner ? jointBudgetForState(state, context) : Math.round(context.visible.cash || 0);
+}
+
+function partnerVetoesBid(lot, state, nextPrice) {
+  const partner = state.jointPartner;
+  if (!partner) return false;
+  if (partner.investor === false || partner.canVetoPrice === false || (partner.cashSupport || 0) <= 0) return false;
+  if (nextPrice <= (partner.maxPrice || lot.startPrice * 1.2)) return false;
+  const lowControl = Math.max(0, 55 - (partner.playerControl || 50)) / 70;
+  const overrun = nextPrice / Math.max(1, partner.maxPrice || lot.startPrice) - 1;
+  const vetoChance = clampNumber(0.22 + lowControl + overrun * 1.6, 0.18, 0.86);
+  return Math.random() < vetoChance;
+}
+
+function rivalAuctionLine(rival, lot, action, price) {
+  const premium = price / Math.max(1, lot.startPrice);
+  if (action === "stop") {
+    if (premium >= 1.35) return "这个价回去不好交代。";
+    if (price > auctionAutoEstimate(lot).ceiling * 1.18) return "已经过估值线了。";
+    if ((rival.cash || 0) < price * 0.9) return "现金不跟了，先撤。";
+    if ((rival.aggression || 0) >= 0.78) return "先放你一轮，别以为稳了。";
+    return "太烫了，我先停。";
+  }
+  if ((rival.aggression || 0) >= 0.82) return premium >= 1.28 ? "地王也得有人敢拿。" : "这块我势在必得。";
+  if ((rival.budgetBias || 0) >= 1.12) return "资金还够，再跟一手。";
+  if (["核心区", "老城"].includes(lot.district)) return "核心位置不能轻易放。";
+  if (premium >= 1.22) return "最后再试一口价。";
+  return "我跟，看你还加不加。";
 }
 
 function buildAuctionResultAction(lot, state, won, mode) {
   const finalPrice = Math.max(lot.startPrice, Math.round(state.currentPrice || lot.startPrice));
   const overpayRatio = Math.max(0, finalPrice / Math.max(1, lot.startPrice) - 1);
   const joint = Boolean(state.jointPartner || mode === "joint");
-  const cashShare = joint ? 0.58 : 1;
-  const cashCost = Math.max(1, Math.round((lot.deposit + finalPrice * 0.08 + overpayRatio * lot.startPrice * 0.28) * cashShare));
-  const debtGain = Math.max(0, Math.round(finalPrice * (joint ? 0.27 : 0.38)));
-  const landGain = Math.max(4, Math.round(lot.landBankGain * (joint ? 0.72 : 1)));
+  const financialJoint = Boolean(state.jointPartner && state.jointPartner.investor !== false);
+  const winner = won
+    ? "你"
+    : state.winner || (state.leader && state.leader !== "挂牌价" && state.leader !== "你" ? state.leader : "其他竞买人");
+  const playerShare = financialJoint ? clampNumber((state.jointPartner?.playerShare || 58) / 100, 0.35, 0.78) : 1;
+  const cashShare = playerShare;
+  const upfrontRate = financialJoint ? 0.34 : 0.42;
+  const overpayCash = Math.max(0, Math.round(overpayRatio * finalPrice * 0.22));
+  const cashCost = Math.max(1, Math.round((lot.deposit * 0.85 + finalPrice * upfrontRate + overpayCash) * cashShare));
+  const debtGain = Math.max(0, Math.round(finalPrice * (financialJoint ? 0.42 : 0.54)));
+  const landGain = Math.max(4, Math.round(lot.landBankGain * (financialJoint ? playerShare : 1)));
   if (!won) {
     return {
       id: `auction-exit-${lot.id}-${Date.now()}`,
@@ -3088,15 +4858,16 @@ function buildAuctionResultAction(lot, state, won, mode) {
       models: ["land-fiscal-pressure", "exit-discipline"],
       sourceEpisodes: ["EP101", "EP124"],
       scaleScore: -1,
-      consequence: `你没有拿下「${lot.title}」。这不是坏事，但市场知道你预算有限，下一次对手会按这个价位试探你。`,
-      lesson: "退出竞拍也是经营动作：不拿地可以保现金，但也会暴露你的预算边界。"
+      consequence: `你没有拿下「${lot.title}」。最后是${winner}以 ${finalPrice} 拿走。市场知道你预算有限，下一次对手会按这个价位试探你。`,
+      lesson: "退出竞拍也是经营动作：不拿地可以保现金，但也会暴露你的预算边界。",
+      auctionResult: { lotId: lot.id, won: false, finalPrice, winner }
     };
   }
   return {
     id: `auction-win-${lot.id}-${Date.now()}`,
     category: "land",
     label: `摘下${lot.title}`,
-    hint: `成交 ${finalPrice}，溢价 ${Math.round(overpayRatio * 100)}%。`,
+    hint: `成交 ${finalPrice}，先付 ${cashCost}，溢价 ${Math.round(overpayRatio * 100)}%。`,
     visibleEffects: {
       cash: -cashCost,
       debt: debtGain,
@@ -3105,13 +4876,13 @@ function buildAuctionResultAction(lot, state, won, mode) {
       sales: isBoomPhase() ? 2 : 1
     },
     hiddenEffects: {
-      financing_cost: Math.max(2, Math.round(finalPrice * 0.07 + overpayRatio * 12)),
+      financing_cost: Math.max(2, Math.round(finalPrice * 0.09 + overpayRatio * 14)),
       price_bubble: Math.max(1, Math.round(lot.competition / 22 + overpayRatio * 8)),
       delivery_pressure: Math.max(2, Math.round(lot.size / 10 + overpayRatio * 10)),
       buyer_liability: Math.max(1, Math.round(overpayRatio * 7)),
-      political_dependency: joint ? 6 : 1,
-      control_loss: joint ? 8 : 0,
-      legal_exposure: joint ? 4 : 1
+      political_dependency: joint ? (financialJoint ? 6 : 4) : 1,
+      control_loss: financialJoint ? Math.max(4, Math.round(12 - (state.jointPartner?.playerControl || 50) / 8)) : 1,
+      legal_exposure: joint ? (financialJoint ? 4 : 2) : 1
     },
     relationEffects: {
       competitors: -Math.max(2, Math.round(lot.competition / 14)),
@@ -3128,14 +4899,260 @@ function buildAuctionResultAction(lot, state, won, mode) {
     models: ["land-finance-loop", "leverage-backfire", joint ? "political-embedded-enterprise" : "competitor-pressure", joint ? "control-right-risk" : "land-fiscal-pressure"],
     sourceEpisodes: ["EP101", "EP124", "EP126"],
     scaleScore: Math.max(1, Math.round(2 + lot.size / 35 - overpayRatio * 2)),
-    consequence: `你以 ${finalPrice} 摘下「${lot.title}」。地进了账本，但溢价会变成后面的利息、售价压力和交付难度。${joint ? `联合体让你少出现金，也让${state.jointPartner?.name || "伙伴"}进入收益和控制权顺位。` : ""}`,
-    lesson: "土拍成交价不是结束，而是项目难度的起点：地价越高，后面越需要房价、融资和预售速度一起配合。"
+    consequence: `你以 ${finalPrice} 摘下「${lot.title}」，本轮先付保证金和首段土地款 ${cashCost}，剩余土地款、开发贷和工程款会进后续资金压力。${financialJoint ? `联合体让你少出现金，也让${state.jointPartner?.name || "伙伴"}进入收益和控制权顺位。` : joint ? `${state.jointPartner?.name || "窗口"}只提供口径和保护，不替你出资，价格责任仍在你身上。` : "地进了账本，但溢价会变成后面的利息、售价压力和交付难度。"}`,
+    lesson: "土拍成交价不是结束，而是项目难度的起点：地价越高，后面越需要房价、融资和预售速度一起配合。",
+    auctionResult: { lotId: lot.id, won: true, finalPrice, winner }
   };
 }
 
 function commitAuctionAction(action) {
+  if (action?.auctionResult?.lotId && game.auctionDesk?.lots) {
+    const lot = game.auctionDesk.lots.find((item) => item.id === action.auctionResult.lotId);
+    if (lot) {
+      recordCompetitorAuctionOutcome(game, game.auctionBidState, action.auctionResult.winner, action.auctionResult.finalPrice);
+      const record = {
+        ...lot,
+        turn: game.turn,
+        finalPrice: action.auctionResult.finalPrice,
+        winner: action.auctionResult.winner || (action.auctionResult.won ? "你" : "其他竞买人"),
+        ownedByPlayer: Boolean(action.auctionResult.won)
+      };
+      game.landRegistry = [record, ...(game.landRegistry || [])].slice(0, 24);
+      game.auctionDesk.soldLots = [record, ...(game.auctionDesk.soldLots || [])].slice(0, 8);
+    }
+    game.auctionDesk.lots = game.auctionDesk.lots.filter((lot) => lot.id !== action.auctionResult.lotId);
+    game.selectedAuctionLotId = null;
+    game.auctionBidState = null;
+  }
   game.availableActions = [...(game.availableActions || []), action];
   chooseOfficeAction(action.id);
+}
+
+function spendAuctionPrepTurn(action, state) {
+  const event = officeActionEvent(action);
+  applyChoice(event, action);
+  scheduleChoiceFeedback(event, action);
+  rollWorldPressure(event, action);
+  advanceProjectLedger(event, action);
+  advanceFundingLedger(event, action);
+  updateCriticalCounters();
+  state.prepTurns = (state.prepTurns || 0) + 1;
+  if (game.turn < MAX_TURNS) game.turn += 1;
+  game.currentEvent = OFFICE_EVENT_ID;
+  game.selectedActionCategory = "land";
+  activateFeedbackForTurn();
+}
+
+function selectAuctionPartner(partnerId, variantId = "standard") {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  if (state.jointPartner) return;
+  const rawPartner = auctionPartnerById(lot, partnerId, context);
+  if (!rawPartner || !rawPartner.available) return;
+  const partner = materializeAuctionPartnerVariant(rawPartner, lot, variantId);
+  if ((context.visible.cash || 0) < partner.confirmCost) {
+    state.prepMode = "partner";
+    state.message = `现金 ${context.visible.cash} 不够确认这个方案，至少要 ${partner.confirmCost} 现金。`;
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  state.jointPartner = {
+    id: partner.id,
+    name: `${partner.name}（${partner.org}）`,
+    investor: partner.investor,
+    canVetoPrice: partner.investor !== false,
+    cashSupport: partner.cashSupport,
+    playerShare: partner.playerShare,
+    playerControl: partner.playerControl,
+    maxPrice: partner.maxPrice,
+    variantLabel: partner.variantLabel,
+    playerCashCost: partner.playerCashCost,
+    confirmCost: partner.confirmCost
+  };
+  state.jointTerm = partnerTermFor(partner, lot);
+  state.prepMode = "partner";
+  state.partnerContact = partner.id;
+  state.partnerCandidates = auctionPartnerCandidates(lot, context);
+  state.message = `${partner.name}愿意按「${partner.variantLabel}」方案上桌；这次接触占用了一回合。`;
+  pushAuctionLog(state, `第${game.turn}回合：和${partner.name}谈成「${partner.variantLabel}」。`);
+  spendAuctionPrepTurn({
+    id: `auction-partner-${lot.id}-${partner.id}-${Date.now()}`,
+    category: "land",
+    label: `找${partner.name}${partner.variantLabel}`,
+    hint: partner.term,
+    visibleEffects: combineEffectBuckets(
+      { cash: -(1 + partner.playerCashCost), bank: partner.relationKeys.includes("bank_manager") ? 1 : 0, government: partner.relationKeys.includes("local_official") ? 1 : 0 },
+      partner.variant?.visibleEffects
+    ),
+    hiddenEffects: combineEffectBuckets(
+      { control_loss: Math.max(1, Math.round((60 - partner.playerControl) / 10)), legal_exposure: 1 },
+      partner.variant?.hiddenEffects
+    ),
+    relationEffects: {},
+    models: ["political-embedded-enterprise", "control-right-risk", "land-finance-loop"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 0,
+    consequence: partner.investor === false
+      ? `${partner.name}愿意按「${partner.variantLabel}」给你窗口口径；对方不出资、不决定拍卖价格，也不会替你叫停。你本次确认花费 ${partner.confirmCost}${partner.playerCashCost ? `，其中 ${partner.playerCashCost} 是你追加保证金` : ""}。亲密度不会因为这次土拍点击自动变好，真正走关系要回到关系页花人情成本。`
+      : `${partner.name}愿意按「${partner.variantLabel}」和你上土拍桌；对方提供约 ${partner.cashSupport}，你本次确认花费 ${partner.confirmCost}${partner.playerCashCost ? `，其中 ${partner.playerCashCost} 是你追加保证金` : ""}。价格超过 ${partner.maxPrice} 时他可能终止举牌。亲密度不会因为这次土拍点击自动变好，真正走关系要回到关系页花人情成本。`,
+    lesson: "联合体不是免费加钱，它会改变话语权、收益分配和是否继续举牌的决定权。"
+  }, state);
+  saveGame();
+  renderOfficeTurn();
+}
+
+function selectAuctionEstimate(levelId) {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  if (state.estimate) return;
+  const estimate = auctionEstimate(lot, context, levelId);
+  state.prepMode = "estimate";
+  state.estimate = estimate;
+  state.message = `${estimate.label}完成：建议上限 ${estimate.ceiling}。这次勘探占用了一回合。`;
+  pushAuctionLog(state, `第${game.turn}回合：${estimate.label}，合理 ${estimate.low}-${estimate.high}，上限 ${estimate.ceiling}。`);
+  spendAuctionPrepTurn({
+    id: `auction-estimate-${lot.id}-${estimate.levelId}-${Date.now()}`,
+    category: "land",
+    label: `${estimate.label}${lot.title}`,
+    hint: estimate.note,
+    visibleEffects: { cash: -estimate.cost, sales: 1 },
+    hiddenEffects: { data_inflation: estimate.levelId === "expert" ? -2 : -1, legal_exposure: -1 },
+    relationEffects: {},
+    models: ["land-finance-loop", "exit-discipline"],
+    sourceEpisodes: ["EP101", "EP124"],
+    scaleScore: 0,
+    consequence: `你花一回合做了${lot.title}的${estimate.label}，合理区间约 ${estimate.low}-${estimate.high}，建议上限 ${estimate.ceiling}。`,
+    lesson: "估价不是装饰，它决定你后面是用纪律拿地，还是用高溢价把现金流压坏。"
+  }, state);
+  saveGame();
+  renderOfficeTurn();
+}
+
+function selectAuctionChatGroup(groupId) {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  const group = auctionChatGroupById(groupId);
+  const contacts = auctionChatContactProfiles(context, group.id);
+  state.prepMode = "chat";
+  state.chatGroup = group.id;
+  state.chatContact = contacts[0]?.id || null;
+  state.message = `先找${group.label}里的具体人，再谈条件。`;
+  saveGame();
+  renderOfficeTurn();
+}
+
+function selectAuctionChatContact(contactId) {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  const contact = auctionChatContactById(context, contactId);
+  state.prepMode = "chat";
+  state.chatGroup = contact.group;
+  state.chatContact = contact.id;
+  setAuctionIntel(state, {
+    speaker: contact.name,
+    label: "联系人",
+    text: auctionContactIntroText(contact)
+  });
+  state.message = `${contact.name}：${contact.stance}。`;
+  saveGame();
+  renderOfficeTurn();
+}
+
+function selectAuctionChat(chatId) {
+  const context = officeActionContext();
+  const lot = selectedAuctionLot(context);
+  if (!lot) return;
+  const state = ensureAuctionBidState(lot, context);
+  const contact = auctionChatContactById(context, state.chatContact);
+  const option = auctionChatActionProfile(contact, chatId);
+  const usedKey = `${contact?.id || "unknown"}:${chatId}`;
+  if (!option || option.locked) {
+    state.message = option?.lockedReason || "这个人现在谈不动。";
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  if (state.usedChatActions?.[usedKey]) {
+    state.message = "这个问题已经问过，情报已经记录，不再重复占回合，也不会刷亲密度。";
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  const consultCost = auctionChatConsultCost(contact, option, lot);
+  if ((context.visible.cash || 0) < consultCost) {
+    state.message = `现金 ${context.visible.cash} 不够付这次沟通费用 ${consultCost}。`;
+    setAuctionIntel(state, {
+      speaker: contact.name,
+      label: option.label,
+      text: `这条线要先花 ${consultCost} 现金打点材料、饭局或顾问口径；钱不够，对方不会把具体话说透。`
+    });
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  state.prepMode = "chat";
+  state.chatContact = contact.id;
+  const outcome = auctionChatOutcome(contact, option, lot, context);
+  state.chatEffect = outcome.chatEffect || state.chatEffect || null;
+  state.chatIntelLevel = outcome.level;
+  setAuctionIntel(state, {
+    speaker: contact.name,
+    label: option.label,
+    text: outcome.text
+  });
+  state.message = `${contact.name}：${outcome.text} 这次沟通占用了一回合。`;
+  state.usedChatActions = {
+    ...(state.usedChatActions || {}),
+    [usedKey]: { turn: game.turn, text: outcome.text, level: outcome.level }
+  };
+  const chatVisibleEffects = { ...(option.visibleEffects || {}) };
+  delete chatVisibleEffects.cash;
+  delete chatVisibleEffects.government;
+  delete chatVisibleEffects.bank;
+  delete chatVisibleEffects.sales;
+  pushAuctionLog(state, `第${game.turn}回合：找${contact.name}，${option.label}。`);
+  spendAuctionPrepTurn({
+    id: `auction-chat-${lot.id}-${option.id}-${Date.now()}`,
+    category: "land",
+    label: `找${contact.name}${option.label}`,
+    hint: `${auctionChatOptionHint(contact, option)} 费用 ${consultCost}。`,
+    visibleEffects: combineEffectBuckets(chatVisibleEffects, { cash: -consultCost }),
+    hiddenEffects: outcome.hiddenEffects,
+    relationEffects: {},
+    models: ["political-embedded-enterprise", "bid-rigging-chain", "land-fiscal-pressure"],
+    sourceEpisodes: ["EP004", "EP101", "EP126"],
+    scaleScore: 0,
+    consequence: `${outcome.label}：${outcome.text}`,
+    lesson: "土拍前的沟通能改变牌桌，但也会把关系、法律和倒查风险带进项目。"
+  }, state);
+  saveGame();
+  renderOfficeTurn();
+}
+
+function fallbackAuctionWinner(lot, state) {
+  const rivals = (state.rivals || []).filter((rival) => rival.active || rival.mood !== "合伙");
+  const winner = [...rivals].sort((a, b) => {
+    const aScore = a.cash * a.budgetBias + a.aggression * 18 + Math.random() * 8;
+    const bScore = b.cash * b.budgetBias + b.aggression * 18 + Math.random() * 8;
+    return bScore - aScore;
+  })[0] || state.rivals?.[0];
+  const finalPrice = Math.max(
+    lot.startPrice + auctionRaiseStep(lot, winner?.aggression >= 0.72 ? "hard" : "follow"),
+    Math.round((state.currentPrice || lot.startPrice) * (1.04 + Math.random() * 0.08))
+  );
+  return {
+    winner: winner?.name || "其他竞买人",
+    finalPrice
+  };
 }
 
 function handleAuctionControl(control) {
@@ -3143,56 +5160,186 @@ function handleAuctionControl(control) {
   const lot = selectedAuctionLot(context);
   if (!lot) return;
   const state = ensureAuctionBidState(lot, context);
-  if (control === "quit") {
-    commitAuctionAction(buildAuctionResultAction(lot, state, false, "quit"));
+	  if (control === "clear") {
+	    game.selectedAuctionLotId = null;
+	    game.auctionBidState = null;
+	    saveGame();
+	    renderOfficeTurn();
+	    return;
+	  }
+	  if (control === "toggle-map") {
+	    state.mapExpanded = !state.mapExpanded;
+	    saveGame();
+	    renderOfficeTurn();
+	    return;
+	  }
+  if (control === "commit-result") {
+    if (state.result) commitAuctionAction(state.result);
     return;
   }
-  if (control === "joint" && !state.jointPartner) {
-    const partner = state.rivals.find((rival) => rival.active && rival.relation >= 0.5) || state.rivals[0];
-    state.jointPartner = partner ? { name: partner.name, id: partner.id } : { name: "临时联合体", id: "joint" };
-    if (partner) {
-      partner.active = false;
-      partner.mood = "合伙";
-    }
-    state.message = `${state.jointPartner.name}愿意一起进场，但要收益顺位和项目口径。`;
+  if (control === "estimate" && state.phase === "prep") {
+    state.prepMode = "estimate";
+    state.message = state.estimate
+      ? `已完成${state.estimate.label || "专家估价"}，结果显示在上方。`
+      : "选择一个勘探等级；越贵越准，都会占用一回合。";
+    saveGame();
+    renderOfficeTurn();
+    return;
   }
-  const raise = auctionRaiseStep(lot, control);
+  if (control === "chat" && state.phase === "prep") {
+    state.prepMode = "chat";
+    state.chatGroup = state.chatGroup || "local-boss";
+    const contacts = auctionChatContactProfiles(context, state.chatGroup);
+    state.chatContact = state.chatContact || contacts[0]?.id || null;
+    state.message = "先选本地老板、政府窗口或银行窗口，再选具体人谈条件；亲密度太低时谈不动。";
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+	  if (control === "joint" && state.phase === "prep") {
+	    state.prepMode = "partner";
+	    state.partnerGroup = state.partnerGroup || "classmates";
+	    state.partnerCandidates = auctionPartnerCandidates(lot, context);
+	    const candidates = auctionPartnerGroupCandidates(state.partnerCandidates, state.partnerGroup);
+	    state.partnerContact = state.partnerContact || candidates[0]?.id || null;
+	    state.message = state.jointPartner
+	      ? `已选联合方：${state.jointPartner.name}。你仍然可以重新看其他方案。`
+	      : "联合竞标候选已临时全开放；选定具体联系人会占用一回合。";
+	    saveGame();
+	    renderOfficeTurn();
+	    return;
+	  }
+  if (control === "start") {
+    if (context.visible.cash < lot.deposit && !state.jointPartner) {
+      state.message = `现金 ${context.visible.cash} 不够交保证金 ${lot.deposit}。先融资或找圈内联合方，不能直接报名。`;
+      pushAuctionLog(state, `保证金不足：现金 ${context.visible.cash}，保证金 ${lot.deposit}。`);
+      saveGame();
+      renderOfficeTurn();
+      return;
+    }
+    if (state.jointPartner && auctionAvailableBudget(state, context) < lot.deposit) {
+      const budgetLabel = state.jointPartner.investor === false ? "现金" : "共同资金";
+      state.message = `${budgetLabel} ${auctionAvailableBudget(state, context)} 不够交保证金 ${lot.deposit}。`;
+      pushAuctionLog(state, `${budgetLabel}不足：${auctionAvailableBudget(state, context)}，保证金 ${lot.deposit}。`);
+      saveGame();
+      renderOfficeTurn();
+      return;
+    }
+    state.phase = "live";
+    state.round = Math.max(1, state.round || 1);
+    state.currentPrice = Math.max(state.currentPrice || 0, lot.startPrice);
+    state.leader = "挂牌价";
+    state.message = state.jointPartner
+      ? `${state.jointPartner.name}已经进联合体，竞拍开始。现在只能加价或退出。`
+      : "竞拍开始。现在只能加价或退出。";
+    pushAuctionLog(state, `报名成功，${lot.title} 起拍 ${lot.startPrice}。`);
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  if (state.phase === "result") return;
+  if (control === "quit") {
+    const fallback = fallbackAuctionWinner(lot, state);
+    state.currentPrice = fallback.finalPrice;
+    state.winner = fallback.winner;
+    state.leader = fallback.winner;
+    state.phase = "result";
+    state.result = buildAuctionResultAction(lot, state, false, "quit");
+    state.message = `你退出了竞拍，${fallback.winner}以 ${fallback.finalPrice} 拿走这块地。`;
+    pushAuctionLog(state, `你在 ${Math.round(state.currentPrice || lot.startPrice)} 退出。`);
+    pushAuctionLog(state, `落槌，${fallback.winner}拿走${lot.title}。`);
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  if (state.phase !== "live") return;
+  const raise = control === "raise-big"
+    ? auctionManualRaiseAmount(lot, "big")
+    : control === "raise-small" || control === "follow"
+      ? auctionManualRaiseAmount(lot, "small")
+      : auctionRaiseStep(lot, state.jointPartner ? "joint" : "follow");
   let current = Math.max(state.currentPrice, lot.startPrice);
   const ourBid = current + raise;
+  const availableBudget = auctionAvailableBudget(state, context);
+  if (ourBid > availableBudget) {
+    const fallback = fallbackAuctionWinner(lot, state);
+    state.currentPrice = Math.max(fallback.finalPrice, current);
+    state.winner = fallback.winner;
+    state.leader = fallback.winner;
+    state.phase = "result";
+    state.result = buildAuctionResultAction(lot, state, false, "cash-limit");
+    state.message = state.jointPartner && state.jointPartner.investor !== false
+      ? `共同资金 ${availableBudget} 不够跟到 ${ourBid}，你们只能停手；${fallback.winner}拿走这块地。`
+      : `现金 ${availableBudget} 不够跟到 ${ourBid}，你只能停手；${fallback.winner}拿走这块地。`;
+    pushAuctionLog(state, `资金不足，无法跟到 ${ourBid}。`);
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
+  if (state.jointPartner && partnerVetoesBid(lot, state, ourBid)) {
+    const fallback = fallbackAuctionWinner(lot, state);
+    state.currentPrice = Math.max(fallback.finalPrice, current);
+    state.winner = fallback.winner;
+    state.leader = fallback.winner;
+    state.phase = "result";
+    state.result = buildAuctionResultAction(lot, state, false, "partner-veto");
+    state.message = `${state.jointPartner.name}认为 ${ourBid} 已经超过价格上限，终止举牌；${fallback.winner}拿走这块地。`;
+    pushAuctionLog(state, `${state.jointPartner.name}终止举牌。`);
+    saveGame();
+    renderOfficeTurn();
+    return;
+  }
   state.ourBid = ourBid;
+  state.playerBidCount = (state.playerBidCount || 0) + 1;
   current = ourBid;
   state.leader = "你";
-  const rivalLines = [];
-  state.rivals.forEach((rival) => {
-    const nextPrice = current + auctionRaiseStep(lot, rival.aggression >= 0.72 ? "hard" : "follow");
-    if (competitorWantsToRaise(rival, lot, state, nextPrice)) {
-      rival.lastBid = nextPrice;
-      rival.mood = rival.aggression >= 0.72 ? "抬价" : "跟价";
-      current = nextPrice;
-      state.leader = rival.name;
-      rivalLines.push(`${rival.name}跟到 ${nextPrice}`);
-    } else {
-      rival.active = false;
-      rival.mood = "停手";
-      rivalLines.push(`${rival.name}停手`);
-    }
-  });
+  pushAuctionLog(state, `你加到 ${ourBid}。`);
+	  const rivalLines = [];
+	  state.rivals.forEach((rival) => {
+	    rival.justMoved = false;
+	  });
+	  state.rivals.forEach((rival, index) => {
+	    const nextPrice = current + auctionRaiseStep(lot, rival.aggression >= 0.72 ? "hard" : "follow");
+	    if (competitorWantsToRaise(rival, lot, state, nextPrice, index)) {
+	      rival.lastBid = nextPrice;
+	      rival.mood = rival.aggression >= 0.72 ? "抬价" : "跟价";
+	      rival.quote = rivalAuctionLine(rival, lot, "raise", nextPrice);
+	      rival.justMoved = true;
+	      current = nextPrice;
+	      state.leader = rival.name;
+	      rivalLines.push(`${rival.name}跟到 ${nextPrice}`);
+	      pushAuctionLog(state, `${rival.name}加到 ${nextPrice}。`);
+	    } else {
+	      rival.active = false;
+	      rival.mood = "停手";
+	      rival.quote = rivalAuctionLine(rival, lot, "stop", current);
+	      rival.justMoved = true;
+	      rivalLines.push(`${rival.name}停手`);
+	      pushAuctionLog(state, `${rival.name}停手。`);
+	    }
+	  });
   state.currentPrice = current;
   state.round += 1;
   const activeRivals = state.rivals.filter((rival) => rival.active);
   state.message = rivalLines.join("，") || "这一轮没人继续抬价。";
   const overpayRatio = current / Math.max(1, lot.startPrice) - 1;
-  if (state.leader === "你" && (!activeRivals.length || state.round >= 4)) {
-    commitAuctionAction(buildAuctionResultAction(lot, state, true, control));
+  if (state.leader === "你" && (!activeRivals.length || state.round >= 4 || overpayRatio >= 0.55)) {
+    state.winner = "你";
+    state.phase = "result";
+    state.result = buildAuctionResultAction(lot, state, true, "follow");
+    state.message = `拿地成功：${lot.title} 成交 ${Math.round(state.currentPrice)}。`;
+    pushAuctionLog(state, `落槌，${lot.title} 归你。`);
+    saveGame();
+    renderOfficeTurn();
     return;
   }
-  if (overpayRatio >= 0.55 || state.round >= 6) {
-    if (state.leader === "你") {
-      commitAuctionAction(buildAuctionResultAction(lot, state, true, control));
-    } else {
-      commitAuctionAction(buildAuctionResultAction(lot, state, false, control));
-    }
-    return;
+  if (state.leader !== "你") {
+    const pressure = overpayRatio >= 0.55
+      ? "价格已经明显偏高，"
+      : state.round >= 6
+        ? "竞价已经拖了多轮，"
+        : "";
+    state.message = `${state.leader}暂时领跑到 ${Math.round(state.currentPrice)}。${pressure}你还可以继续加价，或者主动退出。`;
   }
   saveGame();
   renderOfficeTurn();
@@ -3277,17 +5424,9 @@ function projectMapPosition(project, index = 0) {
 
 function renderMapBase(content, className = "") {
   const profile = auctionProfile();
-  const center = AUCTION_DISTRICT_COORDS.核心区;
   return `
     <div class="office-map ${className}" aria-label="云江地图">
-      <div class="map-layer map-river"></div>
-      <div class="map-layer map-road map-road-main"></div>
-      <div class="map-layer map-road map-road-cross"></div>
-      <span class="map-golden-core" style="--x:${center.x}%;--y:${center.y}%;">${escapeHtml(profile.center || "中心")}</span>
-      <span class="map-zone map-zone-old">老城</span>
-      <span class="map-zone map-zone-new">新区</span>
-      <span class="map-zone map-zone-east">东郊</span>
-      <span class="map-zone map-zone-south">南站</span>
+      ${renderCityPlanBase({ centerLabel: profile.center || "中心", escapeHtml, planning: cityPlanningSnapshot() })}
       ${content}
     </div>
   `;
@@ -3316,7 +5455,14 @@ function materializeOfficeAction(def, context) {
     endingCandidate: value("endingCandidate", null),
     special: value("special", null),
     nextScaleIndex: value("nextScaleIndex", null),
-    auctionBid: value("auctionBid", null),
+	    auctionBid: value("auctionBid", null),
+	    financeChannel: value("financeChannel", null),
+	    fundingChannel: value("fundingChannel", null),
+	    fundingPrincipal: value("fundingPrincipal", null),
+	    fundingMonthlyRate: value("fundingMonthlyRate", null),
+	    fundingMonthlyInterest: value("fundingMonthlyInterest", null),
+	    relationGroup: value("relationGroup", null),
+    relationContactId: value("relationContactId", null),
     projectTitle: value("projectTitle", null),
     projectBookValue: value("projectBookValue", null),
     projectSaleableInventory: value("projectSaleableInventory", null),
@@ -3338,7 +5484,7 @@ function buildOfficeActionCatalog() {
     };
   }
 
-  const candidates = OFFICE_ACTION_DEFS
+  const candidates = [...OFFICE_ACTION_DEFS, ...DESK_ACTION_DEFS]
     .filter((def) => !def.condition || def.condition(context))
     .map((def) => ({ def, weight: Math.max(1, typeof def.weight === "function" ? def.weight(context) : def.weight || 10) }))
     .sort((a, b) => b.weight - a.weight);
@@ -3350,9 +5496,10 @@ function buildOfficeActionCatalog() {
     groups[action.category].push(action);
   });
   Object.keys(groups).forEach((category) => {
+    const limit = category === "relation" ? 32 : category === "finance" ? 16 : category === "project" ? 12 : 3;
     groups[category] = groups[category]
       .sort((a, b) => b.weight - a.weight)
-      .slice(0, 3);
+      .slice(0, limit);
   });
   if (game.selectedActionCategory === "land") {
     const lot = selectedAuctionLot(context);
@@ -3361,10 +5508,11 @@ function buildOfficeActionCatalog() {
     }
   }
   const actions = Object.values(groups).flat();
-  const selected = game.selectedActionCategory === "land"
+  const desiredCategory = game.selectedActionCategory || "land";
+  const selected = desiredCategory === "land"
     ? "land"
-    : groups[game.selectedActionCategory]?.length
-    ? game.selectedActionCategory
+    : groups[desiredCategory]?.length
+    ? desiredCategory
     : null;
   return {
     context,
@@ -3386,7 +5534,7 @@ function officePressureLine(context = officeActionContext()) {
     if (context.downturn) return "市场转冷，现金、库存和银行信任开始互相咬合。";
     return "桌面暂时没有单点爆雷，但资金、项目和关系仍在滚动。";
   }
-  return `当前最该盯住：${issues.join(" / ")}。`;
+  return "";
 }
 
 function officeActionEvent(action) {
@@ -3480,9 +5628,9 @@ function categoryIconSvg(categoryId) {
 function renderActionDock(groups, selectedCategory, options = {}) {
   const locked = Boolean(options.locked);
   return OFFICE_ACTION_CATEGORIES
-    .filter((category) => category.id !== "scale" || groups.scale?.length)
+    .filter((category) => category.id !== "scale")
     .map((category) => {
-      const count = groups[category.id]?.length || 0;
+      const count = category.id === "land" ? ensureAuctionDesk().lots.length : groups[category.id]?.length || 0;
       const disabled = locked || count <= 0;
       return `
         <button
@@ -3554,63 +5702,499 @@ function renderOfficeMap(groups, selectedCategory) {
   return renderMapBase(nodes);
 }
 
+function districtStatusText(district) {
+  const info = districtMarketInfo(district);
+  const trend = districtTrendLabel(district);
+  return `房价 ${Math.round(info.index)}｜${trend}｜热度 ${Math.round(info.heat)}`;
+}
+
+function renderLandMarketBoard(desk, selectedLot, context, options = {}) {
+  return renderAuctionMapBoard({
+    desk,
+    selectedLot,
+    context,
+    landRegistry: game.landRegistry || [],
+    districtTrendLabel,
+    renderMapBase,
+    escapeHtml,
+    ...options
+  });
+}
+
+function renderLandMapFrame(desk, selectedLot, bidState, context) {
+  if (!shouldShowAuctionMapForState(bidState)) return "";
+  const isSelectedFlow = Boolean(selectedLot && bidState);
+  const isDeepFlow = Boolean(bidState && (bidState.phase !== "prep" || ["chat", "partner"].includes(bidState.prepMode)));
+  const expanded = isSelectedFlow ? Boolean(bidState?.mapExpanded) : true;
+  const board = renderLandMarketBoard(desk, selectedLot, context, {
+    showSoldStrip: !isSelectedFlow
+  });
+  return `
+    <div class="land-map-frame ${isSelectedFlow ? "selected-lot" : ""} ${isDeepFlow ? "deep-flow" : ""} ${expanded ? "expanded" : "compact"}">
+      ${isSelectedFlow ? `
+        <button class="map-toggle-button" type="button" data-auction-control="toggle-map">
+          ${expanded ? "缩小地图" : "展开地图"}
+        </button>
+      ` : ""}
+      ${board}
+    </div>
+  `;
+}
+
+function auctionRivalsHtml(bidState) {
+  return `
+    <div class="auction-rivals">
+      ${(bidState.rivals || []).map((rival) => `
+        <span class="${rival.active ? "" : "out"} ${rival.justMoved ? "just-moved" : ""} ${bidState.jointPartner?.id === rival.id ? "partner" : ""}">
+          <strong>${escapeHtml(rival.name)}｜余${Math.round(rival.cash)}</strong>
+          <small>${escapeHtml(rival.quote || (rival.active ? rival.org || "地产圈" : rival.mood || "停手"))}</small>
+        </span>
+      `).join("")}
+    </div>
+  `;
+}
+
+function auctionLogHtml(bidState) {
+  const lines = bidState.log || [];
+  if (!lines.length) return "";
+  return `
+    <ol class="auction-log">
+      ${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+    </ol>
+  `;
+}
+
+function auctionEstimateHtml(bidState) {
+  if (!bidState.estimate) return "";
+  const estimate = bidState.estimate;
+  return `
+    <div class="auction-estimate-card">
+      <strong>${escapeHtml(estimate.label || "专家估价")}</strong>
+      <span>合理区间 ${Math.round(estimate.low)}-${Math.round(estimate.high)}｜建议上限 ${Math.round(estimate.ceiling)}</span>
+      <small>${escapeHtml(estimate.note)}</small>
+    </div>
+  `;
+}
+
+function auctionIntelHtml(bidState) {
+  const intel = bidState.lastIntel;
+  if (!intel?.text) return "";
+  return `
+    <div class="auction-intel-strip">
+      <strong>${escapeHtml(intel.speaker || intel.label)}</strong>
+      <span>${escapeHtml(intel.text)}</span>
+    </div>
+  `;
+}
+
+function auctionIntelAccessLevel(contact, option) {
+  const intimacy = Number(contact?.intimacy || 0);
+  const quality = Number(option?.quality ?? intimacy);
+  if (intimacy <= -20 || quality <= -35) return "hostile";
+  if (intimacy < 18) return "vague";
+  if (intimacy < 40 || quality < 16) return "partial";
+  return "specific";
+}
+
+function auctionContactIntroText(contact) {
+  const intimacy = Number(contact?.intimacy || 0);
+  if (intimacy >= 40) return `${contact.stance}。${contact.brief || `亲密度 ${contact.intimacy}（${contact.intimacyLabel}）。`}`;
+  if (intimacy >= 18) return `${contact.stance}。能聊出一点方向，但还不到交底牌的关系。`;
+  if (contact?.group === "gov-window") {
+    return `${contact.stance}。现在只能按公开窗口理解，他不会在这个关系上讲具体红线。`;
+  }
+  if (contact?.group === "bank-window") {
+    return `${contact.stance}。现在只能问材料和流程，额度、折扣和展期不会直接说。`;
+  }
+  if (contact?.group === "local-boss") {
+    return `${contact.stance}。只知道他会来这张桌，真实偏好、底价和退让条件都不清楚。`;
+  }
+  return `${contact.stance}。亲密度 ${contact.intimacy}（${contact.intimacyLabel}），暂时不会交底。`;
+}
+
+function auctionChatOutcomeLabel(level) {
+  return {
+    hostile: "反向试探",
+    vague: "套话",
+    partial: "半句口径",
+    specific: "具体口径"
+  }[level] || "套话";
+}
+
+function auctionChatOptionStatus(contact, option, cost, used) {
+  if (used) return "已问过｜情报已记录";
+  if (option.locked) return option.lockedReason;
+  const level = auctionIntelAccessLevel(contact, option);
+  const result = {
+    hostile: "可能被反向利用",
+    vague: "大概率只给套话",
+    partial: "可能给半句口径",
+    specific: "可能给具体口径"
+  }[level] || "大概率只给套话";
+  return `费用 ${cost}｜占用 1 回合｜${result}`;
+}
+
+function auctionChatOptionHint(contact, option) {
+  const level = auctionIntelAccessLevel(contact, option);
+  if (option?.locked) return option.lockedReason;
+  if (level === "specific") return option?.hint || "关系到位时，对方才可能把话讲具体。";
+  if (level === "partial") return "关系还没到交底牌，只可能拿到方向，不能拿它当定价依据。";
+  if (level === "hostile") return `${contact.name}会把你的开口当成试探，可能反过来抬价或卡你。`;
+  if (contact?.group === "gov-window") return "只能问公开口径和模糊风向，不会给规划、配建或审批红线的实话。";
+  if (contact?.group === "bank-window") return "只能问材料和流程，不会给授信额度、抵押折扣或展期承诺。";
+  if (contact?.group === "local-boss") return "只能试探态度，对方不会白讲偏好和底价，还可能反向利用。";
+  return "关系不到位，只能拿到场面话。";
+}
+
+function riskOnlyEffects(effects = {}, factor = 1) {
+  return Object.fromEntries(
+    Object.entries(effects)
+      .filter(([, value]) => Number(value) > 0)
+      .map(([key, value]) => [key, Math.max(1, Math.round(Number(value) * factor))])
+  );
+}
+
+function auctionChatOutcomeHiddenEffects(contact, option, level) {
+  if (level === "specific") return option.hiddenEffects || {};
+  if (level === "partial") return riskOnlyEffects(option.hiddenEffects, 0.5);
+  const base = contact?.group === "local-boss"
+    ? { local_isolation: 1, legal_exposure: 1 }
+    : contact?.group === "gov-window"
+      ? { political_dependency: 1, legal_exposure: 1 }
+      : { data_inflation: 1, financing_cost: 1 };
+  if (level === "hostile") {
+    return Object.fromEntries(Object.entries(base).map(([key, value]) => [key, value + 1]));
+  }
+  return base;
+}
+
+function auctionChatOutcome(contact, option, lot, context = officeActionContext()) {
+  const level = auctionIntelAccessLevel(contact, option);
+  return {
+    level,
+    label: auctionChatOutcomeLabel(level),
+    text: auctionChatIntelText(contact, option, lot, context),
+    chatEffect: level === "specific" ? option.effect : null,
+    hiddenEffects: auctionChatOutcomeHiddenEffects(contact, option, level)
+  };
+}
+
+function vagueAuctionIntel(contact, lot, option) {
+  if (contact?.group === "gov-window") {
+    if ((contact?.intimacy || 0) <= -20) {
+      return `${contact.name}只说“按公开口径走”，没有给你任何实话；这种关系下再追问，窗口反而会记住你在盯${lot.district}。`;
+    }
+    return `${contact.name}说得很虚：${lot.district}后面要看规划、配套和会议口径，现在谁都不好把话说死。你只能知道这块地有故事，但不知道故事会不会兑现。`;
+  }
+  if (contact?.group === "bank-window") {
+    return `${contact.name}只按流程说：先看证照、担保、销售回款和监管户，额度和折扣要等正式材料，没给你具体数。`;
+  }
+  if (contact?.group === "local-boss") {
+    return `${contact.name}绕着说了几句场面话，没有讲自己真正想拿哪块地；关系不到位时，他更可能拿你的试探反过来抬价。`;
+  }
+  return option?.message || "对方说得很模糊，没有给出可以直接下注的情报。";
+}
+
+function partialAuctionIntel(contact, lot, option, estimate) {
+  if (contact?.group === "gov-window") {
+    if (["新区", "东郊", "河湾"].includes(lot.district)) {
+      return `${contact.name}只透了一半：${lot.district}确实有人在看配套，但学校、道路或产业节点哪个先落，还没给准话；别按最高预期拍。`;
+    }
+    if (["农业区", "工业区"].includes(lot.district)) {
+      return `${contact.name}只说这类地有转换空间，但要看控规、投资强度和开工节点；能不能变成好地，还不确定。`;
+    }
+    return `${contact.name}提醒你这块地要看配建和审批边界，但没有说清哪条最要命；最多只能把上限压在估值中段附近。`;
+  }
+  if (contact?.group === "bank-window") {
+    return `${contact.name}暗示银行会保守看抵押和监管户，价格超过 ${Math.round((estimate.low + estimate.high) / 2)} 后，开发贷会明显难谈。`;
+  }
+  if (contact?.group === "local-boss") {
+    return `${contact.name}没有明说退让条件，但能听出来他要么要工程份额，要么要下一块地互让；不是现金一句话能解决。`;
+  }
+  return option?.message || "对方给了一点方向，但还不到能直接定价的程度。";
+}
+
+function auctionChatIntelText(contact, option, lot, context = officeActionContext()) {
+  const districtTrend = districtTrendLabel(lot.district);
+  const estimate = auctionAutoEstimate(lot);
+  const district = lot.district;
+  const accessLevel = auctionIntelAccessLevel(contact, option);
+  if (accessLevel === "hostile" || accessLevel === "vague") return vagueAuctionIntel(contact, lot, option);
+  if (accessLevel === "partial") return partialAuctionIntel(contact, lot, option, estimate);
+  if (/land-use|planning|index|permit|quality|escrow|collateral|credit|margin|document|project-separate|covenant|rollover/.test(option.id)) {
+    if (contact.group === "gov-window") {
+      if (district === "农业区") {
+        return `${district}${lot.size}亩现在仍按农地边界看，最早要等产业路和控规调整；5回合内不开工会被问闲置，不能只捂地等涨。`;
+      }
+      if (district === "工业区") {
+        return `${district}能谈产业配套和小比例商住，但住宅口不能直接承诺；投资强度、开工节点和税源承诺会被写进条件。`;
+      }
+      if (["新区", "东郊", "河湾"].includes(district)) {
+        return `${district}有升温机会，关键看道路/学校/产业节点；现在拿便宜，但配建和开工节点会卡，建议把心理上限压在 ${estimate.ceiling} 左右。`;
+      }
+      if (district === "老城" || district === "核心区") {
+        return `${district}指标稳定但旧改、限高和配建多，地价不该拍穿 ${estimate.ceiling}；超过这个价，后面只能靠涨价和高周转补。`;
+      }
+      return `${districtTrend}地块可以继续看，但窗口只认控规、配建和开工节点；这块地合理上限约 ${estimate.ceiling}，不能把口头消息当批文。`;
+    }
+    if (contact.group === "bank-window") {
+      const haircut = clampNumber(0.42 + (context.visible.bank || 0) / 260 - Math.max(0, (context.visible.debt || 0) - 42) / 360, 0.28, 0.62);
+      const loanRoom = Math.max(0, Math.round(lot.expectedValue * haircut - lot.startPrice * 0.18));
+      return `银行只会按保守估值和抵押折扣看这块地，当前大约能认 ${Math.round(haircut * 100)}% 折扣，拍到 ${estimate.ceiling} 以上开发贷会明显收紧，预计可谈额度约 ${loanRoom}。`;
+    }
+  }
+  if (contact.group === "local-boss") {
+    return `${contact.name}真正盯的是${["老城", "核心区"].includes(district) ? "核心位置和面子" : `${district}的周转空间`}；他不会白退，让价通常要现金、工程份额或下一块地互让。`;
+  }
+  return option.message;
+}
+
+function auctionChatConsultCost(contact, option, lot) {
+  if (!contact || !option || !lot) return 0;
+  return 0;
+}
+
+function auctionAutoEstimate(lot) {
+  const low = Math.max(lot.startPrice, Math.round(lot.expectedValue * 0.78));
+  const high = Math.max(low + 1, Math.round(lot.expectedValue * 1.04));
+  const ceiling = Math.max(lot.startPrice + 1, Math.round(lot.expectedValue * 0.96));
+  return { low, high, ceiling };
+}
+
+function auctionLiveInfoHtml(lot, bidState) {
+  const estimate = bidState.estimate || auctionAutoEstimate(lot);
+  return `
+    <div class="auction-live-info">
+      <span>预估 ${Math.round(estimate.low)}-${Math.round(estimate.high)}</span>
+      <span>建议上限 ${Math.round(estimate.ceiling)}</span>
+      <span>现价 ${Math.round(bidState.currentPrice || lot.startPrice)}</span>
+    </div>
+  `;
+}
+
+function auctionCashWarningHtml(context) {
+  const cash = Number(context?.visible?.cash || 0);
+  if (cash > 18) return "";
+  return `
+    <div class="auction-cash-warning">
+      现金只剩 ${Math.round(cash)}。每次沟通、联合确认、加价和保证金都会占现金，先看清花费再点。
+    </div>
+  `;
+}
+
+function auctionEstimateOptionsHtml(bidState) {
+  if (bidState.prepMode !== "estimate" || bidState.estimate) return "";
+  return `
+    <div class="auction-option-scroll auction-estimate-options">
+      ${AUCTION_ESTIMATE_LEVELS.map((level) => `
+        <button class="auction-option-card" type="button" data-auction-estimate="${escapeHtml(level.id)}">
+          <strong>${escapeHtml(level.label)}</strong>
+          <span>花费 ${level.cost}｜占用 1 回合</span>
+          <small>${escapeHtml(level.hint)}</small>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function auctionChatOptionsHtml(bidState) {
+  if (bidState.prepMode !== "chat") return "";
+  const context = officeActionContext();
+  const selectedGroup = bidState.chatGroup || "local-boss";
+  const contacts = auctionChatContactProfiles(context, selectedGroup);
+  const selectedContact = contacts.find((contact) => contact.id === bidState.chatContact) || contacts[0];
+  const actions = (selectedContact?.options || []).map((action) => auctionChatActionProfile(selectedContact, action.id));
+  return `
+    <div class="auction-chat-shell">
+      <div class="auction-chat-groups" aria-label="圈内沟通分类">
+        ${auctionChatGroups().map((group) => `
+          <button class="${selectedGroup === group.id ? "active" : ""}" type="button" data-auction-chat-group="${escapeHtml(group.id)}" title="${escapeHtml(group.brief)}">
+            <span>${escapeHtml(group.icon)}</span>
+            <small>${escapeHtml(group.label)}</small>
+          </button>
+        `).join("")}
+      </div>
+      <div class="auction-chat-main">
+        <div class="auction-chat-contacts auction-option-scroll">
+          ${contacts.map((contact) => `
+            <button class="${selectedContact?.id === contact.id ? "active" : ""}" type="button" data-auction-chat-contact="${escapeHtml(contact.id)}">
+              <strong>${escapeHtml(contact.name)}</strong>
+              <small>亲密 ${Math.round(contact.intimacy)}｜${escapeHtml(contact.intimacyLabel)}</small>
+            </button>
+          `).join("")}
+        </div>
+        ${selectedContact ? `
+          <div class="auction-chat-actions auction-option-scroll">
+            ${actions.map((option) => {
+              const cost = auctionChatConsultCost(selectedContact, option, selectedAuctionLot(context) || { startPrice: 0 });
+              const used = Boolean(bidState.usedChatActions?.[`${selectedContact.id}:${option.id}`]);
+              const locked = option.locked || used;
+              const statusText = auctionChatOptionStatus(selectedContact, option, cost, used);
+              const hintText = auctionChatOptionHint(selectedContact, option);
+              return `
+              <button class="auction-option-card ${locked ? "locked" : ""}" type="button" data-auction-chat="${escapeHtml(option.id)}" ${locked ? "disabled" : ""}>
+                <strong>${escapeHtml(option.label)}</strong>
+                <span>${escapeHtml(statusText)}</span>
+                <small>${escapeHtml(hintText)}</small>
+              </button>
+            `;
+            }).join("")}
+          </div>
+        ` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function auctionPartnerOptionsHtml(lot, bidState) {
+  if (bidState.prepMode !== "partner") return "";
+  if (bidState.jointPartner) return "";
+  const candidates = bidState.partnerCandidates || auctionPartnerCandidates(lot);
+  const selectedGroup = bidState.partnerGroup || "classmates";
+  const visibleCandidates = auctionPartnerGroupCandidates(candidates, selectedGroup);
+  const selectedPartner = visibleCandidates.find((partner) => partner.id === bidState.partnerContact) || visibleCandidates[0] || null;
+  const variants = selectedPartner ? auctionPartnerBidVariants(selectedPartner, lot) : [];
+  return `
+    <div class="auction-partner-shell auction-chat-shell">
+      <div class="auction-partner-tabs auction-chat-groups" aria-label="联合竞标分类">
+        ${AUCTION_PARTNER_GROUPS.map((group) => `
+          <button class="${selectedGroup === group.id ? "active" : ""}" type="button" data-auction-partner-group="${escapeHtml(group.id)}">
+            <span>${escapeHtml(group.icon || group.label.slice(0, 1))}</span>
+            <small>${escapeHtml(group.label)}</small>
+          </button>
+        `).join("")}
+      </div>
+      <div class="auction-chat-main">
+        <div class="auction-partner-contacts auction-chat-contacts auction-option-scroll">
+          ${visibleCandidates.map((partner) => {
+            const supportText = partner.investor === false ? "不出资" : `可出 ${partner.cashSupport}`;
+            const gateText = partner.gateDisabled ? "｜试用开放" : "";
+            return `
+              <button class="${selectedPartner?.id === partner.id ? "active" : ""}" type="button" data-auction-partner-contact="${escapeHtml(partner.id)}">
+                <strong>${escapeHtml(partner.name)}</strong>
+                <small>亲密 ${Math.round(partner.relationScore)}｜${supportText}${gateText}</small>
+              </button>
+            `;
+          }).join("")}
+        </div>
+        ${selectedPartner ? `
+          <div class="auction-partner-actions auction-chat-actions auction-option-scroll">
+            ${variants.map((variant) => {
+              const offer = materializeAuctionPartnerVariant(selectedPartner, lot, variant.id);
+              const supportText = offer.investor === false
+                ? "不出资｜不干预价格"
+                : `对方出 ${offer.cashSupport}${offer.playerCashCost ? `｜你追加 ${offer.playerCashCost}` : ""}｜你占 ${Math.round(offer.playerShare)}%｜话语权 ${Math.round(offer.playerControl)}%`;
+              return `
+                <button class="auction-option-card" type="button" data-auction-partner="${escapeHtml(selectedPartner.id)}" data-auction-partner-variant="${escapeHtml(variant.id)}">
+                  <strong>${escapeHtml(variant.label)}</strong>
+                  <span>${supportText}</span>
+                  <small>${escapeHtml(`${variant.hint} 确认花费 ${offer.confirmCost} 现金。`)}</small>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        ` : `
+          <div class="office-empty-panel"><strong>这一类暂时没人能谈</strong></div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function renderAuctionBidPanel(lot, bidState, context) {
+  const phase = bidState.phase || "prep";
+  const isFocusPrep = phase === "prep" && ["chat", "partner"].includes(bidState.prepMode);
+  const hasFundingPartner = bidState.jointPartner && bidState.jointPartner.investor !== false;
+  const row = `
+    <div class="auction-bid-row">
+      <span>${phase === "prep" ? "拍前" : phase === "result" ? "落槌" : `第 ${bidState.round} 轮`}</span>
+      <strong>${phase === "prep" ? `起拍 ${lot.startPrice}` : `现价 ${Math.round(bidState.currentPrice)}`}</strong>
+      <em>${hasFundingPartner ? `共同资金 ${jointBudgetForState(bidState, context)}` : `现金 ${context.visible.cash}`}</em>
+      <em>${hasFundingPartner ? `话语权 ${Math.round(bidState.jointPartner.playerControl || 50)}%` : `领跑 ${escapeHtml(bidState.leader)}`}</em>
+    </div>
+  `;
+  if (phase === "result") {
+    const won = Boolean(bidState.result?.auctionResult?.won);
+    const winner = bidState.result?.auctionResult?.winner || bidState.winner || bidState.leader || "未知买家";
+    return `
+      <div class="auction-bid-panel auction-result-panel ${won ? "won" : "lost"}">
+        <div class="auction-result-mark">
+          <strong>${won ? "拿地成功" : "竞拍结束"}</strong>
+          <span>${escapeHtml(bidState.message || `${lot.title} 归属：${winner}`)}</span>
+        </div>
+        ${row}
+        ${auctionLogHtml(bidState)}
+        <div class="auction-controls auction-result-controls">
+          <button type="button" data-auction-control="commit-result">${won ? "确认成交入账" : "确认结果"}</button>
+        </div>
+      </div>
+    `;
+  }
+  if (phase === "prep") {
+    return `
+      <div class="auction-bid-panel auction-prep-panel ${isFocusPrep ? "focus-flow" : ""}">
+        <div class="auction-lot-summary">
+          <strong>${escapeHtml(lot.title)}</strong>
+          <span>${lot.size}亩｜起拍 ${lot.startPrice}｜保证金 ${lot.deposit}｜${escapeHtml(lot.district)}｜${escapeHtml(districtTrendLabel(lot.district))}</span>
+        </div>
+        ${auctionEstimateHtml(bidState)}
+        ${auctionCashWarningHtml(context)}
+        ${bidState.jointPartner ? `
+          <div class="auction-estimate-card partner-term">
+            <strong>联合竞标方案</strong>
+            ${bidState.jointPartner.investor === false ? `
+              <span>${escapeHtml(bidState.jointPartner.name)}｜不出资｜现金 ${context.visible.cash}</span>
+              <small>${escapeHtml(bidState.jointTerm || "只提供口径或协调，不参与出资。")} 这个窗口不替你出钱，也不能终止举牌。</small>
+            ` : `
+              <span>${escapeHtml(bidState.jointPartner.name)}｜共同资金 ${jointBudgetForState(bidState, context)}｜话语权 ${Math.round(bidState.jointPartner.playerControl || 50)}%</span>
+              <small>${escapeHtml(bidState.jointTerm || "收益和责任待确认。")} 价格超过 ${Math.round(bidState.jointPartner.maxPrice || lot.startPrice)} 时，对方可能终止举牌。</small>
+            `}
+          </div>
+        ` : ""}
+        ${auctionIntelHtml(bidState)}
+        ${auctionEstimateOptionsHtml(bidState)}
+        ${auctionChatOptionsHtml(bidState)}
+        ${auctionPartnerOptionsHtml(lot, bidState)}
+        <div class="auction-controls auction-prep-controls">
+          <button type="button" data-auction-control="chat">圈内沟通</button>
+          ${bidState.jointPartner ? "" : `<button type="button" data-auction-control="joint">联合竞标</button>`}
+          <button type="button" data-auction-control="start">进入拍卖</button>
+        </div>
+      </div>
+    `;
+  }
+  const smallRaise = auctionManualRaiseAmount(lot, "small");
+  const bigRaise = auctionManualRaiseAmount(lot, "big");
+  const liveBudget = auctionAvailableBudget(bidState, context);
+  const livePrice = Math.max(bidState.currentPrice || lot.startPrice, lot.startPrice);
+  return `
+    <div class="auction-bid-panel auction-live-panel">
+      ${row}
+      ${auctionLiveInfoHtml(lot, bidState)}
+      ${auctionCashWarningHtml(context)}
+      ${auctionRivalsHtml(bidState)}
+      <p>${escapeHtml(bidState.message || "竞拍进行中。")}</p>
+      ${auctionLogHtml(bidState)}
+      <div class="auction-controls auction-live-controls">
+        <button type="button" data-auction-control="raise-small" ${livePrice + smallRaise > liveBudget ? "disabled" : ""}>加价 ${smallRaise}</button>
+        <button type="button" data-auction-control="raise-big" ${livePrice + bigRaise > liveBudget ? "disabled" : ""}>加价 ${bigRaise}</button>
+        <button type="button" data-auction-control="quit">退出</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderLandDesk(context, actions) {
   const ledger = context.ledger;
   const desk = ensureAuctionDesk(context);
   const selectedLot = selectedAuctionLot(context);
   const bidState = selectedLot ? ensureAuctionBidState(selectedLot, context) : null;
-  const selectedProject = ledger.projects.find((project) => project.id === game.selectedProjectId) || null;
-  const owned = [...ledger.projects].slice(0, 8).map((project, index) => {
-    const pos = projectMapPosition(project, index);
-    const value = marketValueForProject(project, ledger);
-    const active = game.selectedProjectId === project.id;
-    return `
-      <button
-        class="lot-node owned ${active ? "active" : ""}"
-        type="button"
-        data-project-id="${escapeHtml(project.id)}"
-        style="--x:${pos.x}%;--y:${pos.y}%;"
-      >
-        <strong>${escapeHtml(project.title.replace(/第一块地/, "1号地"))}</strong>
-        <small>${escapeHtml(projectStageName(project.stage))}｜估${value}</small>
-      </button>
-    `;
-  }).join("");
-  const auctionLots = desk.lots.map((lot) => {
-    const selected = selectedLot?.id === lot.id;
-    const expensive = lot.deposit > context.visible.cash;
-    return `
-      <button
-        class="lot-node auction ${selected ? "active" : ""} ${expensive ? "expensive" : ""}"
-        type="button"
-        data-lot-id="${escapeHtml(lot.id)}"
-        style="--x:${lot.x}%;--y:${lot.y}%;"
-      >
-        <strong>${escapeHtml(lot.title)}</strong>
-        <small>${lot.size}亩｜起${lot.startPrice}｜竞${lot.competition}</small>
-      </button>
-    `;
-  }).join("");
-  const map = renderMapBase(`
-    <span class="map-legend owned">自有</span>
-    <span class="map-legend auction">土拍</span>
-    ${owned}
-    ${auctionLots}
-  `, "land-market-map");
-  const selectedDetail = selectedProject
-    ? `
-      <div class="auction-detail owned">
-        <strong>${escapeHtml(selectedProject.title)}</strong>
-        <span>${escapeHtml(projectStageName(selectedProject.stage))}｜估 ${marketValueForProject(selectedProject, ledger)}｜${escapeHtml(projectCashFlowLine(selectedProject, ledger))}</span>
-      </div>
-    `
-    : selectedLot
-    ? `
-      <div class="auction-detail">
-        <strong>${escapeHtml(selectedLot.title)}</strong>
-        <span>${selectedLot.size}亩｜起拍 ${selectedLot.startPrice}｜保证金 ${selectedLot.deposit}｜竞争 ${selectedLot.competition}｜${escapeHtml(selectedLot.district)}${selectedLot.premium >= 1.15 ? "黄金带" : "外围价"}</span>
-      </div>
-    `
+  const focusFlow = selectedLot && isAuctionFocusFlow(context);
+  const board = focusFlow ? "" : renderLandMapFrame(desk, selectedLot, bidState, context);
+  const selectedDetail = selectedLot
+    ? ""
+    : focusFlow
+      ? ""
     : `
       <div class="auction-detail muted">
         <strong>先点一块土拍地</strong>
@@ -3618,41 +6202,457 @@ function renderLandDesk(context, actions) {
       </div>
     `;
   const bidPanel = selectedLot && bidState
-    ? `
-      <div class="auction-bid-panel">
-        <div class="auction-bid-row">
-          <span>第 ${bidState.round} 轮</span>
-          <strong>现价 ${Math.round(bidState.currentPrice)}</strong>
-          <em>现金 ${context.visible.cash}</em>
-          <em>领跑 ${escapeHtml(bidState.leader)}</em>
+    ? renderAuctionBidPanel(selectedLot, bidState, context)
+    : "";
+  return `${board}${selectedDetail}${bidPanel}`;
+}
+
+function renderDeskActions(actions, className = "") {
+  if (!actions.length) {
+    return `<div class="office-empty-panel"><strong>暂时没有可执行动作</strong><p>关系、资金和项目状态变化后，这里会出现新的窗口。</p></div>`;
+  }
+  return `
+    <div class="desk-action-list ${className}">
+      ${actions.map((action, index) => `
+        <button class="choice office-action" type="button" data-action="${escapeHtml(action.id)}" data-index="${index}">
+          <span>${escapeHtml(action.label)}</span>
+          <small>${escapeHtml(action.hint || "")}</small>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function actionHintLines(action, metaParts = 3) {
+  const parts = String(action?.hint || "").split("｜").map((part) => part.trim()).filter(Boolean);
+  if (!parts.length) return { meta: "", detail: "" };
+  return {
+    meta: parts.slice(0, metaParts).join("｜"),
+    detail: parts.slice(metaParts).join("｜")
+  };
+}
+
+function renderFinanceDesk(context, actions) {
+  const selectedChannel = game.selectedFinanceChannel || "bank";
+  const lenders = financeLenderProfiles(selectedChannel, context);
+  const selectedLender = lenders.find((lender) => lender.id === game.selectedFinanceContact) || lenders[0] || null;
+  const channelActions = financeActionsForLender(selectedLender, context);
+  if (selectedLender) {
+    game.availableActions = [...new Map([...(game.availableActions || []), ...channelActions].map((action) => [action.id, action])).values()];
+  }
+  const nav = FINANCE_CHANNELS.map((channel) => {
+    const count = financeLenderProfiles(channel.id, context).length;
+    return `
+      <button class="desk-channel-card ${selectedChannel === channel.id ? "active" : ""}" type="button" data-finance-channel="${escapeHtml(channel.id)}">
+        <strong>${escapeHtml(channel.label)}</strong>
+        <span>${escapeHtml(channel.tone)}</span>
+        <small>${count} 个窗口</small>
+      </button>
+    `;
+  }).join("");
+  return `
+    <section class="desk-split finance-desk">
+      <div class="desk-nav">
+        <div class="market-board-head">
+          <strong>资金来源</strong>
+          <span>现金 ${context.visible.cash}｜资产 ${context.ledger.marketAssetValue || 0}｜债务 ${context.visible.debt}｜付息 ${context.funding.interestDue || 0}</span>
         </div>
-        <div class="auction-rivals">
-          ${(bidState.rivals || []).map((rival) => `
-            <span class="${rival.active ? "" : "out"} ${bidState.jointPartner?.id === rival.id ? "partner" : ""}">
-              <strong>${escapeHtml(rival.name)}</strong>
-              <em>${escapeHtml(rival.bidStyle || rival.mood || "竞价")}</em>
-              <small>${bidState.jointPartner?.id === rival.id ? "联合" : rival.active ? `余${Math.round(rival.cash)}｜报${Math.round(rival.lastBid || 0) || "-"}` : escapeHtml(rival.mood || "停手")}</small>
-            </span>
+        <div class="desk-card-grid">${nav}</div>
+      </div>
+      <div class="desk-detail">
+        <div class="contact-strip finance-contact-strip">
+          ${lenders.map((lender) => `
+            <button class="desk-contact-card contact-pill ${selectedLender?.id === lender.id ? "active" : ""}" type="button" data-finance-contact="${escapeHtml(lender.id)}">
+              <strong>${escapeHtml(lender.name)}</strong>
+              <span>额度 ${Math.round(lender.limit)}｜月息 ${lender.rate}%</span>
+              <small>${escapeHtml(lender.org)}｜关系 ${Math.round(lender.relation)}</small>
+            </button>
           `).join("")}
         </div>
-        <p>${escapeHtml(bidState.message || "竞拍刚开始。")}</p>
-        <div class="auction-controls">
-          <button type="button" data-auction-control="follow">跟一手</button>
-          <button type="button" data-auction-control="hard">硬顶</button>
-          <button type="button" data-auction-control="joint">${bidState.jointPartner ? "联合体已进" : "找联合体"}</button>
-          <button type="button" data-auction-control="quit">退出</button>
+        <div class="relationship-action-head">${selectedLender ? `${escapeHtml(selectedLender.name)}能做什么` : "可以做什么"}</div>
+        <div class="relationship-action-grid finance-loan-actions">
+          ${channelActions.map((action, index) => {
+            const lines = actionHintLines(action);
+            return `
+              <button class="choice office-action relationship-action-card finance-action-card" type="button" data-action="${escapeHtml(action.id)}" data-index="${index}">
+                <strong>${escapeHtml(action.label)}</strong>
+                ${lines.meta ? `<span>${escapeHtml(lines.meta)}</span>` : ""}
+                <small>${escapeHtml(lines.detail || action.hint || "")}</small>
+              </button>
+            `;
+          }).join("") || `<div class="office-empty-panel"><strong>暂时没人能借</strong><p>现金、资产或关系变化后再谈。</p></div>`}
         </div>
       </div>
+    </section>
+  `;
+}
+
+function relationActionsForContact(actions, contact) {
+  if (!contact) return [];
+  const context = officeActionContext();
+  const relationValue = Math.round(context.relations[contact.relationKey] || 0);
+  const byContact = actions.filter((action) => action.relationContactId === contact.id);
+  const byIds = (contact.actionIds || [])
+    .map((id) => actions.find((action) => action.id === id))
+    .filter(Boolean);
+  const giftAction = relationGiftAction(contact, context);
+  const unique = [...new Map([...(giftAction ? [giftAction] : []), ...byContact, ...byIds].map((action) => [action.id, action])).values()];
+  return unique.filter((action) => !isJointInvestmentAction(action) || relationValue >= 80);
+}
+
+function relationGiftAction(contact, context) {
+  const costByGroup = { friends: 2, government: 5, bank: 4, other: 3 };
+  const gainByGroup = { friends: 4, government: 3, bank: 3, other: 4 };
+  const cost = costByGroup[contact.group] || 3;
+  if ((context.visible.cash || 0) < cost) return null;
+  const labelByGroup = {
+    friends: `请${contact.name}吃饭走动`,
+    government: `给${contact.name}送礼走动`,
+    bank: `维护${contact.name}这条线`,
+    other: `打点${contact.name}`
+  };
+  const riskByGroup = {
+    friends: { off_balance_debt: 1 },
+    government: { political_dependency: 3, legal_exposure: 2 },
+    bank: { data_inflation: 1, financing_cost: -1 },
+    other: { gray_risk: 3, legal_exposure: 1 }
+  };
+  return {
+    id: `relation-gift-${contact.id}-${game.turn}`,
+    category: "relation",
+    relationContactId: contact.id,
+    label: labelByGroup[contact.group] || `和${contact.name}走动`,
+    hint: `花费 ${cost} 现金；亲密度 +${gainByGroup[contact.group] || 3}。这是关系页动作，不在土拍口径里刷关系。`,
+    visibleEffects: { cash: -cost },
+    hiddenEffects: riskByGroup[contact.group] || {},
+    relationEffects: { [contact.relationKey]: gainByGroup[contact.group] || 3 },
+    models: ["political-embedded-enterprise", "relationship-capital"],
+    sourceEpisodes: ["EP004", "EP101"],
+    scaleScore: 0,
+    consequence: `你花 ${cost} 现金和${contact.name}走动了一次，关系热了一点，也留下相应的人情账。`,
+    lesson: "关系不是点击联系人自然变好，而是现金、人情、材料和风险一起支付。"
+  };
+}
+
+function isJointInvestmentAction(action) {
+  if (!action) return false;
+  const jointInvestmentIds = new Set([
+    "relation-friend-joint-dev",
+    "finance-friend-equity-sidecar",
+    "state-capital-minority",
+    "minority-share-old-town",
+    "nominee-partner-sidecar"
+  ]);
+  if (jointInvestmentIds.has(action.id)) return true;
+  return /合股|共同开发|联合投资|联合开发|入股|小股/.test(String(action.label || ""));
+}
+
+function relationActionNeedsMenu(action) {
+  return Boolean(loanProfileForAction(action?.id) || jointProfileForAction(action?.id));
+}
+
+function loanNegotiationActions(action, context) {
+  const offer = buildRelationLoanOffer(action.id, context);
+  if (!offer) return [];
+  const isFriend = offer.style === "friend";
+  const isGray = offer.style === "gray";
+  return [{
+    ...action,
+    id: `${action.id}-offer-${offer.amount}-${String(offer.rate).replace(".", "_")}`,
+    label: `借 ${offer.amount}，月息 ${offer.rate}%`,
+    hint: `${offer.lender}：${offer.reply}`,
+    visibleEffects: {
+      cash: offer.amount,
+      debt: offer.debt,
+      bank: isFriend ? 0 : -1,
+      government: isGray ? -2 : 0
+    },
+    hiddenEffects: {
+      financing_cost: offer.financingCost,
+      off_balance_debt: Math.max(1, Math.round(offer.amount * (isFriend ? 0.36 : 0.58))),
+      legal_exposure: isFriend ? 2 : 3,
+      gray_risk: isGray ? 8 : offer.style === "micro" ? 3 : 0,
+      boss_safety: isGray ? -5 : 0
+    },
+    relationEffects: isFriend
+      ? { private_friends: 1 }
+      : offer.style === "micro"
+        ? { micro_lender: 4 }
+        : { underground: 6, micro_lender: 2 },
+    consequence: `${offer.lender}愿意借 ${offer.amount}，月息约 ${offer.rate}%。他说：“${offer.reply}”`,
+    lesson: "借款不是一个按钮，而是额度、利息、关系和违约后果一起报价。"
+  }];
+}
+
+function jointNegotiationActions(action, context) {
+  return buildJointDevelopmentProposals(action.id, context).map((proposal) => ({
+    ...action,
+    id: `${action.id}-proposal-${proposal.id}`,
+    label: proposal.title,
+    hint: proposal.hint,
+    visibleEffects: { ...(proposal.visibleEffects || {}) },
+    hiddenEffects: { ...(proposal.hiddenEffects || {}) },
+    relationEffects: { ...(proposal.relationEffects || {}) },
+    scaleScore: proposal.scaleScore || action.scaleScore || 0,
+    consequence: `你和${proposal.partner}谈成共同开发比例：${proposal.title}。${proposal.hint}`,
+    lesson: "共同开发不是“找人一起做”四个字，核心是出资、控制权、工程优先权和退出价怎么写。"
+  }));
+}
+
+function relationNegotiationActions(action, context) {
+  if (!action) return [];
+  return loanProfileForAction(action.id)
+    ? loanNegotiationActions(action, context)
+    : jointNegotiationActions(action, context);
+}
+
+function projectActionNeedsMenu(action) {
+  return action?.id === "project-site-supervision";
+}
+
+function projectSupervisionOptions(action) {
+  return [
+    {
+      ...action,
+      id: "project-supervision-cut-standard",
+      label: "降低非关键建设标准，先省现金保进度",
+      hint: "现金压力会小一点，进度会快，但质量、业主和法律风险会上升。",
+      visibleEffects: { cash: 4, delivery: 3, public_trust: -5 },
+      hiddenEffects: { buyer_liability: 6, legal_exposure: 4, delivery_pressure: 2, data_inflation: 2 },
+      relationEffects: { contractor: 2, buyers: -5 },
+      models: ["delivery-first", "legal-exposure", "presale-cashflow-trap"],
+      sourceEpisodes: ["EP124", "EP126"],
+      scaleScore: -1,
+      consequence: "你用降低非关键标准换现金和进度，短期能过节点，长期更怕交付验房和业主留证。",
+      lesson: "降低标准不是免费降本，它把今天的现金缺口换成未来的质量、维权和法律风险。"
+    },
+    {
+      ...action,
+      id: "project-supervision-rework",
+      label: "按图返工，先把隐患修掉",
+      hint: "现金和工期都痛，但质量、交付信用和法律风险会改善。",
+      visibleEffects: { cash: -6, delivery: 4, public_trust: 4 },
+      hiddenEffects: { buyer_liability: -5, legal_exposure: -4, delivery_pressure: -3 },
+      relationEffects: { buyers: 4, contractor: -2 },
+      models: ["delivery-first", "legal-exposure"],
+      sourceEpisodes: ["EP124", "EP126"],
+      scaleScore: -1,
+      consequence: "你选择返工，把一部分现金烧在看不见的质量修复上。",
+      lesson: "返工最难的是承认之前错了，但它能把交付风险从危机拉回经营问题。"
+    },
+    {
+      ...action,
+      id: "project-supervision-replace-crew",
+      label: "换掉拖工班组，重排现场责任",
+      hint: "能改善现场执行，但旧班组可能讨薪、留证或反咬。",
+      visibleEffects: { cash: -4, delivery: 5, public_trust: 1 },
+      hiddenEffects: { delivery_pressure: -3, legal_exposure: 2, gray_risk: 2 },
+      relationEffects: { contractor: -4, suppliers: -1 },
+      models: ["delivery-first", "counterparty-retaliation"],
+      sourceEpisodes: ["EP004", "EP124"],
+      scaleScore: 0,
+      consequence: "新班组把现场往前推了一步，旧班组也开始计算自己手里有哪些证据。",
+      lesson: "换人能解决效率，也会制造新的结算、讨薪和反咬问题。"
+    },
+    {
+      ...action,
+      id: "project-supervision-material-audit",
+      label: "严查材料和隐蔽工程，不让供应商糊弄",
+      hint: "会拖慢一点，但能压低质量和安全事故风险。",
+      visibleEffects: { cash: -3, delivery: 2, public_trust: 2 },
+      hiddenEffects: { legal_exposure: -3, buyer_liability: -3, data_inflation: -2 },
+      relationEffects: { suppliers: -3, contractor: 1, buyers: 2 },
+      models: ["audit-revenue-recognition", "delivery-first"],
+      sourceEpisodes: ["EP124", "EP126"],
+      scaleScore: 0,
+      consequence: "材料和隐蔽工程被重新抽查，供应商不高兴，但后面交付更有底。",
+      lesson: "材料成本省错地方，最后会从质量、安全和业主证据里翻倍回来。"
+    }
+  ];
+}
+
+function projectMenuActions(action) {
+  if (!projectActionNeedsMenu(action)) return [];
+  return projectSupervisionOptions(action);
+}
+
+function relationActionShortLabel(action) {
+  const labels = {
+    "relation-friend-chat": "叙旧摸消息",
+    "relation-friend-site-audit": "看现场",
+    "relation-friend-borrow": "借钱",
+    "relation-friend-repayment-talk": "重排还款",
+    "relation-investor-exit-talk": "谈退出",
+    "relation-friend-joint-dev": "共同开发",
+    "finance-friend-equity-sidecar": "合股",
+    "relation-gov-progress-sync": "同步进度",
+    "relation-gov-whitelist": "白名单会商",
+    "relation-gov-protection": "合规护航",
+    "relation-gov-dry-share": "承诺干股",
+    "relation-gov-complaint-buffer": "稳投诉",
+    "relation-gov-inspection-headsup": "查前提醒",
+    "state-capital-minority": "引城投小股",
+    "minority-share-old-town": "旧改小股",
+    "relation-bank-materials": "交材料",
+    "relation-bank-escrow-map": "拆监管户",
+    "collateral-bank-credit": "抵押授信",
+    "bank-rollover-talk": "谈展期",
+    "relation-bank-risk-brief": "解释风控",
+    "relation-bank-covenant-reset": "重谈条件",
+    "clean-invoice-chain": "清账",
+    "finance-nonbank-microloan": "小贷周转",
+    "finance-underground-short-money": "高息短钱",
+    "relation-other-boundary": "划边界",
+    "relation-other-earthwork-settlement": "结节点款",
+    "relation-other-micro-extension": "谈展期",
+    "cut-gray-line": "切割灰线"
+  };
+  return labels[action.id] || action.label;
+}
+
+function renderRelationActionCards(actions, selectedMenuAction, menuActions = []) {
+  if (selectedMenuAction) {
+    return `
+      <div class="relationship-action-grid relation-actions">
+        <button class="choice relationship-action-card relation-back-card" type="button" data-relation-menu="">
+          <strong>返回</strong>
+          <small>回到${escapeHtml(relationActionShortLabel(selectedMenuAction))}以外的联系人动作。</small>
+        </button>
+        ${menuActions.map((action, index) => `
+          <button class="choice office-action relationship-action-card" type="button" data-action="${escapeHtml(action.id)}" data-index="${index}">
+            <strong>${escapeHtml(action.label)}</strong>
+            <small>${escapeHtml(action.hint || "")}</small>
+          </button>
+        `).join("")}
+      </div>
+    `;
+  }
+  if (!actions.length) {
+    return `
+      <div class="office-empty-panel relation-empty">
+        <strong>暂时不能对这个人做动作</strong>
+        <p>先把关系、现金或项目状态推到合适位置。</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="relationship-action-grid relation-actions">
+      ${actions.map((action, index) => `
+        <button class="choice ${relationActionNeedsMenu(action) ? "" : "office-action"} relationship-action-card" type="button" ${relationActionNeedsMenu(action) ? `data-relation-menu="${escapeHtml(action.id)}"` : `data-action="${escapeHtml(action.id)}"`} data-index="${index}">
+          <strong>${escapeHtml(relationActionShortLabel(action))}</strong>
+          <small>${escapeHtml(action.hint || action.label || "")}</small>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderRelationDesk(context, actions) {
+  const selectedGroup = game.selectedRelationGroup || "friends";
+  const group = RELATION_GROUPS.find((item) => item.id === selectedGroup) || RELATION_GROUPS[0];
+  const contacts = RELATION_CONTACTS.filter((contact) => contact.group === group.id);
+  const selectedContact = contacts.find((contact) => contact.id === game.selectedRelationContact) || contacts[0] || null;
+  const groupNav = RELATION_GROUPS.map((item) => `
+    <button class="desk-channel-card relation-group-card ${group.id === item.id ? "active" : ""}" type="button" data-relation-group="${escapeHtml(item.id)}">
+      <strong>${escapeHtml(item.label)}</strong>
+      <small>${RELATION_CONTACTS.filter((contact) => contact.group === item.id).length} 人</small>
+    </button>
+  `).join("");
+  const contactCards = contacts.map((contact) => {
+    const relationValue = Math.round(context.relations[contact.relationKey] || 0);
+    return `
+      <button class="desk-contact-card contact-pill ${selectedContact?.id === contact.id ? "active" : ""}" type="button" data-relation-contact="${escapeHtml(contact.id)}">
+        <strong>${escapeHtml(contact.name)}</strong>
+        <small>关系 ${relationValue}</small>
+      </button>
+    `;
+  }).join("");
+  const contactActions = relationActionsForContact(actions, selectedContact);
+  const selectedMenuAction = contactActions.find((action) => action.id === game.selectedRelationAction && relationActionNeedsMenu(action)) || null;
+  const menuActions = selectedMenuAction ? relationNegotiationActions(selectedMenuAction, context) : [];
+  if (contactActions.length) {
+    game.availableActions = [...new Map([...(game.availableActions || []), ...contactActions].map((action) => [action.id, action])).values()];
+  }
+  if (menuActions.length) {
+    game.availableActions = [...new Map([...(game.availableActions || []), ...menuActions].map((action) => [action.id, action])).values()];
+  }
+  return `
+    <section class="desk-split relation-desk">
+      <div class="desk-nav">
+        <div class="market-board-head">
+          <strong>关系分类</strong>
+          <span>政 ${context.visible.government}｜银 ${context.visible.bank}｜安全 ${context.hidden.boss_safety}</span>
+        </div>
+        <div class="desk-card-grid relation-group-grid">${groupNav}</div>
+      </div>
+      <div class="desk-detail">
+        <div class="desk-detail-head">
+          <div>
+            <span>${escapeHtml(group.label)}</span>
+            <strong>${escapeHtml(group.note)}</strong>
+          </div>
+        </div>
+        <div class="contact-strip" aria-label="${escapeHtml(group.label)}联系人">${contactCards}</div>
+        <div class="relationship-action-head">${selectedMenuAction ? escapeHtml(relationActionShortLabel(selectedMenuAction)) : "可以做什么"}</div>
+        ${renderRelationActionCards(contactActions, selectedMenuAction, menuActions)}
+      </div>
+    </section>
+  `;
+}
+
+function renderProjectDesk(context, actions) {
+  const selectedMenuAction = actions.find((action) => action.id === game.selectedProjectAction && projectActionNeedsMenu(action)) || null;
+  const menuActions = selectedMenuAction ? projectMenuActions(selectedMenuAction) : [];
+  if (menuActions.length) {
+    game.availableActions = [...new Map([...(game.availableActions || []), ...menuActions].map((action) => [action.id, action])).values()];
+  }
+  const actionCards = selectedMenuAction
+    ? `
+      <div class="relationship-action-grid project-action-grid">
+        <button class="choice relationship-action-card relation-back-card" type="button" data-project-menu="">
+          <strong>返回</strong>
+          <small>回到项目动作。</small>
+        </button>
+        ${menuActions.map((action, index) => `
+          <button class="choice office-action relationship-action-card" type="button" data-action="${escapeHtml(action.id)}" data-index="${index}">
+            <strong>${escapeHtml(action.label)}</strong>
+            <small>${escapeHtml(action.hint || "")}</small>
+          </button>
+        `).join("")}
+      </div>
     `
-    : "";
-  return `${map}${selectedDetail}${bidPanel}`;
+    : `
+      <div class="relationship-action-grid project-action-grid">
+        ${actions.map((action, index) => `
+          <button class="choice ${projectActionNeedsMenu(action) ? "" : "office-action"} relationship-action-card" type="button" ${projectActionNeedsMenu(action) ? `data-project-menu="${escapeHtml(action.id)}"` : `data-action="${escapeHtml(action.id)}"`} data-index="${index}">
+            <strong>${escapeHtml(action.id === "project-site-supervision" ? "监工" : action.label)}</strong>
+            <small>${escapeHtml(action.hint || "")}</small>
+          </button>
+        `).join("")}
+      </div>
+    `;
+  return `
+    <section class="desk-detail project-desk">
+      <div class="desk-detail-head">
+        <div>
+          <span>项目</span>
+          <strong>宣发、监工、监管户、总包、渠道和业主沟通。</strong>
+        </div>
+        <span>${actions.length} 个窗口</span>
+      </div>
+      <div class="relationship-action-head">${selectedMenuAction ? "监工怎么做" : "可以做什么"}</div>
+      ${actionCards}
+    </section>
+  `;
 }
 
 function renderCategoryActions(groups, selectedCategory) {
-  const map = renderOfficeMap(groups, selectedCategory);
   if (!selectedCategory) {
     return `
-      ${map}
+      <section class="office-idle-panel">
+        <strong>先选一个经营入口</strong>
+        <p>底部四个入口分别对应土拍、资金、关系和项目。没有突发事件时，你可以主动决定今天坐哪张桌。</p>
+      </section>
     `;
   }
   const meta = actionCategoryMeta(selectedCategory);
@@ -3660,16 +6660,23 @@ function renderCategoryActions(groups, selectedCategory) {
   if (selectedCategory === "land") {
     return renderLandDesk(officeActionContext(), actions);
   }
+  if (selectedCategory === "finance") {
+    return renderFinanceDesk(officeActionContext(), actions);
+  }
+  if (selectedCategory === "relation") {
+    return renderRelationDesk(officeActionContext(), actions);
+  }
+  if (selectedCategory === "project") {
+    return renderProjectDesk(officeActionContext(), actions);
+  }
   if (!actions.length) {
     return `
-      ${map}
       <div class="office-empty-panel">
         <strong>${escapeHtml(meta.empty)}</strong>
       </div>
     `;
   }
   return `
-    ${map}
     <div class="office-actions">
       <div class="office-actions-head">
         <strong>${escapeHtml(meta.label)}</strong>
@@ -3687,8 +6694,25 @@ function renderCategoryActions(groups, selectedCategory) {
   `;
 }
 
+function clearActiveFeedback() {
+  if (!game) return;
+  game.activeFeedback = [];
+}
+
+function syncActiveHorizontalPills() {
+  requestAnimationFrame(() => {
+    elements.choiceList
+      .querySelectorAll(".auction-chat-contacts, .auction-partner-contacts, .auction-rivals")
+      .forEach((strip) => {
+        const active = strip.querySelector(".active, .just-moved, .partner");
+        if (active) active.scrollIntoView({ block: "nearest", inline: "center" });
+      });
+  });
+}
+
 function selectOfficeCategory(categoryId) {
   if (!game || game.ended) return;
+  clearActiveFeedback();
   if (game.currentEvent && game.currentEvent !== OFFICE_EVENT_ID) {
     const event = eventById(game.currentEvent);
     if (event?.severity === "crisis") return;
@@ -3701,7 +6725,25 @@ function selectOfficeCategory(categoryId) {
   game.selectedActionCategory = categoryId;
   if (categoryId !== "land") {
     game.selectedAuctionLotId = null;
+    game.selectedAuctionDistrict = null;
     game.auctionBidState = null;
+  }
+  if (categoryId !== "project") {
+    game.selectedProjectId = null;
+    game.selectedProjectAction = null;
+  }
+  if (categoryId !== "finance") {
+    game.selectedFinanceChannel = null;
+    game.selectedFinanceContact = null;
+  } else if (!game.selectedFinanceChannel) {
+    game.selectedFinanceChannel = "bank";
+  }
+  if (categoryId !== "relation") {
+    game.selectedRelationGroup = null;
+    game.selectedRelationContact = null;
+    game.selectedRelationAction = null;
+  } else if (!game.selectedRelationGroup) {
+    game.selectedRelationGroup = "friends";
   }
   if (categoryId === "land") ensureAuctionDesk();
   saveGame();
@@ -3714,10 +6756,14 @@ function renderOfficeTurn() {
   const actions = catalog.actions;
   const groups = catalog.groups;
   const selectedCategory = catalog.selectedCategory;
+  const auctionFocusMode = selectedCategory === "land" && isAuctionFocusFlow(context);
+  game.currentEventCause = null;
   game.availableActions = actions;
   game.currentEvent = OFFICE_EVENT_ID;
   show(elements.eventScreen);
   elements.eventScreen.classList.add("office-mode");
+  elements.eventScreen.classList.toggle("auction-focus-mode", auctionFocusMode);
+  document.body.classList.toggle("auction-focus-active", auctionFocusMode);
   renderShell();
   elements.eventPhase.textContent = currentPhase().title;
   elements.eventSource.textContent = context.scaleReviewIndex ? "规模评审" : "经营回合";
@@ -3734,11 +6780,16 @@ function renderOfficeTurn() {
   elements.eventTitle.textContent = context.scaleReviewIndex
     ? `有人请你坐到「${DATA.scales[context.scaleReviewIndex].title}」这张桌`
     : "老板桌面";
-  elements.eventBriefing.textContent = officePressureLine(context);
-  elements.assetBoard.innerHTML = "";
-  elements.assetBoard.classList.add("hidden");
-  elements.actionDock.innerHTML = "";
-  elements.actionDock.classList.add("hidden");
+  const briefingText = officePressureLine(context);
+  elements.eventBriefing.textContent = briefingText;
+  elements.eventBriefing.classList.toggle("hidden", !briefingText);
+		  elements.assetBoard.innerHTML = "";
+	  elements.assetBoard.classList.add("hidden");
+	  elements.actionDock.innerHTML = renderActionDock(groups, selectedCategory);
+	  elements.actionDock.classList.toggle("hidden", auctionFocusMode);
+	  elements.actionDock.querySelectorAll("button[data-category]").forEach((button) => {
+	    button.addEventListener("click", () => selectOfficeCategory(button.dataset.category));
+	  });
   elements.actorList.innerHTML = "";
   elements.actorList.classList.add("hidden");
   elements.choiceList.classList.add("office-action-panel");
@@ -3746,12 +6797,28 @@ function renderOfficeTurn() {
   elements.choiceList.querySelectorAll(".map-node[data-category]").forEach((button) => {
     button.addEventListener("click", () => selectOfficeCategory(button.dataset.category));
   });
-  elements.choiceList.querySelectorAll(".lot-node[data-lot-id]").forEach((button) => {
+  elements.choiceList.querySelectorAll("[data-auction-district]").forEach((button) => {
     button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedAuctionDistrict = button.dataset.auctionDistrict;
+      const selectedLot = selectedAuctionLot(context);
+      if (selectedLot && selectedLot.district !== game.selectedAuctionDistrict) {
+        game.selectedAuctionLotId = null;
+        game.auctionBidState = null;
+      }
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll(".land-lot-card[data-lot-id], .lot-node[data-lot-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
       if (game.selectedAuctionLotId !== button.dataset.lotId) {
         game.auctionBidState = null;
       }
       game.selectedAuctionLotId = button.dataset.lotId;
+      const lot = ensureAuctionDesk(context).lots.find((item) => item.id === button.dataset.lotId);
+      if (lot) game.selectedAuctionDistrict = lot.district;
       game.selectedProjectId = null;
       saveGame();
       renderOfficeTurn();
@@ -3759,6 +6826,7 @@ function renderOfficeTurn() {
   });
   elements.choiceList.querySelectorAll(".lot-node[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
+      clearActiveFeedback();
       game.selectedProjectId = button.dataset.projectId;
       game.selectedAuctionLotId = null;
       game.auctionBidState = null;
@@ -3766,8 +6834,125 @@ function renderOfficeTurn() {
       renderOfficeTurn();
     });
   });
+  elements.choiceList.querySelectorAll("[data-project-menu]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedProjectAction = button.dataset.projectMenu || null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
   elements.choiceList.querySelectorAll("[data-auction-control]").forEach((button) => {
-    button.addEventListener("click", () => handleAuctionControl(button.dataset.auctionControl));
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      handleAuctionControl(button.dataset.auctionControl);
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-auction-estimate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      selectAuctionEstimate(button.dataset.auctionEstimate);
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-auction-chat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      selectAuctionChat(button.dataset.auctionChat);
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-auction-chat-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      selectAuctionChatGroup(button.dataset.auctionChatGroup);
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-auction-chat-contact]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      selectAuctionChatContact(button.dataset.auctionChatContact);
+    });
+  });
+	  elements.choiceList.querySelectorAll("[data-auction-partner-group]").forEach((button) => {
+	    button.addEventListener("click", () => {
+        clearActiveFeedback();
+	      const lot = selectedAuctionLot(context);
+	      if (!lot) return;
+	      const state = ensureAuctionBidState(lot, context);
+	      state.partnerGroup = button.dataset.auctionPartnerGroup || "classmates";
+	      state.prepMode = "partner";
+	      state.partnerCandidates = auctionPartnerCandidates(lot, context);
+	      const candidates = auctionPartnerGroupCandidates(state.partnerCandidates, state.partnerGroup);
+	      state.partnerContact = candidates[0]?.id || null;
+	      saveGame();
+	      renderOfficeTurn();
+	    });
+	  });
+	  elements.choiceList.querySelectorAll("[data-auction-partner-contact]").forEach((button) => {
+	    button.addEventListener("click", () => {
+        clearActiveFeedback();
+	      const lot = selectedAuctionLot(context);
+	      if (!lot) return;
+	      const state = ensureAuctionBidState(lot, context);
+	      const partner = auctionPartnerById(lot, button.dataset.auctionPartnerContact, context);
+	      state.prepMode = "partner";
+	      state.partnerContact = partner?.id || null;
+	      if (partner) {
+	        const group = AUCTION_PARTNER_GROUPS.find((item) => item.circles.includes(partner.circle));
+	        state.partnerGroup = group?.id || state.partnerGroup || "classmates";
+	      }
+	      saveGame();
+	      renderOfficeTurn();
+	    });
+	  });
+	  elements.choiceList.querySelectorAll("[data-auction-partner]").forEach((button) => {
+	    button.addEventListener("click", () => {
+        clearActiveFeedback();
+        selectAuctionPartner(button.dataset.auctionPartner, button.dataset.auctionPartnerVariant);
+      });
+	  });
+  elements.choiceList.querySelectorAll("[data-finance-channel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedFinanceChannel = button.dataset.financeChannel;
+      game.selectedFinanceContact = null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-finance-contact]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedFinanceContact = button.dataset.financeContact;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-relation-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedRelationGroup = button.dataset.relationGroup;
+      game.selectedRelationContact = null;
+      game.selectedRelationAction = null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-relation-contact]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedRelationContact = button.dataset.relationContact;
+      game.selectedRelationAction = null;
+      saveGame();
+      renderOfficeTurn();
+    });
+  });
+  elements.choiceList.querySelectorAll("[data-relation-menu]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearActiveFeedback();
+      game.selectedRelationAction = button.dataset.relationMenu || null;
+      saveGame();
+      renderOfficeTurn();
+    });
   });
   const hideActionHint = () => {
     elements.actorList.innerHTML = "";
@@ -3785,6 +6970,7 @@ function renderOfficeTurn() {
     button.addEventListener("blur", hideActionHint);
     button.addEventListener("click", () => chooseOfficeAction(button.dataset.action));
   });
+  syncActiveHorizontalPills();
   elements.mobileProjectBrief.innerHTML = "";
   elements.mobileProjectBrief.classList.add("hidden");
   elements.episodeCard.innerHTML = `
@@ -3865,7 +7051,9 @@ function chooseOfficeAction(actionId) {
 
   applyChoice(event, action);
   scheduleChoiceFeedback(event, action);
+  game.pendingCauseContext = buildCauseContext(event, action);
   scheduleConsequences(event, action);
+  game.pendingCauseContext = null;
   rollWorldPressure(event, action);
   advanceProjectLedger(event, action);
   advanceFundingLedger(event, action);
@@ -3919,7 +7107,9 @@ function choose(choiceId) {
   game.notice = "";
   applyChoice(event, choice);
   scheduleChoiceFeedback(event, choice);
+  game.pendingCauseContext = buildCauseContext(event, choice);
   scheduleConsequences(event, choice);
+  game.pendingCauseContext = null;
   rollWorldPressure(event, choice);
   advanceProjectLedger(event, choice);
   advanceFundingLedger(event, choice);
@@ -3994,13 +7184,19 @@ function advanceToNextEvent(previousEventId, event = null, choice = null) {
   }
   game.turn += 1;
   const previousWasIncident = event && !String(event.id || "").startsWith("office-") && event.id !== OFFICE_EVENT_ID;
-  const mustContinueCrisis = previousWasIncident && (
-    computeSystemPressure() >= 0.78 ||
-    projectDeliveryFailureReady() ||
-    game.state.visible.cash <= 6 ||
-    (game.state.hidden.boss_safety || 0) <= 18
-  );
-  game.currentEvent = previousWasIncident && !mustContinueCrisis ? OFFICE_EVENT_ID : rollTurnIncident(previousEventId) || OFFICE_EVENT_ID;
+  const nextIncidentStreak = previousWasIncident ? (game.flags.incidentStreak || 0) + 1 : 0;
+  game.flags.incidentStreak = nextIncidentStreak;
+  if (nextIncidentStreak >= MAX_CONSECUTIVE_INCIDENTS) {
+    game.currentEvent = OFFICE_EVENT_ID;
+  } else {
+    const mustContinueCrisis = previousWasIncident && (
+      computeSystemPressure() >= 0.78 ||
+      projectDeliveryFailureReady() ||
+      game.state.visible.cash <= 6 ||
+      (game.state.hidden.boss_safety || 0) <= 18
+    );
+    game.currentEvent = previousWasIncident && !mustContinueCrisis ? OFFICE_EVENT_ID : rollTurnIncident(previousEventId) || OFFICE_EVENT_ID;
+  }
   activateFeedbackForTurn();
   saveGame();
   renderEvent();
@@ -4215,7 +7411,7 @@ function addFunding(key, amount) {
 function reduceFundingDebt(amount) {
   const ledger = ensureFundingLedger();
   let remaining = Math.max(0, Math.round(amount || 0));
-  const order = ["commercialPaper", "supplierCredit", "trustLoan", "bondDebt", "bankLoan", "rolloverNeed"];
+  const order = ["undergroundLoan", "microLoan", "commercialPaper", "supplierCredit", "friendLoan", "trustLoan", "bondDebt", "bankLoan", "rolloverNeed"];
   order.forEach((key) => {
     if (remaining <= 0) return;
     const paid = Math.min(ledger[key] || 0, remaining);
@@ -4226,7 +7422,11 @@ function reduceFundingDebt(amount) {
 }
 
 function fundingChannelFor(event, choice, models) {
+  if (choice?.fundingChannel) return choice.fundingChannel;
   const text = `${event.id || ""} ${event.title || ""} ${choice.id || ""} ${choice.label || ""}`;
+  if (/高息|地下|高利贷|灰线/.test(text)) return "undergroundLoan";
+  if (/小贷|担保公司|短钱/.test(text)) return "microLoan";
+  if (/朋友|老友|同学|股东短拆|熟人/.test(text)) return "friendLoan";
   if (models.has("whitelist-financing") || /白名单|专项|封闭复工贷|政策贷|银行|开发贷|授信|抵押/.test(text)) return "bankLoan";
   if (models.has("shadow-banking-loop") || models.has("related-party-financing")) return "trustLoan";
   if (/信托|非标|理财/.test(text)) return "trustLoan";
@@ -4242,11 +7442,23 @@ function recordFundingFromChoice(event, choice, models, visibleEffects, hiddenEf
   const notes = [];
   const text = `${event.id || ""} ${event.title || ""} ${choice.id || ""} ${choice.label || ""}`;
   const channel = fundingChannelFor(event, choice, models);
-  const borrowedAmount = Math.max(0, metrics.cashIn + metrics.debtGain * 0.85);
+  const borrowedAmount = Math.max(0, Math.round(choice.fundingPrincipal || (metrics.cashIn + metrics.debtGain * 0.85)));
 
   if (metrics.loanLike && borrowedAmount > 0) {
     ledger.freshPrincipalThisTurn = Math.round((ledger.freshPrincipalThisTurn || 0) + borrowedAmount);
-    if (channel === "commercialPaper") {
+    if (channel === "friendLoan") {
+      const amount = addFunding("friendLoan", borrowedAmount);
+      ledger.lastSource = `朋友/股东短拆 ${amount}`;
+      notes.push(`这笔钱来自熟人，月息约 ${choice.fundingMonthlyRate || 2.4}%，还不上会先伤关系，再变成借条和诉讼。`);
+    } else if (channel === "microLoan") {
+      const amount = addFunding("microLoan", borrowedAmount);
+      ledger.lastSource = `小贷周转 ${amount}`;
+      notes.push(`这笔小贷月息约 ${choice.fundingMonthlyRate || 6}%，抵押和续作压力会很快回到现金表。`);
+    } else if (channel === "undergroundLoan") {
+      const amount = addFunding("undergroundLoan", borrowedAmount);
+      ledger.lastSource = `高息短钱 ${amount}`;
+      notes.push(`这笔高息钱月息约 ${choice.fundingMonthlyRate || 10}%，它解决今天的洞，也把安全和灰线风险推高。`);
+    } else if (channel === "commercialPaper") {
       const paper = addFunding("commercialPaper", borrowedAmount * 0.7);
       const supplier = addFunding("supplierCredit", borrowedAmount * 0.35);
       ledger.lastSource = `商票/供应链融资 ${paper + supplier}`;
@@ -4369,10 +7581,16 @@ function applyFundingCycle(event, choice, tradeoff) {
     models.has("escrow-control");
 
   if (loanLike && cashIn > 0) {
-    const debtShadow = Math.max(1, Math.ceil(cashIn * 0.22 + debtGain * 0.2));
-    visible.debt = (visible.debt || 0) + debtShadow;
-    hidden.financing_cost = (hidden.financing_cost || 0) + Math.max(1, Math.ceil(cashIn * 0.32 + debtGain * 0.24));
-    notes.push("这笔现金不是免费的：它来自银行或信用链，后面会以利息、展期和抽贷压力回到结局里。");
+    if (choice.fundingPrincipal) {
+      const monthlyInterest = choice.fundingMonthlyInterest || Math.max(1, Math.round(choice.fundingPrincipal * (choice.fundingMonthlyRate || 2) / 100));
+      hidden.financing_cost = (hidden.financing_cost || 0) + monthlyInterest;
+      notes.push(`这笔现金按月息 ${choice.fundingMonthlyRate}% 记账，本金 ${choice.fundingPrincipal}，每轮付息压力约 ${monthlyInterest}。`);
+    } else {
+      const debtShadow = Math.max(1, Math.ceil(cashIn * 0.22 + debtGain * 0.2));
+      visible.debt = (visible.debt || 0) + debtShadow;
+      hidden.financing_cost = (hidden.financing_cost || 0) + Math.max(1, Math.ceil(cashIn * 0.32 + debtGain * 0.24));
+      notes.push("这笔现金不是免费的：它来自银行或信用链，后面会以利息、展期和抽贷压力回到结局里。");
+    }
   }
 
   if (presaleLike && (cashIn > 0 || salesGain > 0)) {
@@ -4489,12 +7707,16 @@ function projectLedgerSummary() {
 
 function projectLiquidityProfile(project, ledger = refreshProjectLedger()) {
   const remaining = Math.max(0, (project.saleableInventory || 0) - (project.soldValue || 0));
-  if (!PROJECT_CASH_STAGES.has(project.stage) || remaining <= 0) {
-    return { remaining, expectedCollection: 0, expectedFreeCash: 0, expectedEscrow: 0 };
+  if (!PROJECT_CASH_STAGES.has(project.stage) || (remaining <= 0 && (project.soldValue || 0) <= (project.cashCollected || 0))) {
+    return { remaining, expectedSales: 0, expectedCollection: 0, expectedFreeCash: 0, expectedEscrow: 0 };
   }
   const visible = game.state.visible;
   const hidden = game.state.hidden;
   const relation = game.relations || {};
+  const sold = Math.max(0, project.soldValue || 0);
+  const collected = Math.max(0, Math.min(sold, project.cashCollected || 0));
+  const progress = clampNumber((project.constructionProgress || 0) / 100, 0, 1);
+  const soldRatio = project.saleableInventory ? sold / project.saleableInventory : 0;
   const priceFomo = clampNumber(((ledger.marketPriceIndex || 100) - 104) / 55, 0, 0.34);
   const boomFomo = ["early-expansion", "shelter-reform-boom", "high-turnover"].includes(currentPhase().id) ? 0.12 : 0;
   const marketingPush = clampNumber((visible.sales - 32) / 145 + Math.max(0, (relation.channel || 0) - 18) / 280, -0.08, 0.22);
@@ -4507,7 +7729,7 @@ function projectLiquidityProfile(project, ledger = refreshProjectLedger()) {
   const trustDrag = Math.max(0, 34 - visible.public_trust) / 160;
   const bankDrag = Math.max(0, 26 - visible.bank) / 180;
   const marketHeat = clampNumber(
-    0.05 +
+    0.08 +
       priceFomo +
       boomFomo +
       marketingPush +
@@ -4521,23 +7743,54 @@ function projectLiquidityProfile(project, ledger = refreshProjectLedger()) {
       trustDrag -
       bankDrag,
     0,
-    0.72
+    0.86
   );
-  const boomTurnover = isBoomPhase() ? 0.46 : 0;
-  const normalTurnover = currentPhase().id === "three-red-lines" ? 0.28 : 0.22;
-  const downturnDrag = isDownturnPhase() ? 0.08 + game.phaseIndex * 0.012 : 0;
+  const earlySaleBoost = game.turn <= (project.saleableTurn || 0) + 3 && (project.soldValue || 0) <= (project.saleableInventory || 1) * 0.38 ? 0.14 : 0;
+  const boomTurnover = isBoomPhase() ? 0.68 : 0;
+  const normalTurnover = currentPhase().id === "three-red-lines" ? 0.38 : 0.36;
+  const downturnDrag = isDownturnPhase() ? 0.1 + game.phaseIndex * 0.014 : 0;
   const priceMomentum = clampNumber(((ledger.marketPriceIndex || 100) - 100) / 170, -0.08, 0.18);
   const collectionRate = clampNumber(
-    0.03 + marketHeat * (boomTurnover || normalTurnover) + priceFomo * 0.16 + priceMomentum - downturnDrag,
-    isBoomPhase() ? 0.06 : 0.015,
-    isBoomPhase() ? 0.28 : 0.18
+    0.07 + earlySaleBoost + marketHeat * (boomTurnover || normalTurnover) + priceFomo * 0.2 + mortgageSupport * 0.24 + priceMomentum - downturnDrag,
+    isBoomPhase() ? 0.12 : 0.045,
+    isBoomPhase() ? 0.55 : isDownturnPhase() ? 0.26 : 0.42
   );
-  const expectedCollection = Math.min(remaining, Math.max(0, Math.round(remaining * collectionRate)));
-  const escrowRatio = clampNumber(0.24 + game.phaseIndex * 0.035 + Math.max(0, hidden.presale_misuse - 28) / 260, 0.22, 0.58);
-  const freeRatio = clampNumber(0.5 - game.phaseIndex * 0.03 + Math.max(0, visible.bank - 45) / 420 - Math.max(0, hidden.presale_misuse - 34) / 360, 0.24, 0.52);
+  const expectedSales = Math.min(remaining, Math.max(0, Math.round(remaining * collectionRate)));
+  const soldAfterExpected = Math.min(project.saleableInventory || sold + expectedSales, sold + expectedSales);
+  const downPaymentRatio = project.stage === "delivered"
+    ? 0.82
+    : clampNumber(0.28 + Math.max(0, visible.bank - 36) / 310 + progress * 0.1, 0.24, 0.48);
+  const receiptCoverage = project.stage === "delivered"
+    ? 0.96
+    : clampNumber(
+        0.26 +
+          progress * 0.58 +
+          soldRatio * 0.12 +
+          Math.max(0, visible.bank - 35) / 360 -
+          Math.max(0, hidden.presale_misuse - 30) / 390 -
+          (isDownturnPhase() ? 0.06 : 0),
+        0.24,
+        0.9
+      );
+  const receiptRoom = Math.max(0, soldAfterExpected - collected);
+  const milestoneDue = Math.max(0, Math.round(soldAfterExpected * receiptCoverage) - collected);
+  const downPaymentDue = Math.round(expectedSales * downPaymentRatio);
+  let expectedCollection = Math.min(receiptRoom, Math.max(downPaymentDue, milestoneDue));
+  if (soldRatio >= 0.52 && progress >= 0.52) {
+    const fastSaleFloor = Math.round(soldAfterExpected * (0.055 + progress * 0.04));
+    expectedCollection = Math.min(receiptRoom, Math.max(expectedCollection, fastSaleFloor));
+  }
+  const progressRelease = project.stage === "delivered" ? 0.2 : clampNumber((progress - 0.52) * 0.36 + Math.max(0, soldRatio - 0.62) * 0.14, 0, 0.22);
+  const escrowRatio = project.stage === "delivered"
+    ? clampNumber(0.05 + game.phaseIndex * 0.01, 0.04, 0.16)
+    : clampNumber(0.25 + game.phaseIndex * 0.025 + Math.max(0, hidden.presale_misuse - 28) / 290 - progressRelease, 0.14, 0.52);
+  const turnoverBoost = soldRatio >= 0.5 ? clampNumber((soldRatio - 0.5) * 0.28 + progress * 0.12, 0, 0.18) : 0;
+  const freeRatio = project.stage === "delivered"
+    ? clampNumber(0.72 - game.phaseIndex * 0.02 + Math.max(0, visible.bank - 45) / 500, 0.48, 0.84)
+    : clampNumber(0.56 + turnoverBoost - game.phaseIndex * 0.018 + Math.max(0, visible.bank - 45) / 410 - Math.max(0, hidden.presale_misuse - 34) / 360, 0.36, 0.78);
   const expectedEscrow = expectedCollection ? Math.max(1, Math.round(expectedCollection * escrowRatio)) : 0;
   const expectedFreeCash = expectedCollection ? Math.max(0, Math.min(expectedCollection - expectedEscrow, Math.round(expectedCollection * freeRatio))) : 0;
-  return { remaining, expectedCollection, expectedFreeCash, expectedEscrow };
+  return { remaining, expectedSales, expectedCollection, expectedFreeCash, expectedEscrow };
 }
 
 function projectCashFlowLine(project, ledger = refreshProjectLedger()) {
@@ -4551,10 +7804,10 @@ function projectCashFlowLine(project, ledger = refreshProjectLedger()) {
   }
   if ((project.lastCashTurn || 0) >= game.turn - 1 && ((project.lastFreeCash || 0) > 0 || (project.lastEscrow || 0) > 0)) {
     const progress = (project.lastProgressGain || 0) > 0 ? ` 工程+${Math.round(project.lastProgressGain || 0)}%` : "";
-    return `上回现金+${Math.round(project.lastFreeCash || 0)} 监管+${Math.round(project.lastEscrow || 0)}${progress}`;
+    return `上回到账+${Math.round(project.lastCollection || 0)} 自由+${Math.round(project.lastFreeCash || 0)} 监管+${Math.round(project.lastEscrow || 0)}${progress}`;
   }
   const liquidity = projectLiquidityProfile(project, ledger);
-  if (liquidity.expectedFreeCash > 0) return `预计现金+${liquidity.expectedFreeCash}`;
+  if (liquidity.expectedFreeCash > 0) return `预计到账+${liquidity.expectedCollection} 自由+${liquidity.expectedFreeCash}`;
   if (PROJECT_CASH_STAGES.has(project.stage)) return "卖得慢，暂不进现金";
   return "还没到回款口";
 }
@@ -4660,6 +7913,13 @@ function advanceProjectConstruction(project, notes) {
   project.constructionProgress = clamp((project.constructionProgress || 0) + progressGain, 0, 100);
   project.lastProgressGain = progressGain;
   project.lastConstructionDraw = escrowDraw;
+  const contractorPaid = Math.min(project.contractorPayable || 0, Math.max(0, Math.round(escrowDraw * 0.78 + cashSupport * 0.8)));
+  project.lastContractorPaid = contractorPaid;
+  if (contractorPaid > 0) {
+    project.contractorPayable = Math.max(0, Math.round((project.contractorPayable || 0) - contractorPaid));
+    coolStakeholder("contractor", Math.min(5, contractorPaid * 0.35));
+    coolStakeholder("suppliers", Math.min(4, contractorPaid * 0.22));
+  }
   if (escrowDraw > 0) {
     project.escrowCash = Math.max(0, Math.round((project.escrowCash || 0) - escrowDraw));
     project.escrowUsedForConstruction = Math.round((project.escrowUsedForConstruction || 0) + escrowDraw);
@@ -4673,7 +7933,13 @@ function advanceProjectConstruction(project, notes) {
     reduceRisk("delivery", progressGain * 0.9);
     hidden.delivery_pressure = clamp(hidden.delivery_pressure - Math.max(0, Math.round(progressGain * 0.16)));
   }
-  notes.push(`「${project.title}」工程推进 ${Math.round(progressGain)}%，监管账户拨付 ${Math.round(escrowDraw)} 用到工地。`);
+  if ((project.contractorPayable || 0) >= Math.max(8, (project.bookValue || 0) * 0.12)) {
+    bumpStakeholder("contractor", 4);
+    bumpRisk("counterparty", 3);
+    notes.push(`「${project.title}」工程推进 ${Math.round(progressGain)}%，但总包/土方应付款还压着 ${Math.round(project.contractorPayable || 0)}。`);
+  } else {
+    notes.push(`「${project.title}」工程推进 ${Math.round(progressGain)}%，监管账户拨付 ${Math.round(escrowDraw)} 用到工地，支付工程/土方 ${Math.round(contractorPaid)}。`);
+  }
 }
 
 function maybeDeliverProject(project, notes) {
@@ -5276,6 +8542,7 @@ function advanceProjectLedger(event, choice) {
     project.lastEscrow = 0;
     project.lastConstructionDraw = 0;
     project.lastProgressGain = 0;
+    project.lastContractSales = 0;
 
     if (project.stage === "land" && game.turn > project.acquiredTurn) {
       project.stage = "construction";
@@ -5293,25 +8560,38 @@ function advanceProjectLedger(event, choice) {
 
     if (project.stage === "presale" || project.stage === "delivery" || project.stage === "delivered") {
       const liquidity = projectLiquidityProfile(project, ledger);
-      const collection = Math.min(liquidity.remaining, Math.max(0, Math.round(liquidity.expectedCollection * (0.72 + Math.random() * 0.58))));
+      const contractSales = Math.min(liquidity.remaining, Math.max(0, Math.round((liquidity.expectedSales || 0) * (0.72 + Math.random() * 0.58))));
+      if (contractSales > 0) {
+        project.soldValue = Math.min(project.saleableInventory || project.soldValue + contractSales, Math.round((project.soldValue || 0) + contractSales));
+        project.lastContractSales = contractSales;
+      }
+      const collectionRoom = Math.max(0, Math.round((project.soldValue || 0) - (project.cashCollected || 0)));
+      const collection = Math.min(collectionRoom, Math.max(0, Math.round(liquidity.expectedCollection * (0.78 + Math.random() * 0.54))));
       if (collection > 0) {
         const postDeliverySale = project.stage === "delivered";
+        const soldRatioAfter = project.saleableInventory ? (project.soldValue || 0) / project.saleableInventory : 0;
+        const progress = clampNumber((project.constructionProgress || 0) / 100, 0, 1);
+        const progressRelease = postDeliverySale ? 0.2 : clampNumber((progress - 0.52) * 0.36 + Math.max(0, soldRatioAfter - 0.62) * 0.14, 0, 0.22);
         const escrowRatio = postDeliverySale
-          ? clampNumber(0.04 + game.phaseIndex * 0.01, 0.04, 0.18)
-          : clampNumber(0.24 + game.phaseIndex * 0.035 + Math.max(0, hidden.presale_misuse - 28) / 260, 0.22, 0.58);
+          ? clampNumber(0.05 + game.phaseIndex * 0.01, 0.04, 0.16)
+          : clampNumber(0.25 + game.phaseIndex * 0.025 + Math.max(0, hidden.presale_misuse - 28) / 290 - progressRelease, 0.14, 0.52);
+        const turnoverBoost = soldRatioAfter >= 0.5 ? clampNumber((soldRatioAfter - 0.5) * 0.28 + progress * 0.12, 0, 0.18) : 0;
         const freeRatio = postDeliverySale
-          ? clampNumber(0.62 - game.phaseIndex * 0.025 + Math.max(0, visible.bank - 45) / 500, 0.42, 0.72)
-          : clampNumber(0.46 - game.phaseIndex * 0.025 + Math.max(0, visible.bank - 45) / 420, 0.24, 0.48);
+          ? clampNumber(0.72 - game.phaseIndex * 0.02 + Math.max(0, visible.bank - 45) / 500, 0.48, 0.84)
+          : clampNumber(0.56 + turnoverBoost - game.phaseIndex * 0.018 + Math.max(0, visible.bank - 45) / 410 - Math.max(0, hidden.presale_misuse - 34) / 360, 0.36, 0.78);
         const escrow = Math.min(collection, Math.max(1, Math.round(collection * escrowRatio)));
         const freeCash = Math.max(0, Math.min(collection - escrow, Math.round(collection * freeRatio)));
         const liability = postDeliverySale ? 0 : Math.max(1, collection - freeCash - Math.round(escrow * 0.45));
-        project.soldValue += collection;
+        const contractorDue = postDeliverySale ? 0 : Math.max(0, Math.round(collection * (0.08 + Math.max(0, 70 - (project.constructionProgress || 0)) / 900)));
         project.cashCollected = (project.cashCollected || 0) + collection;
         project.freeCashCollected = (project.freeCashCollected || 0) + freeCash;
         project.escrowCash = (project.escrowCash || 0) + escrow;
+        project.contractorPayable = Math.max(0, Math.round((project.contractorPayable || 0) + contractorDue));
+        project.cashWindow = Math.max(0, Math.round((project.cashWindow || 0) + freeCash));
         project.lastCollection = collection;
         project.lastFreeCash = freeCash;
         project.lastEscrow = escrow;
+        project.lastContractorDue = contractorDue;
         project.lastCashTurn = game.turn;
         ledger.freeCashCollected += freeCash;
         ledger.lastCollection += collection;
@@ -5325,11 +8605,18 @@ function advanceProjectLedger(event, choice) {
           notes.push(`「${project.title}」交付后尾盘回款 ${collection}，其中 ${freeCash} 进入现金池，${escrow} 留作维修/结算保证。`);
         } else {
           hidden.buyer_liability = clamp((hidden.buyer_liability || 0) + Math.max(1, Math.round(liability * 0.08)));
-          hidden.delivery_pressure = clamp(hidden.delivery_pressure + Math.max(0, Math.round(collection * 0.035) - Math.round((project.constructionProgress || 0) / 60)));
+          hidden.delivery_pressure = clamp(hidden.delivery_pressure + Math.max(0, Math.round(collection * 0.028) - Math.round((project.constructionProgress || 0) / 58)));
+          if (freeCash > escrow + contractorDue) {
+            hidden.presale_misuse = clamp((hidden.presale_misuse || 0) + Math.max(1, Math.round((freeCash - escrow - contractorDue) * 0.045)));
+          }
           bumpRisk("presale", Math.max(1, liability * 0.12));
           bumpRisk("delivery", Math.max(1, Math.max(0, 58 - (project.constructionProgress || 0)) * 0.05));
-          notes.push(`「${project.title}」回款 ${collection}，其中 ${freeCash} 变成可用现金，其余变成交付和监管责任。`);
+          const saleNote = contractSales > 0 ? `签约 ${contractSales}、` : "";
+          notes.push(`「${project.title}」${saleNote}到账 ${collection}，其中 ${freeCash} 先进入现金池，${escrow} 进监管户，形成约 ${contractorDue} 的工程/土方后续付款。`);
         }
+      } else if (contractSales > 0) {
+        hidden.buyer_liability = clamp((hidden.buyer_liability || 0) + Math.max(1, Math.round(contractSales * 0.05)));
+        notes.push(`「${project.title}」签约 ${contractSales}，但按揭/监管放款还没到账，短期只是交付责任增加。`);
       }
       advanceProjectConstruction(project, notes);
       maybeDeliverProject(project, notes);
@@ -5363,6 +8650,18 @@ function advanceProjectLedger(event, choice) {
   }
   if (ledger.collateralValue < Math.max(12, visible.debt * 0.42) && visible.debt >= 50) {
     enqueueOneOf(["bank-branch-risk-meeting", "trust-covenant-review", "bank-loan-withdrawal"], 2, "抵押物折扣不够覆盖债务，银行开始重新估值。");
+  }
+  const openProjects = ledger.projects.filter((project) => ["land", "construction", "presale", "delivery"].includes(project.stage));
+  const expansionLoad = openProjects.length * 8 + Math.max(0, visible.debt - 34) + Math.max(0, visible.land_bank - 22) + Math.max(0, ledger.unsoldInventory - 30) * 0.18;
+  if ((ledger.lastPriceChange <= -3 || currentPhase().id === "three-red-lines" || currentPhase().id === "sales-freeze") && expansionLoad >= 42) {
+    const squeeze = Math.max(2, Math.round(expansionLoad / 18));
+    visible.bank = clamp(visible.bank - Math.min(4, Math.round(squeeze * 0.45)));
+    hidden.financing_cost = clamp((hidden.financing_cost || 0) + Math.min(5, squeeze));
+    hidden.delivery_pressure = clamp(hidden.delivery_pressure + Math.min(4, Math.round(squeeze * 0.55)));
+    bumpRisk("inventory", squeeze * 1.4);
+    bumpRisk("liquidity", squeeze);
+    bumpRisk("debt", squeeze * 0.8);
+    notes.push(`盘子铺得太开，房价/监管收紧时库存、债务和工程节点同时挤压，资金链压力上升 ${squeeze}。`);
   }
   if (notes.length) {
     ledger.lastNote = notes.at(-1);
@@ -5796,7 +9095,7 @@ function activateFeedbackForTurn() {
   const alerts = dashboardAlertFeedback();
   const important = [...ready.filter((entry) => (entry.severity || 0) >= 4), ...alerts];
   important.sort((a, b) => (b.severity || 0) - (a.severity || 0));
-  game.activeFeedback = important.slice(0, 2);
+  game.activeFeedback = important.slice(0, 1);
   game.feedbackQueue = later;
 }
 
@@ -6505,11 +9804,29 @@ function enqueueEvent(id, delay = 2, reason = "") {
   if (!event) return;
   if (eventAlreadyConsumed(event)) return;
   if (game.eventQueue.some((entry) => entry.id === id)) return;
+  const cause = game.pendingCauseContext
+    ? { ...game.pendingCauseContext, eventId: id, eventTitle: event.title, reason }
+    : reason
+      ? { eventId: id, eventTitle: event.title, turn: game.turn, reason }
+      : null;
   game.eventQueue.push({
     id,
     availableTurn: game.turn + delay,
-    reason
+    reason,
+    cause
   });
+  if (cause) {
+    game.causalLog = [
+      {
+        turn: game.turn,
+        targetEventId: id,
+        targetEventTitle: event.title,
+        choiceLabel: cause.choiceLabel || "",
+        reason: cause.reason || reason
+      },
+      ...(game.causalLog || [])
+    ].slice(0, 60);
+  }
 }
 
 function recordIncident(event, choice, type, text) {
@@ -6520,7 +9837,19 @@ function recordIncident(event, choice, type, text) {
     eventTitle: event.title,
     choiceLabel: choice.label,
     text
-  });
+	  });
+	}
+
+function buildCauseContext(event, choice) {
+  return {
+    turn: game.turn,
+    sourceEventId: event.id,
+    sourceEventTitle: event.title,
+    choiceId: choice.id,
+    choiceLabel: choice.label,
+    sourceEpisodes: choice.sourceEpisodes || event.sourceEpisodes || [],
+    models: [...new Set([...(event.modelTags || []), ...(choice.models || [])])]
+  };
 }
 
 function randomizedEffect(delta) {
@@ -7036,12 +10365,19 @@ function selectNextEvent(previousId) {
   if (!candidates.length) return null;
 
   const picked = pickWeighted(candidates, (candidate) => candidate.weight);
-  if (picked.kind === "queued") {
-    removeQueuedEntry(picked.entry);
-    if (picked.entry.reason) {
-      game.scaleHistory.push({ turn: game.turn, title: "暗线发酵", text: picked.entry.reason });
-    }
-  }
+	  if (picked.kind === "queued") {
+	    removeQueuedEntry(picked.entry);
+	    game.currentEventCause = picked.entry.cause
+	      ? { ...picked.entry.cause, eventId: picked.entry.id, eventTitle: eventById(picked.entry.id)?.title || picked.entry.id }
+	      : picked.entry.reason
+	        ? { eventId: picked.entry.id, eventTitle: eventById(picked.entry.id)?.title || picked.entry.id, turn: game.turn, reason: picked.entry.reason }
+	        : null;
+	    if (picked.entry.reason) {
+	      game.scaleHistory.push({ turn: game.turn, title: "暗线发酵", text: picked.entry.reason });
+	    }
+	  } else {
+	    game.currentEventCause = null;
+	  }
   if (picked.kind === "main") {
     game.mainStep = Math.max(game.mainStep, picked.mainIndex + 1);
   }
@@ -7116,12 +10452,19 @@ function rollTurnIncident(previousId) {
 
   if (!candidates.length) return null;
   const picked = pickWeighted(candidates, (candidate) => candidate.weight);
-  if (picked.kind === "queued") {
-    removeQueuedEntry(picked.entry);
-    if (picked.entry.reason) {
-      game.scaleHistory.push({ turn: game.turn, title: "突发事件", text: picked.entry.reason });
-    }
-  }
+	  if (picked.kind === "queued") {
+	    removeQueuedEntry(picked.entry);
+	    game.currentEventCause = picked.entry.cause
+	      ? { ...picked.entry.cause, eventId: picked.entry.id, eventTitle: eventById(picked.entry.id)?.title || picked.entry.id }
+	      : picked.entry.reason
+	        ? { eventId: picked.entry.id, eventTitle: eventById(picked.entry.id)?.title || picked.entry.id, turn: game.turn, reason: picked.entry.reason }
+	        : null;
+	    if (picked.entry.reason) {
+	      game.scaleHistory.push({ turn: game.turn, title: "突发事件", text: picked.entry.reason });
+	    }
+	  } else {
+	    game.currentEventCause = null;
+	  }
   if (picked.id) {
     game.lastIncidentEvent = picked.id;
     advanceMainStep(picked.id);
