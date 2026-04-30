@@ -2,13 +2,13 @@
   "meta": {
     "title": "颖响力知识图谱",
     "subtitle": "节目、概念、模型、人物、主题之间的可视化连接网络",
-    "nodeCount": 452,
-    "linkCount": 840,
+    "nodeCount": 462,
+    "linkCount": 852,
     "typeCounts": {
-      "model": 56,
-      "episode": 128,
-      "concept": 119,
-      "theme": 88,
+      "model": 58,
+      "episode": 129,
+      "concept": 124,
+      "theme": 90,
       "person": 61
     }
   },
@@ -131,6 +131,17 @@
       "type": "episode",
       "route": "episodes/EP120",
       "summary": "本期围绕匈牙利大选展开，核心判断不是单纯的选举轮替，而是欧洲内部一次典型的“拆雷”成功。节目认为，这场胜利首先是年轻选民推动下的民意回归，其次才是地缘政治牌局里的再分配：欧盟拆掉了内部的一颗雷，俄罗斯和特朗普阵营则失去了一张能持续撬动欧洲裂缝的牌。",
+      "status": "curated",
+      "degree": 12
+    },
+    {
+      "id": "episode:EP129",
+      "key": "EP129",
+      "label": "EP129",
+      "fullLabel": "EP129 · 华谊破产、爱奇艺没落，100万审批红线撕开的真相：我们正在从观众，变成垃圾场里的淘金者",
+      "type": "episode",
+      "route": "episodes/EP129",
+      "summary": "本期从华谊兄弟被申请破产和爱奇艺长视频业务失速谈起，反对把问题简单归因为乱投资、商誉爆雷、长视频成本高或会员续费下降。节目真正要拆的是内容行业的制度成本落差：电影、电视剧、重点网剧和重点微短剧要走完整规划备案、成片审查和发行许可流程，而低成本普通微短剧更多依赖平台自审。100 万投资红线把行业分成两道门，高合规成本的一边要投入明星、导演、团队和漫长审批，低合规成本的一边可以快速生产、快速上线、快速试错。节目进一步借凯文·凯利《失控》和“蒙娜丽莎”比喻说明，短剧与 AI 短剧的繁荣不是单纯自由创作的胜利，而是大规模低质生产加平台筛选的失控逻辑：平台把观众变成免费审核员和垃圾分拣工，用我们的注意力从海量内容里筛出少数可传播作品。最终问题变成：我们获得了更大的选择自由，却也用审美滑坡和注意力被收割支付代价。",
       "status": "curated",
       "degree": 12
     },
@@ -1697,6 +1708,17 @@
       "degree": 4
     },
     {
+      "id": "model:platform-gatekeeping",
+      "key": "platform-gatekeeping",
+      "label": "平台守门结构",
+      "fullLabel": "平台守门结构",
+      "type": "model",
+      "route": "models/platform-gatekeeping",
+      "summary": "平台守门结构说明平台通过流量、规则和处罚权决定谁可见、谁能赚钱、谁被沉默。",
+      "status": null,
+      "degree": 4
+    },
+    {
       "id": "model:screening-machine",
       "key": "screening-machine",
       "label": "筛选机器模型",
@@ -2221,17 +2243,6 @@
       "type": "theme",
       "route": "themes/platform-traffic-and-price-distortion",
       "summary": "当平台把巨量流量集中到极少数节点，价格、信誉和真伪判断都会开始向流量中心倾斜。",
-      "status": null,
-      "degree": 3
-    },
-    {
-      "id": "model:platform-gatekeeping",
-      "key": "platform-gatekeeping",
-      "label": "平台守门结构",
-      "fullLabel": "平台守门结构",
-      "type": "model",
-      "route": "models/platform-gatekeeping",
-      "summary": "平台守门结构说明平台通过流量、规则和处罚权决定谁可见、谁能赚钱、谁被沉默。",
       "status": null,
       "degree": 3
     },
@@ -3259,6 +3270,17 @@
       "degree": 2
     },
     {
+      "id": "theme:film-industry-and-traffic-logic",
+      "key": "film-industry-and-traffic-logic",
+      "label": "影视工业与流量逻辑",
+      "fullLabel": "影视工业与流量逻辑",
+      "type": "theme",
+      "route": "themes/film-industry-and-traffic-logic",
+      "summary": "关注影视生产如何越来越服从人设、粉丝和宣发流量，而非角色与作品本身。",
+      "status": null,
+      "degree": 2
+    },
+    {
       "id": "concept:user-funded-testing",
       "key": "user-funded-testing",
       "label": "用户代偿测试",
@@ -3365,6 +3387,17 @@
       "type": "concept",
       "route": "concepts/chosen-homeland",
       "summary": "故乡不必只由血缘和祖籍决定，也可以由长期生活、责任承担和价值创造重新选择。",
+      "status": null,
+      "degree": 2
+    },
+    {
+      "id": "theme:ai-and-human-creativity",
+      "key": "ai-and-human-creativity",
+      "label": "AI替代与人的创造性",
+      "fullLabel": "AI替代与人的创造性",
+      "type": "theme",
+      "route": "themes/ai-and-human-creativity",
+      "summary": "关注自动化扩张之后，人类该如何重新定义自己的不可替代价值。",
       "status": null,
       "degree": 2
     },
@@ -3666,6 +3699,28 @@
       "degree": 1
     },
     {
+      "id": "concept:dual-track-review-system",
+      "key": "dual-track-review-system",
+      "label": "分层审核制度",
+      "fullLabel": "分层审核制度",
+      "type": "concept",
+      "route": "concepts/dual-track-review-system",
+      "summary": "同一类内容因为投资规模、平台主推程度和发行路径不同，进入不同审核通道。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "concept:aesthetic-decline-by-abundance",
+      "key": "aesthetic-decline-by-abundance",
+      "label": "丰裕导致的审美滑坡",
+      "fullLabel": "丰裕导致的审美滑坡",
+      "type": "concept",
+      "route": "concepts/aesthetic-decline-by-abundance",
+      "summary": "内容数量和选择自由上升，不必然带来审美提升，反而可能训练用户接受更短、更刺激、更套路化的作品。",
+      "status": null,
+      "degree": 1
+    },
+    {
       "id": "person:fengge-wangmingtianya",
       "key": "fengge-wangmingtianya",
       "label": "峰哥亡命天涯",
@@ -3739,6 +3794,17 @@
       "type": "concept",
       "route": "concepts/partnership-shift",
       "summary": "亲密关系在中年、资产和责任变化后，常会从浪漫叙事转向合伙治理。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "concept:audience-filter-labor",
+      "key": "audience-filter-labor",
+      "label": "观众筛选劳动",
+      "fullLabel": "观众筛选劳动",
+      "type": "concept",
+      "route": "concepts/audience-filter-labor",
+      "summary": "用户以为自己在消费内容，实际上也在用停留、滑动、点赞和关注替平台筛选内容。",
       "status": null,
       "degree": 1
     },
@@ -3838,6 +3904,28 @@
       "type": "concept",
       "route": "concepts/overseas-sink-project",
       "summary": "跨境大项目若依赖旧周期资金和宏大叙事，外部条件反转后会变成难以止损的资产黑洞。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "concept:compliance-cost-gap",
+      "key": "compliance-cost-gap",
+      "label": "合规成本落差",
+      "fullLabel": "合规成本落差",
+      "type": "concept",
+      "route": "concepts/compliance-cost-gap",
+      "summary": "不同制度路径让同一市场里的生产者承担完全不同的时间、资金和不确定性成本。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "model:regulatory-cost-arbitrage",
+      "key": "regulatory-cost-arbitrage",
+      "label": "合规成本套利模型",
+      "fullLabel": "合规成本套利模型",
+      "type": "model",
+      "route": "models/regulatory-cost-arbitrage",
+      "summary": "当同一市场存在多条监管路径，低合规成本路径会获得更高试错频率和更强替代能力。",
       "status": null,
       "degree": 1
     },
@@ -4216,6 +4304,17 @@
       "degree": 1
     },
     {
+      "id": "theme:content-regulation-and-short-drama",
+      "key": "content-regulation-and-short-drama",
+      "label": "内容监管与短剧崛起",
+      "fullLabel": "内容监管与短剧崛起",
+      "type": "theme",
+      "route": "themes/content-regulation-and-short-drama",
+      "summary": "讨论长剧、电影、网剧和短剧在不同审核路径下如何重新竞争。",
+      "status": null,
+      "degree": 1
+    },
+    {
       "id": "theme:deglobalization-and-cultural-fragmentation",
       "key": "deglobalization-and-cultural-fragmentation",
       "label": "逆全球化与文化碎片化",
@@ -4289,6 +4388,17 @@
       "type": "concept",
       "route": "concepts/platform-double-standard",
       "summary": "平台执行规则时若按账号商业价值区别处理，治理就会变成选择性守门。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "theme:platform-attention-and-aesthetic-decline",
+      "key": "platform-attention-and-aesthetic-decline",
+      "label": "平台注意力与审美滑坡",
+      "fullLabel": "平台注意力与审美滑坡",
+      "type": "theme",
+      "route": "themes/platform-attention-and-aesthetic-decline",
+      "summary": "关注平台如何用海量内容、即时反馈和算法筛选改变观众审美与耐心。",
       "status": null,
       "degree": 1
     },
@@ -4454,6 +4564,28 @@
       "type": "theme",
       "route": "themes/beauty-industry-and-hollowed-competitions",
       "summary": "关注选美与模特赛事在关系化、头衔化之后如何失去公信力。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "model:uncontrolled-production-filter",
+      "key": "uncontrolled-production-filter",
+      "label": "失控生产过滤模型",
+      "fullLabel": "失控生产过滤模型",
+      "type": "model",
+      "route": "models/uncontrolled-production-filter",
+      "summary": "当生产近乎无限时，系统价值从生产端转向筛选端，用户注意力会成为关键过滤器。",
+      "status": null,
+      "degree": 1
+    },
+    {
+      "id": "concept:uncontrolled-production-logic",
+      "key": "uncontrolled-production-logic",
+      "label": "失控式生产逻辑",
+      "fullLabel": "失控式生产逻辑",
+      "type": "concept",
+      "route": "concepts/uncontrolled-production-logic",
+      "summary": "当生产门槛极低时，系统不再靠少数专业创作者保证质量，而是靠海量产出后的筛选找到少数可用作品。",
       "status": null,
       "degree": 1
     },
@@ -4744,17 +4876,6 @@
       "degree": 1
     },
     {
-      "id": "theme:film-industry-and-traffic-logic",
-      "key": "film-industry-and-traffic-logic",
-      "label": "影视工业与流量逻辑",
-      "fullLabel": "影视工业与流量逻辑",
-      "type": "theme",
-      "route": "themes/film-industry-and-traffic-logic",
-      "summary": "关注影视生产如何越来越服从人设、粉丝和宣发流量，而非角色与作品本身。",
-      "status": null,
-      "degree": 1
-    },
-    {
       "id": "person:yu-donglai",
       "key": "yu-donglai",
       "label": "于东来",
@@ -4960,17 +5081,6 @@
       "type": "theme",
       "route": "themes/ai-capital-and-company-identity",
       "summary": "讨论 AI 创业公司如何在不同法域、资本环境与身份叙事之间重新安排自己的主场。",
-      "status": null,
-      "degree": 1
-    },
-    {
-      "id": "theme:ai-and-human-creativity",
-      "key": "ai-and-human-creativity",
-      "label": "AI替代与人的创造性",
-      "fullLabel": "AI替代与人的创造性",
-      "type": "theme",
-      "route": "themes/ai-and-human-creativity",
-      "summary": "关注自动化扩张之后，人类该如何重新定义自己的不可替代价值。",
       "status": null,
       "degree": 1
     },
@@ -9075,6 +9185,66 @@
     {
       "source": "episode:EP128",
       "target": "theme:big-government-and-incentive-reversal",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "concept:dual-track-review-system",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "concept:compliance-cost-gap",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "concept:uncontrolled-production-logic",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "concept:audience-filter-labor",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "concept:aesthetic-decline-by-abundance",
+      "kind": "episode-concept"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "model:regulatory-cost-arbitrage",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "model:uncontrolled-production-filter",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "model:platform-gatekeeping",
+      "kind": "episode-model"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "theme:content-regulation-and-short-drama",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "theme:film-industry-and-traffic-logic",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "theme:platform-attention-and-aesthetic-decline",
+      "kind": "episode-theme"
+    },
+    {
+      "source": "episode:EP129",
+      "target": "theme:ai-and-human-creativity",
       "kind": "episode-theme"
     },
     {
